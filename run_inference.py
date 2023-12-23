@@ -1,3 +1,4 @@
+# LIDAR Inference:
 import os
 import subprocess
 from pathlib import Path
@@ -12,9 +13,9 @@ else:
     print("Doesn't exists")
     os.mkdir(out_dir)
 
+## LIDAR inference
 pcd_path = f"{home_dir}/software/mmdetection3d/data/nuscenes/samples/LIDAR_TOP/"
 pcd_list = os.listdir(pcd_path)
-
 configs_path = "configs/pointpillars/pointpillars_hv_fpn_sbn-all_8xb4-2x_nus-3d.py"
 checkpoint_path = "checkpoints/hv_pointpillars_fpn_sbn-all_4x8_2x_nus-3d_20210826_104936-fca299c1.pth"
 
