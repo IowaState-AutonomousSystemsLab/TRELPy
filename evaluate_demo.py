@@ -35,7 +35,5 @@ for fn in preds_fn[:2]:
         result = json.load(f)
         result['scores_3d'] = torch.Tensor(result['scores_3d'])
         result['labels_3d'] = torch.Tensor(result['labels_3d'])
-        nusc_box = output_to_nusc_box(result)
-        pdb.set_trace()
-
+        
 # Convert the results:
