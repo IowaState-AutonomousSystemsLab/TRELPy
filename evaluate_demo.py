@@ -21,6 +21,7 @@ home_dir = str(Path.home())
 nusc = NuScenes(version='v1.0-trainval', dataroot = f"{home_dir}/software/mmdetection3d/data/nuscenes")
 dataroot = f"{home_dir}/software/mmdetection3d/data/nuscenes/"
 out_dir = f"{home_dir}/nuscenes_dataset/inference_results"
+preds_dir = os.path.join(out_dir, "preds")
 ann_file=dataroot + 'nuscenes_infos_val.pkl'
 metric='bbox'
 
@@ -121,25 +122,35 @@ def transform_det_annos_to_nusc_annos(det_annos, nusc):
 
     return nusc_annos
 
+def get_sample_token(fn):
+    with open("token_dict.json", 'r') as f:
+        token_dict = json.load(f)
+    sample_token = token_dict[fn]['sample_token']
+    f.close()
+    return sample_token
+
 # Read json file:
 def read_preds_file(fn):
-    with open(fn, 'r') as f:
+    full_fn = os.path.join(preds_dir, fn)
+    with open(full_fn, 'r') as f:
         result = json.load(f)
         result['bboxes_3d'] = torch.Tensor(result['bboxes_3d']).numpy()
         result['scores_3d'] = torch.Tensor(result['scores_3d']).numpy()
         result['labels_3d'] = torch.Tensor(result['labels_3d']).numpy()
-        return result
+        sample_token = dict()
+        sample_token['token'] = get_sample_token(fn)
+        result.update({'metadata':sample_token})
+    f.close()
+    return result
         # nusc_box = output_to_nusc_box(result)
 
 def read_results():
-    preds_dir = os.path.join(out_dir, "preds")
     preds_fn = os.listdir(preds_dir)
     results = []
     for fn in preds_fn[:2]:
-        fn = os.path.join(preds_dir, fn)
         results.append(read_preds_file(fn))
+    return results
 
-# nusc_results = transform_det_annos_to_nusc_annos(results, nusc)
 def construct_token_dict():
     token_dict = dict()
     for scene in nusc.scene:
@@ -155,4 +166,8 @@ def construct_token_dict():
 
     with open("token_dict.json", 'w') as f:
         json.dump(token_dict, f)
+    f.close()
 
+results = read_results()
+pdb.set_trace()
+nusc_results = transform_det_annos_to_nusc_annos(results, nusc)
