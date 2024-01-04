@@ -14,7 +14,7 @@ from functools import reduce
 from pathlib import Path
 import numpy as np
 from nuscenes.nuscenes import NuScenes
-from classes import cls_attr_dist
+from classes import cls_attr_dist, class_names
 
 backend_args = None
 home_dir = str(Path.home())
@@ -87,7 +87,6 @@ def transform_det_annos_to_nusc_annos(det_annos, nusc):
         box_list = lidar_nusc_box_to_global(
             nusc=nusc, boxes=box_list, sample_token=det['metadata']['token']
         )
-
         for k, box in enumerate(box_list):
             name = det['name'][k]
             if np.sqrt(box.velocity[0] ** 2 + box.velocity[1] ** 2) > 0.2:
@@ -116,7 +115,8 @@ def transform_det_annos_to_nusc_annos(det_annos, nusc):
                 'detection_score': box.score,
                 'attribute_name': attr
             }
-            annos.append(nusc_anno)
+            if det['scores_3d'][k] >= 0.6:
+                annos.append(nusc_anno)
 
         nusc_annos['results'].update({det["metadata"]["token"]: annos})
 
@@ -136,10 +136,13 @@ def read_preds_file(fn):
         result = json.load(f)
         result['bboxes_3d'] = torch.Tensor(result['bboxes_3d']).numpy()
         result['scores_3d'] = torch.Tensor(result['scores_3d']).numpy()
+        class_labels = [class_names[k] for k in result['labels_3d']]
         result['labels_3d'] = torch.Tensor(result['labels_3d']).numpy()
         sample_token = dict()
         sample_token['token'] = get_sample_token(fn)
         result.update({'metadata':sample_token})
+        result.update({'name':class_labels})
+        
     f.close()
     return result
         # nusc_box = output_to_nusc_box(result)
@@ -147,7 +150,7 @@ def read_preds_file(fn):
 def read_results():
     preds_fn = os.listdir(preds_dir)
     results = []
-    for fn in preds_fn[:2]:
+    for fn in preds_fn[:1]:
         results.append(read_preds_file(fn))
     return results
 
@@ -169,5 +172,5 @@ def construct_token_dict():
     f.close()
 
 results = read_results()
-pdb.set_trace()
 nusc_results = transform_det_annos_to_nusc_annos(results, nusc)
+pdb.set_trace()

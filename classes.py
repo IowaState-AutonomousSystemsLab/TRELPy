@@ -110,3 +110,8 @@ cls_attr_dist = {
         'vehicle.stopped': 11097,
     },
 }
+
+class_names = [
+    'car', 'truck', 'trailer', 'bus', 'construction_vehicle', 'bicycle',
+    'motorcycle', 'pedestrian', 'traffic_cone', 'barrier'
+]
