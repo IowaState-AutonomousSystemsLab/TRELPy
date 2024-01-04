@@ -1,20 +1,23 @@
 import os
-import subprocess
-from pathlib import Path
 import pdb
-import torch
-from mmdet3d.evaluation.metrics import nuscenes_metric as nus_metric
-from mmdet3d.evaluation.metrics.nuscenes_metric import output_to_nusc_box
 import json 
+import torch
+import operator
+import subprocess
+
+import numpy as np
+from pathlib import Path
+from functools import reduce
 from pyquaternion import Quaternion
+from classes import cls_attr_dist, class_names
+
+from typing import Dict, List
+
+from nuscenes.nuscenes import NuScenes
 from nuscenes.utils.data_classes import Box
 from nuscenes.utils.geometry_utils import transform_matrix
-import operator
-from functools import reduce
-from pathlib import Path
-import numpy as np
-from nuscenes.nuscenes import NuScenes
-from classes import cls_attr_dist, class_names
+from mmdet3d.evaluation.metrics import nuscenes_metric as nus_metric
+from mmdet3d.evaluation.metrics.nuscenes_metric import output_to_nusc_box
 
 backend_args = None
 home_dir = str(Path.home())
@@ -37,7 +40,16 @@ checkpoint_path = "checkpoints/hv_pointpillars_fpn_sbn-all_4x8_2x_nus-3d_2021082
 evaluator = nus_metric.NuScenesMetric(dataroot, ann_file)
 
 # Box conversion
-def boxes_lidar_to_nusenes(det_info):
+def boxes_lidar_to_nusenes(det_info: Dict) -> List:
+    """
+    Converts lidar boxes to NuScenes format.
+
+    Args:
+        det_info (dict): A dictionary containing lidar detection information with keys 'bboxes_3d', 'scores_3d', and 'labels_3d'.
+
+    Returns:
+        list: A list of Box objects representing the lidar boxes in NuScenes format.
+    """
     boxes3d = det_info['bboxes_3d']
     scores = det_info['scores_3d']
     labels = det_info['labels_3d']
@@ -54,7 +66,18 @@ def boxes_lidar_to_nusenes(det_info):
         box_list.append(box)
     return box_list
 
-def lidar_nusc_box_to_global(nusc, boxes, sample_token):
+def lidar_nusc_box_to_global(nusc: NuScenes, boxes, sample_token) -> List:
+    """
+    Converts lidar boxes from the NuScenes coordinate system to the global coordinate system.
+
+    Args:
+        nusc (NuScenes): An instance of the NuScenes class.
+        boxes (list): A list representing lidar boxes. Boxes are in <UNKNOWN> coordinate system
+        sample_token (str): The token of the sample containing the lidar data.
+
+    Returns:
+        list: A list representing the lidar boxes in the global coordinate system.
+    """
     s_record = nusc.get('sample', sample_token)
     sample_data_token = s_record['data']['LIDAR_TOP']
 
@@ -75,7 +98,22 @@ def lidar_nusc_box_to_global(nusc, boxes, sample_token):
         box_list.append(box)
     return box_list
 
-def transform_det_annos_to_nusc_annos(det_annos, nusc):
+def transform_det_annos_to_nusc_annos(det_annos: List, nusc: NuScenes) -> Dict:
+    """
+    Transforms detection annotations to NuScenes annotations.
+
+    Args:
+        det_annos (list): A list of detection annotations.
+        nusc (NuScenes): An instance of the NuScenes class.
+
+    Returns:
+        dict: A dictionary containing the transformed NuScenes annotations with keys 'results' and 'meta'. 
+        The resulting annotations have a confidence level greater than 0.6
+
+    Raises:
+        KeyError: If a required key is missing in the detection annotations.
+
+    """
     nusc_annos = {
         'results': {},
         'meta': None,
@@ -122,7 +160,17 @@ def transform_det_annos_to_nusc_annos(det_annos, nusc):
 
     return nusc_annos
 
-def get_sample_token(fn):
+def get_sample_token(fn: str) -> Dict:
+    """
+    Gets the sample token associated with a given filename.
+
+    Args:
+        fn (str): The filename for which to retrieve the sample token.
+
+    Returns:
+        Dict: The sample token associated with the given filename.
+
+    """
     with open("token_dict.json", 'r') as f:
         token_dict = json.load(f)
     sample_token = token_dict[fn]['sample_token']
@@ -130,7 +178,17 @@ def get_sample_token(fn):
     return sample_token
 
 # Read json file:
-def read_preds_file(fn):
+def read_preds_file(fn: str) -> Dict:
+    """
+    Reads the predictions file and processes the data.
+
+    Args:
+        fn (str): The filename of the predictions file.
+
+    Returns:
+        dict: A dictionary containing the processed prediction data with keys 'bboxes_3d', 'scores_3d', 'labels_3d', 'metadata', and 'name'.
+
+    """
     full_fn = os.path.join(preds_dir, fn)
     with open(full_fn, 'r') as f:
         result = json.load(f)
@@ -148,6 +206,12 @@ def read_preds_file(fn):
         # nusc_box = output_to_nusc_box(result)
 
 def read_results():
+    """
+    Reads the results from prediction files.
+
+    Returns:
+        list: A list of dictionaries containing the processed prediction data.
+    """
     preds_fn = os.listdir(preds_dir)
     results = []
     for fn in preds_fn[:1]:
@@ -155,6 +219,9 @@ def read_results():
     return results
 
 def construct_token_dict():
+    """
+    Constructs a dictionary mapping filenames to lidar and sample tokens
+    """
     token_dict = dict()
     for scene in nusc.scene:
         sample_token = scene['first_sample_token']
