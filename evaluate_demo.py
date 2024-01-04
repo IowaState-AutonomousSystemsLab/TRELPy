@@ -227,7 +227,7 @@ def construct_token_dict():
         sample_token = scene['first_sample_token']
         sample = nusc.get('sample', sample_token)
         lidar_data = nusc.get('sample_data', sample['data']["LIDAR_TOP"])
-        while sample['next'] != "":
+        while sample != "":
             filename = lidar_data['filename']
             file_str = filename[filename.rfind("/")+1:].replace("bin", "json")
             token_dict[file_str] = {"lidar_token": lidar_data['token'], "sample_token": lidar_data['sample_token']}
