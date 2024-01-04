@@ -214,7 +214,7 @@ def read_results():
     """
     preds_fn = os.listdir(preds_dir)
     results = []
-    for fn in preds_fn[:1]:
+    for fn in preds_fn:
         results.append(read_preds_file(fn))
     return results
 
@@ -227,17 +227,23 @@ def construct_token_dict():
         sample_token = scene['first_sample_token']
         sample = nusc.get('sample', sample_token)
         lidar_data = nusc.get('sample_data', sample['data']["LIDAR_TOP"])
-        while sample != "":
+        while sample['next'] != "":
             filename = lidar_data['filename']
             file_str = filename[filename.rfind("/")+1:].replace("bin", "json")
             token_dict[file_str] = {"lidar_token": lidar_data['token'], "sample_token": lidar_data['sample_token']}
             sample = nusc.get("sample", sample['next'])
             lidar_data = nusc.get('sample_data', sample['data']["LIDAR_TOP"])
+        
+        filename = lidar_data['filename']
+        file_str = filename[filename.rfind("/")+1:].replace("bin", "json")
+        token_dict[file_str] = {"lidar_token": lidar_data['token'], "sample_token": lidar_data['sample_token']}
 
     with open("token_dict.json", 'w') as f:
         json.dump(token_dict, f)
     f.close()
 
+construct_token_dict()
+pdb.set_trace()
 results = read_results()
 nusc_results = transform_det_annos_to_nusc_annos(results, nusc)
 pdb.set_trace()
