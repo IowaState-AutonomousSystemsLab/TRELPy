@@ -219,7 +219,8 @@ def read_results():
     results = []
     count = 1
     for fn in preds_fn:
-        print("Read results count: ", str(count))
+        if count%1000 == 0:
+            print("Read results count: ", str(count))
         results.append(read_preds_file(fn))
         count += 1
     return results
@@ -296,6 +297,5 @@ def get_metrics(output_path, res_path):
 
 results = read_results()
 nusc_results = transform_det_annos_to_nusc_annos(results, nusc)
+output_path, res_path = save_nusc_results(nusc_results, output_path="/home/apurvabadithela/software/run_nuscenes_evaluations")
 
-
-pdb.set_trace()
