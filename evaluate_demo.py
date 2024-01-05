@@ -19,6 +19,9 @@ from nuscenes.utils.geometry_utils import transform_matrix
 from mmdet3d.evaluation.metrics import nuscenes_metric as nus_metric
 from mmdet3d.evaluation.metrics.nuscenes_metric import output_to_nusc_box
 
+from nuscenes.eval.detection.config import config_factory
+from nuscenes.eval.detection.evaluate import NuScenesEval
+
 backend_args = None
 home_dir = str(Path.home())
 nusc = NuScenes(version='v1.0-trainval', dataroot = f"{home_dir}/software/mmdetection3d/data/nuscenes")
@@ -245,7 +248,54 @@ def construct_token_dict():
         json.dump(token_dict, f)
     f.close()
 
+def save_nusc_results(det_annos, **kwargs):
+    nusc_annos = transform_det_annos_to_nusc_annos(det_annos, nusc)
+    nusc_annos['meta'] = {
+        'use_camera': False,
+        'use_lidar': True,
+        'use_radar': False,
+        'use_map': False,
+        'use_external': False,
+    }
+
+    output_path = Path(kwargs['output_path'])
+    output_path.mkdir(exist_ok=True, parents=True)
+    res_path = str(output_path / 'results_nusc.json')
+    with open(res_path, 'w') as f:
+        json.dump(nusc_annos, f)
+    
+    print('The predictions of NuScenes have been saved to {res_path}')
+    return output_path, res_path
+
+def get_metrics(output_path, res_path):
+    eval_set_map = {
+        'v1.0-mini': 'mini_val',
+        'v1.0-trainval': 'val',
+        'v1.0-test': 'test'
+    }
+    try:
+        eval_version = 'detection_cvpr_2019'
+        eval_config = config_factory(eval_version)
+    except:
+        eval_version = 'cvpr_2019'
+        eval_config = config_factory(eval_version)
+
+    nusc_eval = NuScenesEval(
+        nusc,
+        config=eval_config,
+        result_path=res_path,
+        eval_set=eval_set_map['v1.0-trainval'],
+        output_dir=str(output_path),
+        verbose=True,
+    )
+    metrics_summary = nusc_eval.main(plot_examples=0, render_curves=False)
+
+    with open(output_path / 'metrics_summary.json', 'r') as f:
+        metrics = json.load(f)
+    return metrics, metrics_summary, nusc_eval
 
 results = read_results()
 nusc_results = transform_det_annos_to_nusc_annos(results, nusc)
+
+
 pdb.set_trace()
