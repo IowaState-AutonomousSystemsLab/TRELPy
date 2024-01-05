@@ -8,14 +8,14 @@ from pathlib import Path
 from nuscenes.nuscenes import NuScenes
 
 home_dir = str(Path.home())
-nusc = NuScenes(version='v1.0-trainval', dataroot = f"{home_dir}/nuscenes_dataset/nuscenes_full")
+nusc = NuScenes(version='v1.0-trainval', dataroot = f"{home_dir}/software/mmdetection3d/data/nuscenes")
 
 # Get all the filenames in the nuScenes_full/samples/LIDAR_TOP folder
-pcd_path = f"{home_dir}/nuscenes_dataset/nuscenes_full/samples/LIDAR_TOP/"
+pcd_path = f"{home_dir}/software/mmdetection3d/data/nuscenes/samples/LIDAR_TOP/"
 pcd_files = os.listdir(pcd_path)
 
 # get all the files in the token_dict.json file
-with open("3D_Detection/token_dict.json", "r") as f:
+with open("token_dict.json", "r") as f:
     token_dict = json.load(f)
     json_files = list(token_dict.keys())
 

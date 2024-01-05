@@ -214,8 +214,11 @@ def read_results():
     """
     preds_fn = os.listdir(preds_dir)
     results = []
+    count = 1
     for fn in preds_fn:
+        print("Read results count: ", str(count))
         results.append(read_preds_file(fn))
+        count += 1
     return results
 
 def construct_token_dict():
@@ -242,8 +245,7 @@ def construct_token_dict():
         json.dump(token_dict, f)
     f.close()
 
-construct_token_dict()
-pdb.set_trace()
+
 results = read_results()
 nusc_results = transform_det_annos_to_nusc_annos(results, nusc)
 pdb.set_trace()
