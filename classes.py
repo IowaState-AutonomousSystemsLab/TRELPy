@@ -116,8 +116,7 @@ class_names = [
     'motorcycle', 'pedestrian', 'traffic_cone', 'barrier'
 ]
 
-sample_tokens_val = [
-    '3e8750f331d7499e9b5123e9eb70f2e2', 
+mini_val_tokens = ['3e8750f331d7499e9b5123e9eb70f2e2', 
     '3950bd41f74548429c0f7700ff3d8269', 
     'c5f58c19249d4137ae063b0e9ecd8b8e', 
     '700c1a25559b4433be532de3475e58a9', 
@@ -197,4 +196,5 @@ sample_tokens_val = [
     'cb4e6195faad467094fbd4d0a9e960e9', 
     '7f594234e8034228b1a7d727f1981e09', 
     '9cdbf5ff7f294549aea0a4307e5d104a', 
-    'b4ff30109dd14c89b24789dc5713cf8c']
+    'b4ff30109dd14c89b24789dc5713cf8c'
+]

@@ -5,8 +5,17 @@ from pathlib import Path
 import pdb
 
 home_dir = str(Path.home())
-out_dir = f"{home_dir}/nuscenes_dataset/inference_results_mini"
-pcd_path = f"{home_dir}/software/mmdetection3d/data/nuscenes/samples/LIDAR_TOP/"
+
+setsize = "mini"
+
+if setsize == "mini":
+    dataset_name = "nuscenes-mini"
+    out_dir = f"{home_dir}/nuscenes_dataset/inference_results_mini"
+else:
+    dataset_name = "nuscenes"
+    out_dir = f"{home_dir}/nuscenes_dataset/inference_results"
+    
+pcd_path = f"{home_dir}/software/mmdetection3d/data/{dataset_name}/samples/LIDAR_TOP/"
 
 pcd_list = os.listdir(pcd_path)
 print(len(pcd_list))
@@ -18,7 +27,7 @@ configs_path = "configs/pointpillars/pointpillars_hv_fpn_sbn-all_8xb2-amp-2x_nus
 checkpoint_path = "checkpoints/hv_pointpillars_fpn_sbn-all_fp16_2x8_2x_nus-3d_20201021_120719-269f9dd6.pth"
 
 for i, pcd in enumerate(pcd_list):
-    path = Path(f"{home_dir}/software/mmdetection3d/data/nuscenes/samples/LIDAR_TOP/{pcd}").absolute()
+    path = Path(f"{pcd_path}/{pcd}").absolute()
     # print(path)
     if path.exists():
         cmd = f'python3 demo/pcd_demo.py {str(path)} {configs_path} {checkpoint_path} --device cuda --out-dir {out_dir}'
