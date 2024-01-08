@@ -25,14 +25,14 @@ DETECTION_THRESHOLD = 0.6
 backend_args = None
 home_dir = str(Path.home())
 # nusc = NuScenes(version='v1.0-trainval', dataroot = f"{home_dir}/software/mmdetection3d/data/nuscenes")
-nusc = NuScenes(version='v1.0-mini', dataroot = f"{home_dir}/software/mmdetection3d/data/nuscenes")
-dataroot = f"{home_dir}/software/mmdetection3d/data/nuscenes/"
+nusc = NuScenes(version='v1.0-mini', dataroot = f"{home_dir}/software/mmdetection3d/data/nuscenes-mini")
+dataroot = f"{home_dir}/software/mmdetection3d/data/nuscenes-mini/"
 out_dir = f"{home_dir}/nuscenes_dataset/inference_results_mini"
-preds_dir = os.path.join(out_dir, "model2_good/preds")
+preds_dir = os.path.join(out_dir, "preds")
 ann_file=dataroot + 'nuscenes_infos_val.pkl'
 metric='bbox'
 
-pcd_path = f"{home_dir}/software/mmdetection3d/data/nuscenes/samples/LIDAR_TOP/"
+pcd_path = f"{home_dir}/software/mmdetection3d/data/nuscenes-mini/samples/LIDAR_TOP/"
 mmdet_path = f"{home_dir}/software/mmdetection3d"
 pcd_list = os.listdir(pcd_path)
 
@@ -313,6 +313,9 @@ def convert_to_flat_veh_coords(sample_data_token:str, box:Box) -> Box:
     box.rotate(Quaternion(scalar=np.cos(yaw / 2), vector=[0, 0, np.sin(yaw / 2)]).inverse)
     
     return box
+
+# %%
+nusc.render_sample(sample['token'])
 
 # %%
 from nuscenes.lidarseg.lidarseg_utils import colormap_to_colors, plt_to_cv2, get_stats, \
