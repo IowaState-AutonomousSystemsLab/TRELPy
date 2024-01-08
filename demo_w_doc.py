@@ -304,11 +304,13 @@ def get_metrics(output_path, res_path):
         metrics = json.load(f)
     return metrics, metrics_summary, nusc_eval
 
-print(" -------- Reading results ------------ ")
-results = read_results()
-print(" -------- Transforming annotations to nusc format ------------ ")
-nusc_results = transform_det_annos_to_nusc_annos(results, nusc)
+def convert_to_nusc():
+    print(" -------- Reading results ------------ ")
+    results = read_results()
+    print(" -------- Transforming annotations to nusc format ------------ ")
+    nusc_results = transform_det_annos_to_nusc_annos(results, nusc)
 
-print(" -------- Saving nusc results ------------ ")
-output_path, res_path = save_nusc_results(results, output_path="/home/apurvabadithela/software/run_nuscenes_evaluations")
+    print(" -------- Saving nusc results ------------ ")
+    output_path, res_path = save_nusc_results(results, output_path="/home/apurvabadithela/software/run_nuscenes_evaluations")
+    return nusc_results
 
