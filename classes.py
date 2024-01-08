@@ -116,7 +116,7 @@ class_names = [
     'motorcycle', 'pedestrian', 'traffic_cone', 'barrier'
 ]
 
-sample_tokens_val = [
+mini_val_tokens = [
     '3e8750f331d7499e9b5123e9eb70f2e2', 
     '3950bd41f74548429c0f7700ff3d8269', 
     'c5f58c19249d4137ae063b0e9ecd8b8e', 
