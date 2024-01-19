@@ -44,7 +44,7 @@ def render_sample_data_with_predictions( sample_data_token: str,
                            verbose: bool = True,
                            show_panoptic: bool = False,
                            pred_boxes: list=[],
-                           nusc:NuScenes = NuScenes()) -> None:
+                           nusc=None) -> None:
         """
         Render sample data onto axis.
         :param sample_data_token: Sample_data token.
