@@ -74,10 +74,10 @@ class GenerateConfusionMatrix:
         self.num_bins = int(max_dist // distance_bin)
         self.list_of_classes = list_of_classes
         self.verbose = verbose
-        self.dist_conf_mats = {Tuple[int, int]: np.ndarray}
-        self.prop_conf_mats = {Tuple[int, int]: np.ndarray}
-        self.disc_gt_boxes = {Tuple[int, int]: EvalBoxes}
-        self.disc_pred_boxes = {Tuple[int, int]: EvalBoxes}
+        self.dist_conf_mats: dict(Tuple[int, int], np.ndarray) = {}
+        self.prop_conf_mats: dict(Tuple[int, int], np.ndarray) = {}
+        self.disc_gt_boxes: dict(Tuple[int, int], EvalBoxes) = {}
+        self.disc_pred_boxes: dict(Tuple[int, int], EvalBoxes) = {}
         self.conf_mat_mapping = conf_mat_mapping
         
         self.load_boxes()
@@ -123,12 +123,12 @@ class GenerateConfusionMatrix:
                 
         for gt in self.gt_boxes.all:
             dist = np.sqrt(np.dot(gt.ego_translation, gt.ego_translation))
-            key = list(self.disc_gt_boxes.keys())[int(dist // self.distance_bin) + 1]      # TODO check if this is correct at the edges
+            key = list(self.disc_gt_boxes.keys())[int(dist // self.distance_bin)]      # TODO check if this is correct at the edges
             self.disc_gt_boxes[key].add_boxes(sample_token=gt.sample_token, boxes=[gt])
             
         for pred in self.pred_boxes.all:
             dist = np.sqrt(np.dot(pred.ego_translation, pred.ego_translation))
-            key = list(self.disc_pred_boxes.keys())[int(dist // self.distance_bin) + 1]      # TODO check if this is correct at the edges
+            key = list(self.disc_pred_boxes.keys())[int(dist // self.distance_bin)]      # TODO check if this is correct at the edges
             self.disc_pred_boxes[key].add_boxes(sample_token=pred.sample_token, boxes=[pred])
 
     def load_boxes(self):
@@ -155,7 +155,10 @@ class GenerateConfusionMatrix:
         self.gt_boxes = filter_eval_boxes(self.nusc, self.gt_boxes, self.cfg.class_range, verbose=self.verbose)
     
     def get_distance_param_conf_mat(self):
-        for key in self.disc_gt_boxes.keys():
+        for key in list(self.disc_gt_boxes.keys()):
+            self.dist_conf_mats[key] = self.calculate_conf_mat(self.disc_gt_boxes[key], self.disc_pred_boxes[key], self.conf_mat_mapping)
+    
+    _ = None
     
     def check_distance_param_settings(self) -> None:
         """
@@ -165,14 +168,15 @@ class GenerateConfusionMatrix:
             assert self.lower_thresh < self.upper_thresh, 'Error: lower_thresh must be lesser than upper_thresh'
             assert self.distance_bin > 0, 'Error: distance_bin must be > 0'
 
-    def calculate_distance_param_conf_mat(self,
+    def calculate_conf_mat(self,
                                           gt_boxes:EvalBoxes, 
                                           pred_boxes: EvalBoxes, 
                                           conf_mat_mapping: Dict,
                                           dist_thresh: float = 2.0,       # in m 
                                           yaw_thresh: float = np.pi/2.0): # in radians  -> np.ndarray:
-    
-        
+
+        EMPTY = len(self.list_of_classes)
+        distance_param_conf_mat = np.zeros( (len(self.list_of_classes)+1, len(self.list_of_classes)+1) )
         c = 0
         # -- For each sample
         # -- -- For each ground truth
@@ -223,10 +227,11 @@ class GenerateConfusionMatrix:
                                 
                 c += 1
                 # print(len(sample_pred_list))
-                if self.validation and (sample_token in list_of_validation_tokens):
-                        render_sample_data_with_predictions(self.nusc.get('sample', sample_token)['data']['LIDAR_TOP'], sample_pred_list, nusc=self.nusc)
+                # if self.validation and (sample_token in list_of_validation_tokens):
+                #         render_sample_data_with_predictions(self.nusc.get('sample', sample_token)['data']['LIDAR_TOP'], sample_pred_list, nusc=self.nusc)
                 
-        assert c == 81
+        # assert c == 81
+        return distance_param_conf_mat
     
     def powerset(self, iterable):
         "powerset([1,2,3]) --> () (1,) (2,) (3,) (1,2) (1,3) (2,3) (1,2,3)"
