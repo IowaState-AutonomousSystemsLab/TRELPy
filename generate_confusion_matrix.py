@@ -84,7 +84,7 @@ class GenerateConfusionMatrix:
         
         self.__load_boxes()
         self.__initialize()
-        self.__check_distance_param_settings()
+        # self.__check_distance_param_settings()
         
         # Check result file exists.
         assert os.path.exists(result_path), 'Error: The result file does not exist!'
@@ -173,7 +173,7 @@ class GenerateConfusionMatrix:
             assert self.distance_bin > 0, 'Error: distance_bin must be > 0'
             
             
-    def get_distance_param_conf_mat(self) -> dict(Tuple[int, int], np.ndarray):
+    def get_distance_param_conf_mat(self) -> Dict[Tuple[int, int], np.ndarray]:
         """Get a dictionary with the distance parametrized confusion matrices for each distance bin.
         
         Args:
@@ -200,7 +200,7 @@ class GenerateConfusionMatrix:
             The values are the corresponding proposition labelled confusion matrices.
         """
         for key in list(self.disc_gt_boxes.keys()):
-            self.prop_conf_mats[key] = self.calculate_prop_labelled_conf_mat(self.disc_gt_boxes[key], self.disc_pred_boxes[key], self.list_of_classes)
+            self.prop_conf_mats[key] = self.calculate_prop_labelled_conf_mat(self.disc_gt_boxes[key], self.disc_pred_boxes[key], ["ped", "obs"], self.list_of_classes)
     
         return self.prop_conf_mats
     
@@ -286,10 +286,10 @@ class GenerateConfusionMatrix:
                                          gt_boxes:EvalBoxes, 
                                          pred_boxes: list, 
                                          list_of_propositions: list, 
-                                         class_name:str) -> np.ndarray:
+                                         class_names:list) -> np.ndarray:
         
-        EMPTY = len(self.list_of_classes)
-        propn_labelled_conf_mat = np.zeros( (len(self.list_of_classes)+1, len(self.list_of_classes)+1) )
+        n = len(self.list_of_classes)
+        propn_labelled_conf_mat = np.zeros( ( (2**n), (2**n)) )
 
         propn_indices = list(range(len(list_of_propositions)))
         propn_powerset = list(self.powerset(propn_indices))
