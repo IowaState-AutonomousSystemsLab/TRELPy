@@ -1,4 +1,5 @@
 from generate_confusion_matrix import GenerateConfusionMatrix
+from confusion_matrix import ConfusionMatrix
 
 import os
 import numpy as np
@@ -15,6 +16,7 @@ from nuscenes import NuScenes
 from nuscenes.eval.common.config import config_factory
 from nuscenes.eval.common.data_classes import EvalBoxes
 
+import pdb
 # parameters to setup nuScenes
 
 eval_set_map = {
@@ -62,4 +64,5 @@ generator = GenerateConfusionMatrix(nusc=nusc,
     distance_bin=10
 )
 
-generator.get_distance_param_conf_mat()
+cm = generator.get_distance_param_conf_mat()
+pdb.set_trace()

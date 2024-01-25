@@ -118,9 +118,7 @@ class GenerateConfusionMatrix:
                 self.disc_pred_boxes[( (self.distance_bin * i)+1, self.distance_bin * (i + 1) )] = EvalBoxes()
                 self.dist_conf_mats[( (self.distance_bin * i)+1, self.distance_bin * (i + 1) )] = np.zeros((n+1, n+1))
                 self.prop_conf_mats[( (self.distance_bin * i)+1, self.distance_bin * (i + 1) )] = np.zeros(((2**n), (2**n)))
-        
-        _ = None
-                
+                        
         for gt in self.gt_boxes.all:
             dist = np.sqrt(np.dot(gt.ego_translation, gt.ego_translation))
             key = list(self.disc_gt_boxes.keys())[int(dist // self.distance_bin)]      # TODO check if this is correct at the edges
@@ -154,11 +152,14 @@ class GenerateConfusionMatrix:
             print('Filtering ground truth annotations')
         self.gt_boxes = filter_eval_boxes(self.nusc, self.gt_boxes, self.cfg.class_range, verbose=self.verbose)
     
-    def get_distance_param_conf_mat(self):
+    def compute_distance_param_conf_mat(self):
         for key in list(self.disc_gt_boxes.keys()):
             self.dist_conf_mats[key] = self.calculate_conf_mat(self.disc_gt_boxes[key], self.disc_pred_boxes[key], self.conf_mat_mapping)
     
-    _ = None
+    def get_distance_param_conf_mat(self):
+        self.compute_distance_param_conf_mat() # Todo: Check if the matrix has been constructed, and then return the correct one.
+        return self.dist_conf_mats
+    
     
     def check_distance_param_settings(self) -> None:
         """
