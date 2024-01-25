@@ -4,6 +4,7 @@
 import os
 import numpy as np
 from typing import Tuple, Dict, Any, List
+from collections.abc import Iterable
 from itertools import chain, combinations
 
 from nuscenes import NuScenes
@@ -44,20 +45,21 @@ class GenerateConfusionMatrix:
                 #  upper_thresh: float = np.inf,
                  max_dist: int = 100,
                  distance_bin:float = 10,
-                 ):
-        """
-            Initialize a DetectionEval object.
-            :param nusc: A NuScenes object.
-            :param config: A DetectionConfig object.
-            :param result_path: Path of the nuScenes JSON result file.
-            :param eval_set: The dataset split to evaluate on, e.g. train, val or test.
-            :param output_dir: Folder to save plots and results to.
-            :param verbose: Whether to print to stdout.
-            :param distance_parametrized: Whether the confusion matrix is parametrized by distance or not.
-            :param lower_thresh: Lower distance threshold.
-            :param upper_thresh: Upper distance threshold.
-            :param max_dist: Maximum distance to consider for the distance parametrized confusion matrix.
-            :param distance_bin: If lower_thresh = -1 and upper_thresh = inf, there is only one confusion matrix.
+                 ) -> None:
+        """Initialize a DetectionEval object.
+            
+            Args:
+                nusc: A NuScenes object.
+                config: A DetectionConfig object.
+                result_path: Path of the nuScenes JSON result file.
+                eval_set: The dataset split to evaluate on, e.g. train, val or test.
+                output_dir: Folder to save plots and results to.
+                verbose: Whether to print to stdout.
+                distance_parametrized: Whether the confusion matrix is parametrized by distance or not.
+                lower_thresh: Lower distance threshold.
+                upper_thresh: Upper distance threshold.
+                max_dist: Maximum distance to consider for the distance parametrized confusion matrix.
+                distance_bin: If lower_thresh = -1 and upper_thresh = inf, there is only one confusion matrix.
         """
         
         self.nusc = nusc
@@ -80,9 +82,9 @@ class GenerateConfusionMatrix:
         self.disc_pred_boxes: dict(Tuple[int, int], EvalBoxes) = {}
         self.conf_mat_mapping = conf_mat_mapping
         
-        self.load_boxes()
-        self.initialize()
-        # self.check_distance_param_settings()
+        self.__load_boxes()
+        self.__initialize()
+        self.__check_distance_param_settings()
         
         # Check result file exists.
         assert os.path.exists(result_path), 'Error: The result file does not exist!'
@@ -95,18 +97,20 @@ class GenerateConfusionMatrix:
             os.makedirs(self.plot_dir)
         
         _ = None
-        
-        # for pred in self.pred_boxes.all:
-        #     dist = np.sqrt(np.dot(pred.ego_translation, pred.ego_translation)) 
-        #     if dist > upper_thresh or dist < lower_thresh:
-        #         self.pred_boxes.all.remove(pred)
-        #         self.pred_boxes.sample_tokens.remove(pred.sample_token)
 
         self.sample_tokens = self.gt_boxes.sample_tokens
 
-    def initialize(self) -> None:
+
+    def __initialize(self) -> None:
+        """ initializes all class variables to their default values
+        
+        Args:
+            None
+        """
         
         n = len(self.list_of_classes)
+        
+        # initializing all the bins
         for i in range(self.num_bins):
             if i == 0:
                 self.disc_gt_boxes[(0, self.distance_bin)] = EvalBoxes()
@@ -118,7 +122,8 @@ class GenerateConfusionMatrix:
                 self.disc_pred_boxes[( (self.distance_bin * i)+1, self.distance_bin * (i + 1) )] = EvalBoxes()
                 self.dist_conf_mats[( (self.distance_bin * i)+1, self.distance_bin * (i + 1) )] = np.zeros((n+1, n+1))
                 self.prop_conf_mats[( (self.distance_bin * i)+1, self.distance_bin * (i + 1) )] = np.zeros(((2**n), (2**n)))
-                        
+
+        # Segmenting the ground truth and prediction boxes into distance bins
         for gt in self.gt_boxes.all:
             dist = np.sqrt(np.dot(gt.ego_translation, gt.ego_translation))
             key = list(self.disc_gt_boxes.keys())[int(dist // self.distance_bin)]      # TODO check if this is correct at the edges
@@ -129,7 +134,12 @@ class GenerateConfusionMatrix:
             key = list(self.disc_pred_boxes.keys())[int(dist // self.distance_bin)]      # TODO check if this is correct at the edges
             self.disc_pred_boxes[key].add_boxes(sample_token=pred.sample_token, boxes=[pred])
 
-    def load_boxes(self):
+    def __load_boxes(self) -> None:
+        """Loads GT annotations and predictions from respective files and saves them in respective class variables.
+        
+        Args: 
+            None
+        """
         # Load data.
         if self.verbose:
             print('Initializing nuScenes detection evaluation')
@@ -152,14 +162,11 @@ class GenerateConfusionMatrix:
             print('Filtering ground truth annotations')
         self.gt_boxes = filter_eval_boxes(self.nusc, self.gt_boxes, self.cfg.class_range, verbose=self.verbose)
     
-    def compute_distance_param_conf_mat(self):
+    def get_distance_param_conf_mat(self):
         for key in list(self.disc_gt_boxes.keys()):
             self.dist_conf_mats[key] = self.calculate_conf_mat(self.disc_gt_boxes[key], self.disc_pred_boxes[key], self.conf_mat_mapping)
     
-    def get_distance_param_conf_mat(self):
-        self.compute_distance_param_conf_mat() # Todo: Check if the matrix has been constructed, and then return the correct one.
-        return self.dist_conf_mats
-    
+    _ = None
     
     def check_distance_param_settings(self) -> None:
         """
@@ -168,13 +175,46 @@ class GenerateConfusionMatrix:
         if self.distance_parametrized:
             assert self.lower_thresh < self.upper_thresh, 'Error: lower_thresh must be lesser than upper_thresh'
             assert self.distance_bin > 0, 'Error: distance_bin must be > 0'
+            
+            
+    def get_distance_param_conf_mat(self) -> dict(Tuple[int, int], np.ndarray):
+        """Get a dictionary with the distance parametrized confusion matrices for each distance bin.
+        
+        Args:
+            None
+        
+        Returns:
+            A dictionary where the keys are tuples of the form (lower_dist_thresh, upper_dist_thresh)
+            The values are the corresponding distance parameterized confusion matrices. 
+        """
+        for key in list(self.disc_gt_boxes.keys()):
+            self.dist_conf_mats[key] = self.calculate_conf_mat(self.disc_gt_boxes[key], self.disc_pred_boxes[key], self.conf_mat_mapping)
+
+        return self.dist_conf_mats
+    
+    
+    def get_proposition_labelled_conf_mat(self):
+        """Get a dictionary with the proposition labelled confusion matrices for each distance bin.
+        
+        Args:
+            None
+            
+        Returns:
+            A dictionary where the keys are tuples of the form (lower_dist_thresh, upper_dist_thresh)
+            The values are the corresponding proposition labelled confusion matrices.
+        """
+        for key in list(self.disc_gt_boxes.keys()):
+            self.prop_conf_mats[key] = self.calculate_prop_labelled_conf_mat(self.disc_gt_boxes[key], self.disc_pred_boxes[key], self.list_of_classes)
+    
+        return self.prop_conf_mats
+    
 
     def calculate_conf_mat(self,
-                                          gt_boxes:EvalBoxes, 
-                                          pred_boxes: EvalBoxes, 
-                                          conf_mat_mapping: Dict,
-                                          dist_thresh: float = 2.0,       # in m 
-                                          yaw_thresh: float = np.pi/2.0): # in radians  -> np.ndarray:
+                            gt_boxes:EvalBoxes, 
+                            pred_boxes: EvalBoxes, 
+                            conf_mat_mapping: Dict,
+                            dist_thresh: float = 2.0,       # in m 
+                            yaw_thresh: float = np.pi/2.0): # in radians  -> np.ndarray:
 
         EMPTY = len(self.list_of_classes)
         distance_param_conf_mat = np.zeros( (len(self.list_of_classes)+1, len(self.list_of_classes)+1) )
@@ -234,45 +274,55 @@ class GenerateConfusionMatrix:
         # assert c == 81
         return distance_param_conf_mat
     
-    def powerset(self, iterable):
-        "powerset([1,2,3]) --> () (1,) (2,) (3,) (1,2) (1,3) (2,3) (1,2,3)"
+    def powerset(self, iterable: Iterable):
+        """powerset function to generate all possible subsets of any iterable
+
+        Args:
+            iterable (Iterable): The iterable to create the powerset of
+
+        Returns:
+            An iterable chain object containing all possible subsets of the input iterable
+        """
         s = list(iterable)
         return chain.from_iterable(combinations(s, r) for r in range(len(s)+1))    
     
-    def calculate_prop_labelled_conf_mat(self, gt_boxes:EvalBoxes, 
-                                      pred_boxes: list, 
-                                      list_of_propositions: list, 
-                                      class_name:str) -> np.ndarray:
-    
+    def calculate_prop_labelled_conf_mat(self, 
+                                         gt_boxes:EvalBoxes, 
+                                         pred_boxes: list, 
+                                         list_of_propositions: list, 
+                                         class_name:str) -> np.ndarray:
+        
+        EMPTY = len(self.list_of_classes)
+        propn_labelled_conf_mat = np.zeros( (len(self.list_of_classes)+1, len(self.list_of_classes)+1) )
+
         propn_indices = list(range(len(list_of_propositions)))
-        propn_powerset = list(powerset(propn_indices))
+        propn_powerset = list(self.powerset(propn_indices))
 
         for sample_token in gt_boxes.sample_tokens:
             sample_pred_list = pred_boxes[sample_token]
             sample_gt_list = gt_boxes[sample_token]
             taken = set()  # Initially no gt bounding box is matched.
 
-            gt_classes   = set([gt.detection_name for gt in sample_gt_list])
-            pred_classes = set([pred.detection_name for pred in sample_gt_list])
-            
+            gt_classes = {gt.detection_name for gt in sample_gt_list}
+            pred_classes = {pred.detection_name for pred in sample_gt_list}
+
+            #TODO convert into generic
             gt_classes = {"ped" if x == "pedestrian" else "obs" for x in gt_classes}
             pred_classes = {"ped" if x == "pedestrian" else "obs" for x in pred_classes}
 
             gt_idx = 0
-            gt_propn = "empty"
             pred_idx = 0
-            pred_propn = "empty"
 
             for i, propn in enumerate(propn_powerset):
-                
+
                 classes = {} if len(propn) == 0 else {list_of_propositions[c] for c in propn}
-                
+
                 if gt_classes == set(classes):
-                    gt_propn = set(propn)
                     gt_idx = i
                 if pred_classes == set(classes):
-                    pred_propn = set(propn)
                     pred_idx = i
 
             propn_labelled_conf_mat[pred_idx][gt_idx] += 1
+            
+        return propn_labelled_conf_mat
         
