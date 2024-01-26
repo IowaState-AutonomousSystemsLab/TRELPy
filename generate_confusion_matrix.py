@@ -162,11 +162,15 @@ class GenerateConfusionMatrix:
             print('Filtering ground truth annotations')
         self.gt_boxes = filter_eval_boxes(self.nusc, self.gt_boxes, self.cfg.class_range, verbose=self.verbose)
     
-    def __check_distance_param_settings(self) -> None:
-        """Check that the distance parametrization settings are valid.
-            
-        Args:
-            None
+    def get_distance_param_conf_mat(self):
+        for key in list(self.disc_gt_boxes.keys()):
+            self.dist_conf_mats[key] = self.calculate_conf_mat(self.disc_gt_boxes[key], self.disc_pred_boxes[key], self.conf_mat_mapping)
+    
+    _ = None
+    
+    def check_distance_param_settings(self) -> None:
+        """
+            Check that the distance parametrization settings are valid.
         """
         if self.distance_parametrized:
             assert self.lower_thresh < self.upper_thresh, 'Error: lower_thresh must be lesser than upper_thresh'

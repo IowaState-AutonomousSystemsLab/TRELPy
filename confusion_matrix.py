@@ -1,21 +1,25 @@
 import numpy as np
 import pickle as pkl
 from pdb import set_trace as st
+from collections import OrderedDict as od
 
-class CM:
-    def __init__(self, cm_file, obs, labels):
+class ConfusionMatrix:
+    def __init__(self, cm_generator, obs, labels, label_type="class"):
         '''
+        Attributes:
+        cm_generator: GenerateConfusionMatrix object that was used to compute the confusion matrix. 
+        This object carries all the information on 
+        obs: List of observations
         labels: an input dictionary such as {1: "ped", 2:"obs", ...}
+        n: number of labels
+        cm_file: Default is None. String containing the location of where the confusion matrix was saved
+        
         '''
-        self.cm_file = cm_file
         self.obs = obs
         self.labels = labels
-        self.cm, self.param_cm = self.read_confusion_matrix()
-        self.assert_labels()
-        self.C = self.construct_confusion_matrix_dict(self.cm) # Class-based confusion matrix
-        self.dist_param_C = dict() # Proposition based, distance parametrized confusion matrix
         self.n = len(self.labels)
-        self.eps = 1e-3
+        self.cm_file = None
+
 
     def assert_labels(self):
         '''
@@ -30,9 +34,19 @@ class CM:
             self.canonical_cm += v # Total class based conf matrix w/o distance
 
     def read_confusion_matrix(self):
-        self.conf_matrix = pkl.load(open(self.cm_file, "rb" ))
+        with open(self.cm_file, "rb") as f:
+            conf_matrix = pkl.load(f)
+        f.close()
+        return conf_matrix
         
-    
+    def read_from_file(self, cm_file):
+        if self.cm_file is None:
+            self.cm_file = cm_file
+        self.cm = self.read_confusion_matrix()
+        self.assert_labels()
+        self.C = self.construct_confusion_matrix_dict(self.cm) # Class-based confusion matrix
+        self.dist_param_C = dict() # Proposition based, distance parametrized confusion matrix
+
     def parametrized_confusion_matrix(self):
         for k, cm in self.param_cm.items():
             self.dist_param_C[k] = self.construct_confusion_matrix_dict(cm)
