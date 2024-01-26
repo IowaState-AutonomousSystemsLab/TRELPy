@@ -7,6 +7,7 @@ from itertools import chain, combinations
 
 
 from custom_env import dataset_root as dataroot
+
 from mmdet3d.evaluation.metrics import nuscenes_metric as nus_metric
 from custom_env import home_dir, output_dir, preds_dir, model_dir, is_set_to_mini
 
@@ -63,3 +64,4 @@ generator = GenerateConfusionMatrix(nusc=nusc,
 )
 
 generator.get_distance_param_conf_mat()
+generator.get_proposition_labelled_conf_mat()
