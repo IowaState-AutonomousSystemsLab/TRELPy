@@ -1,5 +1,4 @@
 from generate_confusion_matrix import GenerateConfusionMatrix
-from confusion_matrix import ConfusionMatrix
 
 import os
 import numpy as np
@@ -8,6 +7,7 @@ from itertools import chain, combinations
 
 
 from custom_env import dataset_root as dataroot
+
 from mmdet3d.evaluation.metrics import nuscenes_metric as nus_metric
 from custom_env import home_dir, output_dir, preds_dir, model_dir, is_set_to_mini
 
@@ -16,7 +16,6 @@ from nuscenes import NuScenes
 from nuscenes.eval.common.config import config_factory
 from nuscenes.eval.common.data_classes import EvalBoxes
 
-import pdb
 # parameters to setup nuScenes
 
 eval_set_map = {

@@ -169,7 +169,7 @@ class GenerateConfusionMatrix:
             assert self.distance_bin > 0, 'Error: distance_bin must be > 0'
             
             
-    def get_distance_param_conf_mat(self):
+    def get_distance_param_conf_mat(self) -> Dict[Tuple[int, int], np.ndarray]:
         """Get a dictionary with the distance parametrized confusion matrices for each distance bin.
         
         Args:
@@ -271,8 +271,8 @@ class GenerateConfusionMatrix:
     def calculate_prop_labelled_conf_mat(self, 
                                          gt_boxes:EvalBoxes, 
                                          pred_boxes: list, 
-                                         list_of_propositions: list,
-                                         class_str: None) -> np.ndarray:
+                                         list_of_propositions: list, 
+                                         class_names:list) -> np.ndarray:
         
         n = len(self.list_of_classes)
         propn_labelled_conf_mat = np.zeros( ( (2**n), (2**n)) )
