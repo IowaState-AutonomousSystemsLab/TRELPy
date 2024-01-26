@@ -64,5 +64,9 @@ generator = GenerateConfusionMatrix(nusc=nusc,
     distance_bin=10
 )
 
-cm = generator.get_distance_param_conf_mat()
+cm = generator.get_proposition_labelled_conf_mat()
+canonical_cm = np.zeros((3,3))
+for k, cm_k in cm.items():
+    # pdb.set_trace()
+    canonical_cm += cm_k
 pdb.set_trace()
