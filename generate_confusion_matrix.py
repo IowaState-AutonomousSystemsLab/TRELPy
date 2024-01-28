@@ -239,10 +239,10 @@ class GenerateConfusionMatrix:
                                 iou = scale_iou(sample_pred_list[match_idx], gt)
                                 if best_iou < iou:
                                         best_iou = iou
-                                        best_match = (gt, sample_pred_list[match_idx], match_idx)
+                                        best_match = (sample_pred_list[match_idx], gt, match_idx)
                         
                         if len(match_pred_ids) == 0:
-                                distance_param_conf_mat[conf_mat_mapping[gt.detection_name]][EMPTY] += 1
+                                distance_param_conf_mat[EMPTY][conf_mat_mapping[gt.detection_name]] += 1
                                 continue
                         else:
                                 taken.add(best_match[2])

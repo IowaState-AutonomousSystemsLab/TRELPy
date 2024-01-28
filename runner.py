@@ -1,10 +1,10 @@
 from generate_confusion_matrix import GenerateConfusionMatrix
-
+from confusion_matrix import ConfusionMatrix
 import os
 import numpy as np
 from typing import Tuple, Dict, Any, List
 from itertools import chain, combinations
-
+from pdb import set_trace as st
 
 from custom_env import dataset_root as dataroot
 
@@ -63,9 +63,6 @@ generator = GenerateConfusionMatrix(nusc=nusc,
     distance_bin=10
 )
 
-cm = generator.get_proposition_labelled_conf_mat()
-canonical_cm = np.zeros((3,3))
-for k, cm_k in cm.items():
-    # pdb.set_trace()
-    canonical_cm += cm_k
-pdb.set_trace()
+cm_prop = generator.get_proposition_labelled_conf_mat()
+cm = generator.get_distance_param_conf_mat()
+st()
