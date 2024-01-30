@@ -40,6 +40,8 @@ PED = 0
 OBS = 1
 EMPTY = 2
 
+labels = {0: "ped", 1: "obs", 2:"empty"}
+
 conf_mat_mapping = {
     "pedestrian": PED,
     "bus": OBS,
@@ -65,4 +67,12 @@ generator = GenerateConfusionMatrix(nusc=nusc,
 
 cm_prop = generator.get_proposition_labelled_conf_mat()
 cm = generator.get_distance_param_conf_mat()
+
+confusion_matrix = ConfusionMatrix(generator, list_of_classes, labels)
+confusion_matrix.set_confusion_matrix(cm, label_type="class")
+cm_file = "/home/apurvabadithela/software/run_nuscenes_evaluations/saved_cms/lidar/mini/cm.pkl"
+confusion_matrix.save_confusion_matrix(cm_file, label_type="class")
+prop_cm_file = "/home/apurvabadithela/software/run_nuscenes_evaluations/saved_cms/lidar/mini/prop_cm.pkl"
+confusion_matrix.set_confusion_matrix(cm_prop, label_type="prop")
+confusion_matrix.save_confusion_matrix(prop_cm_file, label_type="prop")
 st()

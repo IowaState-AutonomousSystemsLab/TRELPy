@@ -2,6 +2,23 @@ import numpy as np
 import pickle as pkl
 from pdb import set_trace as st
 from collections import OrderedDict as od
+from collections.abc import Iterable
+from itertools import chain, combinations
+from custom_env import *
+import os
+
+def powerset(s: list):
+        """powerset function to generate all possible subsets of any iterable
+
+        Args:
+            iterable (Iterable): The iterable to create the powerset of
+
+        Returns:
+            An iterable chain object containing all possible subsets of the input iterable
+        """
+        if isinstance(s, Iterable):
+            s = list(s)
+        return chain.from_iterable(combinations(s, r) for r in range(len(s)+1)) 
 
 class ConfusionMatrix:
     def __init__(self, cm_generator, obs, labels, label_type="class"):
@@ -18,12 +35,26 @@ class ConfusionMatrix:
         self.obs = obs
         self.cm_generator = cm_generator
         self.labels = labels
-        self.n = len(self.labels)
+        self.setup_attr()
         self.prop_cm_file = None
         self.cm_file = None
         self.confusion_matrix = None # Canonical confusion matrix stored in file
         self.prop_confusion_matrix = None # Proposition confusion matrix stored in file
         self.model_info = None # ToDo: this needs to be set.
+
+    def setup_attr(self):
+        self.prop_obs = list(powerset(self.obs))
+        self.obs.append("empty")
+        self.prop_obs.append("empty")
+        self.prop_labels = self.labels.copy()
+        self.labels.update({len(self.obs):"empty"})
+        self.prop_labels.update({len(self.prop_obs):"empty"})
+        self.n = len(self.labels)
+        self.prop_n = len(self.prop_obs)
+
+    def setup_paths(self):
+        self.result_path = self.cm_generator.result_path
+        
 
     def assert_labels(self, label_type):
         '''
@@ -64,6 +95,8 @@ class ConfusionMatrix:
             self.prop_confusion_matrix = cm
     
     def save_confusion_matrix(self, file, label_type="class"):
+        # Todo: Add script here that creates the new directory if it does 
+        # not already exist.
         with open(file, "wb") as f:
             if label_type == "class":
                 if self.cm_file is None:
