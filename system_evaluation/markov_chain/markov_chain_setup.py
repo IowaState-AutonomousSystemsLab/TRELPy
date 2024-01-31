@@ -1,10 +1,10 @@
 import sys
 sys.path.append("../..")
-import ped_controller as Kped
-import not_ped_controller as Kobj
-import empty_controller as Kempty
-import construct_mc as cmp
-import distance_param_construct_mc as param_cmp
+import controllers.ped_controller as Kped
+import controllers.not_ped_controller as Kobj
+import controllers.empty_controller as Kempty
+import markov_chain.construct_mc as cmp
+import markov_chain.distance_param_construct_mc as param_cmp
 import importlib
 import pdb
 

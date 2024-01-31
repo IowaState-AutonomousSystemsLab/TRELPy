@@ -344,9 +344,15 @@ class synth_markov_chain:
     
     # Function that returns the distance bin of a particular discrete state:
     def get_distbin(self, ped_st, init_st):
+        # 1/30/24: ToDo: Fix this logic. The distance bins need to be changed / fixed.
         ped_cell = ped_st[0]
         init_cell = init_st[0]
-        distbin = abs(ped_cell-init_cell)//10 
+        distance_z = (abs(ped_cell-init_cell)//10)
+        ld = distance_z*10
+        ud = ld + 10
+        if ld > 0:
+            ld += 1
+        distbin = (ld, ud)
         return distbin
         
     # Constructing the Markov chain 

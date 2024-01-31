@@ -52,7 +52,9 @@ def construct_backup_controller(Ncar, Vlow, Vhigh):
 # Read confusion matrix from nuscnes file:
 def read_confusion_matrix(cm_fn):
     conf_matrix = pkl.load( open(cm_fn, "rb" ))
-    n = len(conf_matrix[0][0])
+    for k,v in conf_matrix.items():
+        n = len(conf_matrix[k][0])
+        break
     cm = np.zeros((n,n))
     for k, v in conf_matrix.items():
         cm += v # Total class based conf matrix w/o distance
@@ -400,6 +402,8 @@ class synth_markov_chain:
     # Probabilistic satisfaction of a temporal logic with respect to a model:
     def prob_TL(self, phi):
         model_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), "models")
+        if not os.path.exists(model_path):
+            os.makedirs(model_path)
         prism_file_path = os.path.join(model_path, "pedestrian.nm")
         path_MC = os.path.join(model_path, model_MC)
         env_MC = os.path.join(model_path, "env_MC.nm")

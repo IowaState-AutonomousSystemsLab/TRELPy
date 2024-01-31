@@ -1,8 +1,9 @@
 import sys
 sys.path.append("..")
 import numpy as np
+import os
 from pathlib import Path
-
+import pdb
 try: 
     from system_evaluation.markov_chain import construct_mc as cmp
     from system_evaluation.controllers import construct_controllers as K_des
@@ -10,10 +11,9 @@ try:
 except:
     from markov_chain import construct_mc as cmp
     from controllers import construct_controllers as K_des
-    from markov_chain.MC import construct_controllers as K_des
+    from markov_chain.markov_chain_setup import call_MC, call_MC_param
 
 import matplotlib as plt
-from MC import call_MC, call_MC_param
 # from figure_plot import probability_plot
 import time
 import json
@@ -77,14 +77,17 @@ def initialize(vmax, MAX_V):
     formula = "P=?[G("+str(phi1)+") && G("+str(phi2)+")]"
     return Ncar, Vlow, Vhigh, xcross_start, xped, bad_states, good_state, formula
 
-cm_fn = "cm/full1_3class_cm_ped_obs_cam_f_hz_100_distbin_10.p"
+cm_fn = "/home/apurvabadithela/software/run_nuscenes_evaluations/saved_cms/lidar/mini/cm.pkl"
+control_dir = "/home/apurvabadithela/software/run_nuscenes_evaluations/system_evaluation/controllers/"
 C, param_C = cmp.confusion_matrix(cm_fn)
+
 VMAX = []
 INIT_V = dict()
 P = dict()
 P_param = dict()
-MAX_V = 7
-for vmax in range(1,MAX_V+1):
+# For some reason, unable to synthesize for max_v = 6
+MAX_V = 6
+for vmax in range(1,MAX_V-1):
     INIT_V[vmax] = []
     P[vmax] = []
     P_param[vmax] = []
@@ -99,7 +102,7 @@ for vmax in range(1,MAX_V+1):
         start_state = "S"+str(state_f(1,vcar))
         print(start_state)
         S, state_to_S, K_backup = cmp.system_states_example_ped(Ncar, Vlow, Vhigh)
-        K = K_des.construct_controllers(Ncar, Vlow, Vhigh, xped, vcar, xcross_start)
+        K = K_des.construct_controllers(Ncar, Vlow, Vhigh, xped, vcar,control_dir=control_dir)
         true_env = str(1) #Sidewalk 3
         true_env_type = "ped"
         O = {"ped", "obj", "empty"}
@@ -115,6 +118,7 @@ for vmax in range(1,MAX_V+1):
         # result = M.prob_TL(formula)
         result2 = M.prob_TL(formula2)
         result_param = param_M.prob_TL(formula2)
+        pdb.set_trace()
         print('Probability of eventually reaching good state for initial speed, {}, and max speed, {} is p = {}:'.format(vcar, vmax, result2[start_state]))
         # Store results:
         VMAX.append(vmax)
@@ -125,11 +129,16 @@ for vmax in range(1,MAX_V+1):
         P_param[vmax].append(result_param[start_state])
 
 # Write to json file:
-results_folder = ""
-fname_v = "probability_results/full1_3class_cm_ped_vmax_"+str(MAX_V)+"_initv.json"
-fname_p = "results/full1_3class_cm_ped_vmax_"+str(MAX_V)+"_prob.json"
-fname_param_p = "results/full1_3class_param_cm_ped_vmax_"+str(MAX_V)+"_prob.json"
+results_folder = "/home/apurvabadithela/software/run_nuscenes_evaluations/saved_cms/lidar/mini/probability_results"
+if not os.path.exists(results_folder):
+    os.makedirs(results_folder)
+result_type="class"
+dataset_label="mini"
+fname_v = Path(f"{results_folder}/{dataset_label}_{result_type}_cm_ped_vmax_"+str(MAX_V)+"_initv.json")
+fname_p = Path(f"{results_folder}/{dataset_label}_{result_type}_cm_ped_vmax_"+str(MAX_V)+"_prob.json")
+fname_param_p = Path(f"{results_folder}/{dataset_label}_{result_type}_param_cm_ped_vmax_"+str(MAX_V)+"_prob.json")
 
+#pdb.set_trace()
 with open(fname_v, 'w') as f:
     json.dump(INIT_V, f)
 with open(fname_p, 'w') as f:

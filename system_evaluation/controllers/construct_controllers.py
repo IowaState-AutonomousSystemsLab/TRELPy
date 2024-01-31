@@ -9,7 +9,7 @@ from tulip.abstract import prop2part, discretize
 from tulip.abstract.plot import plot_partition
 from tulip.dumpsmach import write_python_case
 from tulip.spec.gr1_fragment import response_to_gr1
-import pdb
+from pdb import set_trace as st
 # This script invokes TuLiP to construct a controller for the system with respect to a
 # temporal logic specification based on the observed outputs of the perception algorithm
 # Inputs to the controller synthesis function are: discrete_dynamics (disc_dynamics),

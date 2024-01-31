@@ -1,7 +1,9 @@
 import matplotlib.pyplot as plt
 import numpy as np
 import json
+import os
 import pdb
+from pathlib import Path
 
 def probability_plot(INIT_V, P, fig_name,title=None):
     fig, ax = plt.subplots()
@@ -103,20 +105,16 @@ def probability_individual_plot(INIT_V, P, fig_name):
     plt.savefig(fig_name, format='png', dpi=1200)
     plt.show()
 
-def plot_results(MAX_V, res_type):
-    if res_type == "prop_based":
-        fname_v = "results/full1_3prop_cm_ped_vmax_"+str(MAX_V)+"_initv.json"
-        fname_p = "results/full1_3prop_cm_ped_vmax_"+str(MAX_V)+"_prob.json"
-        fname_p_param = "results/full1_3prop_param_cm_ped_vmax_"+str(MAX_V)+"_prob.json"
-        fig_name = "figures/full1_3prop_cm_ped_vmax_"+str(MAX_V)+".png"
-        fig_name_param = "figures/full1_3prop_param_cm_ped_vmax_"+str(MAX_V)+".png"
-    else:
-        fname_v = "results/full1_3class_cm_ped_vmax_"+str(MAX_V)+"_initv.json"
-        fname_p = "results/full1_3class_cm_ped_vmax_"+str(MAX_V)+"_prob.json"
-        fname_p_param = "results/full1_3class_param_cm_ped_vmax_"+str(MAX_V)+"_prob.json"
-        fig_name = "figures/full1_3class_cm_ped_vmax_"+str(MAX_V)+".png"
-        fig_name_param = "figures/full1_3class_param_cm_ped_vmax_"+str(MAX_V)+".png"
-
+def plot_results(results_folder, dataset_label, MAX_V, res_type):
+    fname_v = Path(f"{results_folder}/{dataset_label}_{res_type}_cm_ped_vmax_"+str(MAX_V)+"_initv.json")
+    fname_p = Path(f"{results_folder}/{dataset_label}_{res_type}_cm_ped_vmax_"+str(MAX_V)+"_prob.json")
+    fname_p_param = Path(f"{results_folder}/{dataset_label}_{res_type}_param_cm_ped_vmax_"+str(MAX_V)+"_prob.json")
+    figure_folder = Path(f"{results_folder}/figures")
+    if not os.path.exists(figure_folder):
+        os.makedirs(figure_folder)
+    fig_name = Path(f"{figure_folder}/{dataset_label}_{res_type}_cm_ped_vmax_"+str(MAX_V)+".png")
+    fig_name_param = Path(f"{figure_folder}/{dataset_label}_{res_type}_param_cm_ped_vmax_"+str(MAX_V)+".png")
+    
     with open(fname_v) as fv:
         INIT_V = json.load(fv)
     with open(fname_p) as fp:
@@ -177,10 +175,13 @@ def plot_sensitivity_results_w_errorbars(MAX_V):
         tp = json.load(fp_tp)
 
     sensitivity_probability_plot_w_errorbars(INIT_V, P, std_P, fig_name, title=title)
+
 if __name__=="__main__":
     MAX_V = 6
-    plot_results(MAX_V, "prop_based")
-    plot_results(MAX_V, "class_based")
+    # plot_results(MAX_V, "prop_based")
+    results_folder = Path(f"/home/apurvabadithela/software/run_nuscenes_evaluations/saved_cms/lidar/mini/probability_results")
+    dataset_label="mini"
+    plot_results(results_folder, dataset_label, MAX_V, "class")
     #plot_sensitivity_results(MAX_V)
-    plot_sensitivity_results_w_errorbars(MAX_V)
+    # plot_sensitivity_results_w_errorbars(MAX_V)
 
