@@ -29,7 +29,10 @@ def design_C(env_vars, sys_vars, env_init, sys_init, env_safe, sys_safe, env_pro
 
     # Synthesize
     ctrl = synth.synthesize(specs)
-    assert ctrl is not None, 'unrealizable'
+    try:
+        assert ctrl is not None, 'unrealizable'
+    except:
+        st()
 
     return ctrl
 

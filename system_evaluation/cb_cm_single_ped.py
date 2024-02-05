@@ -20,15 +20,17 @@ import json
 import sys
 sys.setrecursionlimit(10000)
 
+debug = False
+
 def initialize(vmax, MAX_V):
-    Ncar = int(MAX_V*(MAX_V+1)/2 + 10)
+    Ncar = int(MAX_V*(MAX_V+1)/2 + 4)
     Vlow=  0
     Vhigh = vmax
     x_vmax_stop = MAX_V*(MAX_V+1)/2 + 1
-    xcross_start = 2
-    Nped = Ncar - xcross_start + 1
-    if x_vmax_stop >= xcross_start:
-        min_xped = int(x_vmax_stop + 1 - (xcross_start - 1))
+    
+    Nped = Ncar - 1
+    if x_vmax_stop >= 3:
+        min_xped = int(x_vmax_stop) + 1 # pedestrian location should be atleast one cell infront of the vehicle stopping point.
     else:
         min_xped = 3
     assert(min_xped > 0)
@@ -38,7 +40,9 @@ def initialize(vmax, MAX_V):
     else:
         xped = int(min_xped)
     xped = int(min_xped)
-    xcar_stop = xped + xcross_start - 2
+    xcar_stop = xped-1
+    if debug:
+        st()
     assert(xcar_stop > 0)
     state_f = lambda x,v: (Vhigh-Vlow+1)*(x-1)+v
     bad_states = set()
@@ -75,7 +79,7 @@ def initialize(vmax, MAX_V):
         phi2 = phi2 + "|" + bad
     phi2 = phi2 + ")"
     formula = "P=?[G("+str(phi1)+") && G("+str(phi2)+")]"
-    return Ncar, Vlow, Vhigh, xcross_start, xped, bad_states, good_state, formula
+    return Ncar, Vlow, Vhigh, xped, bad_states, good_state, formula
 
 cm_fn = "/home/apurvabadithela/software/run_nuscenes_evaluations/saved_cms/lidar/mini/cm.pkl"
 control_dir = "/home/apurvabadithela/software/run_nuscenes_evaluations/system_evaluation/controllers/"
@@ -87,16 +91,15 @@ P = dict()
 P_param = dict()
 # For some reason, unable to synthesize for max_v = 6
 MAX_V = 6
-for vmax in range(1,MAX_V-1):
+for vmax in range(1,MAX_V+1):
     INIT_V[vmax] = []
     P[vmax] = []
     P_param[vmax] = []
     print("===========================================================")
     print("Max Velocity: ", vmax)
     # Initial conditions set for all velocities
-    Ncar, Vlow, Vhigh, xcross_start, xped, bad_states, good_state, formula = initialize(vmax, MAX_V)
-    print("Specification: ")
-    print(formula)
+    Ncar, Vlow, Vhigh, xped, bad_states, good_state, formula = initialize(vmax, MAX_V)
+   
     for vcar in range(1, vmax+1):  # Initial speed at starting point
         state_f = lambda x,v: (Vhigh-Vlow+1)*(x-1) + v
         start_state = "S"+str(state_f(1,vcar))
@@ -112,13 +115,14 @@ for vmax in range(1,MAX_V-1):
         state_info["good"] = good_state
         for st in list(good_state):
             formula2 = 'P=?[F(\"'+st+'\")]'
+        print("Specification: ")
+        print(formula2)
         M = call_MC(S, O, state_to_S, K, K_backup, C, true_env, true_env_type, state_info)
         param_M = call_MC_param(S, O, state_to_S, K, K_backup, param_C, true_env, true_env_type, xped, state_info)
 
         # result = M.prob_TL(formula)
         result2 = M.prob_TL(formula2)
         result_param = param_M.prob_TL(formula2)
-        pdb.set_trace()
         print('Probability of eventually reaching good state for initial speed, {}, and max speed, {} is p = {}:'.format(vcar, vmax, result2[start_state]))
         # Store results:
         VMAX.append(vmax)

@@ -201,7 +201,7 @@ class synth_markov_chain:
         self.backup = dict() # This is a backup controller.
 
  # Convert this Markov chain object into a tulip transition system:
-    def to_MC(self, init, bad_states, good_states):
+    def to_MC(self, init):
        states = set(self.states) # Set of product states of the car
        transitions = set()
        for k in self.M.keys():

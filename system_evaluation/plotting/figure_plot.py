@@ -18,7 +18,7 @@ def probability_plot(INIT_V, P, fig_name,title=None):
     plt.xticks(np.arange(1,10,1))
     if title:
         plt.title(title,fontsize=20)
-    ax.set_ylim(0,0.3)
+    ax.set_ylim(0,0.5)
     plt.savefig(fig_name, format='png', dpi=400, bbox_inches = "tight")
     # plt.show()
 
