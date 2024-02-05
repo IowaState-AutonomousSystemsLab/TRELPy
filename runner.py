@@ -9,7 +9,7 @@ from pdb import set_trace as st
 from custom_env import dataset_root as dataroot
 
 from mmdet3d.evaluation.metrics import nuscenes_metric as nus_metric
-from custom_env import home_dir, output_dir, preds_dir, model_dir, is_set_to_mini
+from custom_env import home_dir, cm_dir, repo_dir, output_dir, preds_dir, model_dir, is_set_to_mini
 
 
 from nuscenes import NuScenes
@@ -70,9 +70,8 @@ cm = generator.get_distance_param_conf_mat()
 
 confusion_matrix = ConfusionMatrix(generator, list_of_classes, labels)
 confusion_matrix.set_confusion_matrix(cm, label_type="class")
-cm_file = "/home/apurvabadithela/software/run_nuscenes_evaluations/saved_cms/lidar/mini/cm.pkl"
+cm_file = f"{cm_dir}/cm.pkl"
 confusion_matrix.save_confusion_matrix(cm_file, label_type="class")
-prop_cm_file = "/home/apurvabadithela/software/run_nuscenes_evaluations/saved_cms/lidar/mini/prop_cm.pkl"
+prop_cm_file = f"{cm_dir}/prop_cm.pkl"
 confusion_matrix.set_confusion_matrix(cm_prop, label_type="prop")
 confusion_matrix.save_confusion_matrix(prop_cm_file, label_type="prop")
-st()

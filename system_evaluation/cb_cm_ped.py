@@ -5,7 +5,7 @@ import numpy as np
 import os
 from pathlib import Path
 from experiment_file import *
-import pdb
+# from ..custom_env import cm_dir, is_set_to_mini
 try: 
     from system_evaluation.markov_chain import construct_mc as cmp
     from system_evaluation.controllers import construct_controllers as K_des
@@ -197,14 +197,13 @@ def compute_probabilities(Ncar, MAX_V):
     return INIT_V, P, P_param
 
 def save_results(INIT_V, P, P_param):
-    results_folder = "/home/apurvabadithela/software/run_nuscenes_evaluations/saved_cms/lidar/mini/probability_results"
+    results_folder = f"{cm_dir}/probability_results"
     if not os.path.exists(results_folder):
         os.makedirs(results_folder)
     result_type="class"
-    dataset_label="mini"
-    fname_v = Path(f"{results_folder}/{dataset_label}_{result_type}_cm_ped_vmax_"+str(MAX_V)+"_initv.json")
-    fname_p = Path(f"{results_folder}/{dataset_label}_{result_type}_cm_ped_vmax_"+str(MAX_V)+"_prob.json")
-    fname_param_p = Path(f"{results_folder}/{dataset_label}_{result_type}_param_cm_ped_vmax_"+str(MAX_V)+"_prob.json")
+    fname_v = Path(f"{results_folder}/{result_type}_cm_ped_vmax_"+str(MAX_V)+"_initv.json")
+    fname_p = Path(f"{results_folder}/{result_type}_cm_ped_vmax_"+str(MAX_V)+"_prob.json")
+    fname_param_p = Path(f"{results_folder}/{result_type}_param_cm_ped_vmax_"+str(MAX_V)+"_prob.json")
 
     #pdb.set_trace()
     with open(fname_v, 'w') as f:

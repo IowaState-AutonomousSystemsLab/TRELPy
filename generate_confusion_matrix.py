@@ -8,7 +8,7 @@ from collections.abc import Iterable
 from itertools import chain, combinations
 
 from nuscenes import NuScenes
-from nuscenes.eval.common.data_classes import EvalBoxes
+from nuscenes.eval.common.data_classes import EvalBoxes, EvalBox
 from nuscenes.eval.common.utils import center_distance, scale_iou, yaw_diff
 from nuscenes.eval.detection.data_classes import DetectionConfig, DetectionBox
 from nuscenes.eval.common.loaders import load_prediction, load_gt, add_center_dist, filter_eval_boxes
@@ -266,7 +266,59 @@ class GenerateConfusionMatrix:
             An iterable chain object containing all possible subsets of the input iterable
         """
         s = list(iterable)
-        return chain.from_iterable(combinations(s, r) for r in range(len(s)+1))    
+        return chain.from_iterable(combinations(s, r) for r in range(len(s)+1))   
+    
+    def __unit_vector(self, vector):
+        """ Returns the unit vector of the vector.  """
+        return vector / np.linalg.norm(vector)
+
+    def __angle_between(self, v1, v2):
+        """ Returns the angle in radians between vectors 'v1' and 'v2'::
+
+                >>> angle_between((1, 0, 0), (0, 1, 0))
+                1.5707963267948966
+                >>> angle_between((1, 0, 0), (1, 0, 0))
+                0.0
+                >>> angle_between((1, 0, 0), (-1, 0, 0))
+                3.141592653589793
+        """
+        v1_u = self.__unit_vector(v1)
+        v2_u = self.__unit_vector(v2)
+        return np.arccos(np.clip(np.dot(v1_u, v2_u), -1.0, 1.0))
+    
+    def cluster(self,
+                gt_boxes:EvalBoxes, 
+                pred_boxes: list, 
+                list_of_classes: list) -> np.ndarray:
+        
+        n = len(self.list_of_classes)
+        gt_vectors:Dict(EvalBox, np.ndarray) = {}
+        pred_vectors:Dict(EvalBox, np.ndarray) = {}
+        # Make new Eval Boxes object
+        # Iterate through each sample token
+        # For each sample token, iterate through each ground truth box
+        # Caclulate the vector between the ego vehicle - ground truth box and ego - prediction box
+        # Add it to the vectors dictionary
+        
+        for sample_token in gt_boxes.sample_tokens:
+            # get the orientation of the ego vehicle
+                # -- Orientation of the vehicle is given as a quaternion
+                # -- The vector, calculated with ](x1-x2), (y1-y2), ...] etc is Euler I believe?
+            sample = self.nusc.get('sample', sample_token)
+            sd_record = self.nusc.get('sample_data', sample['data']['LIDAR_TOP'])
+            self.nusc.get('ego_pose', sd_record['ego_pose_token'])
+            
+            sample_pred_list = pred_boxes[sample_token]
+            sample_gt_list = gt_boxes[sample_token]
+            
+            something = "ego's orientation that is the same for everyting in this sample" 
+            
+            for gt in sample_gt_list:
+                gt_vectors[gt] = self.__angle_between(gt.ego_translation, something)
+            
+        
+         
+        
     
     def calculate_prop_labelled_conf_mat(self, 
                                          gt_boxes:EvalBoxes, 
