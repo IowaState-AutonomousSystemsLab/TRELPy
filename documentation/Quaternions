@@ -1,0 +1,37 @@
+[GOD TIER Complex Number tutorial](https://www2.clarku.edu/faculty/djoyce/complex/mult.html)
+
+[Quaternion Explanation](https://www.youtube.com/watch?v=jTgdKoQv738)
+
+
+4 Dimensional extension of the complex numbers
+- Where a complex number is of the form $a + bi$
+$a + bi + cj + dk$
+- $a, b, c, d, \in R$
+- $i, j, k$ are called the fundamental Quaternion units
+
+## Complex Numbers
+
+Multiplying 2 complex numbers with mag 1 results in a complex number with mag 1 with a different rotation
+- Multiplying $x = a + bi$ by $i$ gives $xi = ai + b(i^2)$ but $i^2 = -1$ then $xi = -b + ai$
+- This is a counter clockwise rotation of 90 degrees. 
+
+Think of multiplying $x \cdot t$ where $x = a + bi$ and $t = r + si$ 
+- Based on the previous fact, multiplying by $a + bi$ means scaling by a and rotating by $bi$ where $bi$ is some proportion of 90 degrees
+- Final magnitude will be $|x| \cdot |t|$ = $\sqrt{(a^2 + b^2)} \cdot \sqrt{(r^2 + s^2)}$  
+- $arg(x) = arctan(\frac{a}{b})$  
+- $arg(t) = arctan(\frac{r}{s})$
+- Final rotation will be the sum of the two angles above
+- $x = cos(\theta) + i sin(\theta)$ or j or k
+
+## Quaternions
+- $i^2 = j^2 = k^2 = -1$
+- $i \times j = k$ and $j \times i = -k$
+-  $j \times k = i$ and $k \times j = -i$
+-  $k \times i = j$ and $i \times k = -j$
+
+SEE Image titled ijk circle to understand better
+
+
+
+
+
