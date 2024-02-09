@@ -3,8 +3,9 @@
 # Copy of the evaluate.py script from nuScenes
 import os
 import numpy as np
-from typing import Tuple, Dict, Any, List
+from cluster import Cluster
 from collections.abc import Iterable
+from typing import Tuple, Dict, Any, List
 from itertools import chain, combinations
 
 from nuscenes import NuScenes
@@ -82,6 +83,9 @@ class GenerateConfusionMatrix:
         self.disc_pred_boxes: dict(Tuple[int, int], EvalBoxes) = {}
         self.conf_mat_mapping = conf_mat_mapping
         
+        self.gt_clusters:dict(Tuple[int, int], dict(str, list)) = {}   # {distance_bin: {sample_token: [Cluster1, Cluster2, ...]}
+        self.pred_clusters:dict(Tuple[int, int], dict(str, list)) = {}   # {sample_token: {distance_bin: [Cluster1, Cluster2, ...]}}
+        
         self.__load_boxes()
         self.__initialize()
         # self.__check_distance_param_settings()
@@ -115,21 +119,29 @@ class GenerateConfusionMatrix:
                 self.disc_pred_boxes[(0, self.distance_bin)] = EvalBoxes()
                 self.dist_conf_mats[(0, self.distance_bin)] = np.zeros((n+1, n+1))
                 self.prop_conf_mats[(0, self.distance_bin)] = np.zeros(((2**n), (2**n)))
+                for sample_token in self.gt_boxes.sample_tokens:
+                    self.gt_clusters[sample_token][(0, self.distance_bin)] = []
+                    self.pred_clusters[sample_token][(0, self.distance_bin)] = []
             else:
                 self.disc_gt_boxes[( (self.distance_bin * i)+1, self.distance_bin * (i + 1) )] = EvalBoxes()
                 self.disc_pred_boxes[( (self.distance_bin * i)+1, self.distance_bin * (i + 1) )] = EvalBoxes()
                 self.dist_conf_mats[( (self.distance_bin * i)+1, self.distance_bin * (i + 1) )] = np.zeros((n+1, n+1))
                 self.prop_conf_mats[( (self.distance_bin * i)+1, self.distance_bin * (i + 1) )] = np.zeros(((2**n), (2**n)))
-
+                for sample_token in self.gt_boxes.sample_tokens:
+                    self.gt_clusters[sample_token][( (self.distance_bin * i)+1, self.distance_bin * (i + 1) )] = []
+                    self.pred_clusters[sample_token][( (self.distance_bin * i)+1, self.distance_bin * (i + 1) )] = []
+            
         # Segmenting the ground truth and prediction boxes into distance bins
         for gt in self.gt_boxes.all:
+            gt.ego_translation[-1] = 0                         #TODO check if this is working as expected
             dist = np.sqrt(np.dot(gt.ego_translation, gt.ego_translation))
-            key = list(self.disc_gt_boxes.keys())[int(dist // self.distance_bin)]      # TODO check if this is correct at the edges
+            key = list(self.disc_gt_boxes.keys())[int(dist // self.distance_bin)]      
             self.disc_gt_boxes[key].add_boxes(sample_token=gt.sample_token, boxes=[gt])
             
         for pred in self.pred_boxes.all:
+            pred.ego_translation[-1] = 0                        #TODO check if this is working as expected
             dist = np.sqrt(np.dot(pred.ego_translation, pred.ego_translation))
-            key = list(self.disc_pred_boxes.keys())[int(dist // self.distance_bin)]      # TODO check if this is correct at the edges
+            key = list(self.disc_pred_boxes.keys())[int(dist // self.distance_bin)]     
             self.disc_pred_boxes[key].add_boxes(sample_token=pred.sample_token, boxes=[pred])
 
     def __load_boxes(self) -> None:
@@ -268,32 +280,16 @@ class GenerateConfusionMatrix:
         s = list(iterable)
         return chain.from_iterable(combinations(s, r) for r in range(len(s)+1))   
     
-    def __unit_vector(self, vector):
-        """ Returns the unit vector of the vector.  """
-        return vector / np.linalg.norm(vector)
-
-    def __angle_between(self, v1, v2):
-        """ Returns the angle in radians between vectors 'v1' and 'v2'::
-
-                >>> angle_between((1, 0, 0), (0, 1, 0))
-                1.5707963267948966
-                >>> angle_between((1, 0, 0), (1, 0, 0))
-                0.0
-                >>> angle_between((1, 0, 0), (-1, 0, 0))
-                3.141592653589793
-        """
-        v1_u = self.__unit_vector(v1)
-        v2_u = self.__unit_vector(v2)
-        return np.arccos(np.clip(np.dot(v1_u, v2_u), -1.0, 1.0))
-    
     def cluster(self,
                 gt_boxes:EvalBoxes, 
                 pred_boxes: list, 
+                dist_bin: Tuple[int, int],
                 list_of_classes: list) -> np.ndarray:
         
         n = len(self.list_of_classes)
-        gt_vectors:Dict(EvalBox, np.ndarray) = {}
-        pred_vectors:Dict(EvalBox, np.ndarray) = {}
+        # gt_vectors:Dict(EvalBox, np.ndarray) = {}
+        # pred_vectors:Dict(EvalBox, np.ndarray) = {}
+        
         # Make new Eval Boxes object
         # Iterate through each sample token
         # For each sample token, iterate through each ground truth box
@@ -306,16 +302,44 @@ class GenerateConfusionMatrix:
                 # -- The vector, calculated with ](x1-x2), (y1-y2), ...] etc is Euler I believe?
             sample = self.nusc.get('sample', sample_token)
             sd_record = self.nusc.get('sample_data', sample['data']['LIDAR_TOP'])
-            self.nusc.get('ego_pose', sd_record['ego_pose_token'])
+            ego_veh = self.nusc.get('ego_pose', sd_record['ego_pose_token'])
+            
             
             sample_pred_list = pred_boxes[sample_token]
             sample_gt_list = gt_boxes[sample_token]
             
-            something = "ego's orientation that is the same for everyting in this sample" 
             
             for gt in sample_gt_list:
-                gt_vectors[gt] = self.__angle_between(gt.ego_translation, something)
+                # Calculate the distance between the two by calculating the vector between the ego vehicle and the ground truth box
+                # Go through the Average center of mass for each cluster. 
+                #   If the average center of mass is within a threshold, add it to this, else, create a new cluster. Clusters are sorted counterclockwise
+                #   Update the average center of mass for each cluster, AND check (first_elem - last elem) is still within threshold distance
+                added = False
+                
+                for cluster in self.gt_clusters[dist_bin][sample_token]:
+                    if cluster.can_add_box(gt):
+                        cluster.add_box(gt)
+                        added = True
+                        break
+                
+                if not added:
+                    cluster = Cluster(sample_token, ego_veh, 2.0)
+                    self.gt_clusters[dist_bin][sample_token].append(cluster)
+                    
             
+            for pred in sample_pred_list:
+                added = False
+                
+                for cluster in self.pred_clusters[dist_bin][sample_token]:
+                    if cluster.can_add_box(pred):
+                        cluster.add_box(pred)
+                        added = True
+                        break
+                
+                if not added:
+                    cluster = Cluster(sample_token, ego_veh, 2.0)
+                    cluster.add_box(pred)
+                    self.pred_clusters[dist_bin][sample_token].append(cluster)
         
          
         
