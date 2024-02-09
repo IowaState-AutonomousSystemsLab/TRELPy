@@ -14,7 +14,7 @@ class Cluster:
         self.boxes: list(EvalBox) = []
         self.dist_thresh = dist_threshold
         self.ego_vehicle = ego_veh
-        self.ego_veh_yaw, _, _= Quaternion(ego_veh['rotation']).yaw_pitch_roll() 
+        # self.ego_veh_yaw, _, _= Quaternion(ego_veh['rotation']).yaw_pitch_roll()   # Quaternion() returns a tuple not a class object?
         self.closest_box = None
         self.farthest_box = None
         

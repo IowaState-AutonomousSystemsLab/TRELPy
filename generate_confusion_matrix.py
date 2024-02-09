@@ -119,27 +119,31 @@ class GenerateConfusionMatrix:
                 self.disc_pred_boxes[(0, self.distance_bin)] = EvalBoxes()
                 self.dist_conf_mats[(0, self.distance_bin)] = np.zeros((n+1, n+1))
                 self.prop_conf_mats[(0, self.distance_bin)] = np.zeros(((2**n), (2**n)))
+                self.gt_clusters[(0, self.distance_bin)] = {}
+                self.pred_clusters[(0, self.distance_bin)] = {}
                 for sample_token in self.gt_boxes.sample_tokens:
-                    self.gt_clusters[sample_token][(0, self.distance_bin)] = []
-                    self.pred_clusters[sample_token][(0, self.distance_bin)] = []
+                    self.gt_clusters[(0, self.distance_bin)][sample_token] = []
+                    self.pred_clusters[(0, self.distance_bin)][sample_token] = []
             else:
                 self.disc_gt_boxes[( (self.distance_bin * i)+1, self.distance_bin * (i + 1) )] = EvalBoxes()
                 self.disc_pred_boxes[( (self.distance_bin * i)+1, self.distance_bin * (i + 1) )] = EvalBoxes()
                 self.dist_conf_mats[( (self.distance_bin * i)+1, self.distance_bin * (i + 1) )] = np.zeros((n+1, n+1))
                 self.prop_conf_mats[( (self.distance_bin * i)+1, self.distance_bin * (i + 1) )] = np.zeros(((2**n), (2**n)))
+                self.gt_clusters[( (self.distance_bin * i)+1, self.distance_bin * (i + 1) )] = {}
+                self.pred_clusters[( (self.distance_bin * i)+1, self.distance_bin * (i + 1) )] = {}
                 for sample_token in self.gt_boxes.sample_tokens:
-                    self.gt_clusters[sample_token][( (self.distance_bin * i)+1, self.distance_bin * (i + 1) )] = []
-                    self.pred_clusters[sample_token][( (self.distance_bin * i)+1, self.distance_bin * (i + 1) )] = []
+                    self.gt_clusters[( (self.distance_bin * i)+1, self.distance_bin * (i + 1) )][sample_token] = []
+                    self.pred_clusters[( (self.distance_bin * i)+1, self.distance_bin * (i + 1) )][sample_token] = []
             
         # Segmenting the ground truth and prediction boxes into distance bins
         for gt in self.gt_boxes.all:
-            gt.ego_translation[-1] = 0                         #TODO check if this is working as expected
+            gt.ego_translation = (gt.ego_translation[0], gt.ego_translation[1], 0)                         #TODO check if this is working as expected
             dist = np.sqrt(np.dot(gt.ego_translation, gt.ego_translation))
             key = list(self.disc_gt_boxes.keys())[int(dist // self.distance_bin)]      
             self.disc_gt_boxes[key].add_boxes(sample_token=gt.sample_token, boxes=[gt])
             
         for pred in self.pred_boxes.all:
-            pred.ego_translation[-1] = 0                        #TODO check if this is working as expected
+            pred.ego_translation = (pred.ego_translation[0], pred.ego_translation[1], 0)                         #TODO check if this is working as expected
             dist = np.sqrt(np.dot(pred.ego_translation, pred.ego_translation))
             key = list(self.disc_pred_boxes.keys())[int(dist // self.distance_bin)]     
             self.disc_pred_boxes[key].add_boxes(sample_token=pred.sample_token, boxes=[pred])
@@ -211,6 +215,12 @@ class GenerateConfusionMatrix:
             self.prop_conf_mats[key] = self.calculate_prop_labelled_conf_mat(self.disc_gt_boxes[key], self.disc_pred_boxes[key], ["ped", "obs"], self.list_of_classes)
     
         return self.prop_conf_mats
+    
+    def get_clustered_conf_mat(self):
+        self.cluster(self.disc_gt_boxes[(11, 20)], 
+                     self.disc_pred_boxes[(11, 20)], 
+                     (11, 20), 
+                     self.list_of_classes)
     
 
     def calculate_conf_mat(self,
@@ -322,7 +332,7 @@ class GenerateConfusionMatrix:
                         added = True
                         break
                 
-                if not added:
+                if added:
                     cluster = Cluster(sample_token, ego_veh, 2.0)
                     self.gt_clusters[dist_bin][sample_token].append(cluster)
                     
@@ -336,7 +346,7 @@ class GenerateConfusionMatrix:
                         added = True
                         break
                 
-                if not added:
+                if added:
                     cluster = Cluster(sample_token, ego_veh, 2.0)
                     cluster.add_box(pred)
                     self.pred_clusters[dist_bin][sample_token].append(cluster)
