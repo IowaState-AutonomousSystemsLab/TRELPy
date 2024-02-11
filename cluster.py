@@ -63,14 +63,15 @@ class Cluster:
         """
         self.sample_token = sample_token
         self.distance_threshold = dist_threshold
-        self.center_of_mass = -1
         self.boxes: list(EvalBox) = []
         self.radius_band = None
-        self.closest_box = None
-        self.farthest_box = None
         self.ego_vehicle = ego_veh
         self.lower_radian_lim = lower_radian_lim
         self.upper_radian_lim = upper_radian_lim
+
+        # self.farthest_box = None
+        # self.closest_box = None
+        # self.center_of_mass = -1
         # self.ego_veh_yaw, _, _= Quaternion(ego_veh['rotation']).yaw_pitch_roll()   # Quaternion() returns a tuple not a class object?
         
     def __unit_vector(self, vector):
