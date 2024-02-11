@@ -42,10 +42,9 @@ class GenerateConfusionMatrix:
                  conf_mat_mapping: Dict = None,
                  list_of_classes: List = None,
                  distance_parametrized: bool = False,
-                #  lower_thresh: float = -1,
-                #  upper_thresh: float = np.inf,
                  max_dist: int = 100,
                  distance_bin:float = 10,
+                 max_dist_bw_obj: float = 2.0,
                  ) -> None:
         """Initialize a DetectionEval object.
             
@@ -77,6 +76,7 @@ class GenerateConfusionMatrix:
         self.num_bins = int(max_dist // distance_bin)
         self.list_of_classes = list_of_classes
         self.verbose = verbose
+        self.max_dist_bw_obj = max_dist_bw_obj
         self.dist_conf_mats: dict(Tuple[int, int], np.ndarray) = {}
         self.prop_conf_mats: dict(Tuple[int, int], np.ndarray) = {}
         self.disc_gt_boxes: dict(Tuple[int, int], EvalBoxes) = {}
@@ -119,21 +119,13 @@ class GenerateConfusionMatrix:
                 self.disc_pred_boxes[(0, self.distance_bin)] = EvalBoxes()
                 self.dist_conf_mats[(0, self.distance_bin)] = np.zeros((n+1, n+1))
                 self.prop_conf_mats[(0, self.distance_bin)] = np.zeros(((2**n), (2**n)))
-                self.gt_clusters[(0, self.distance_bin)] = {}
-                self.pred_clusters[(0, self.distance_bin)] = {}
-                for sample_token in self.gt_boxes.sample_tokens:
-                    self.gt_clusters[(0, self.distance_bin)][sample_token] = []
-                    self.pred_clusters[(0, self.distance_bin)][sample_token] = []
             else:
                 self.disc_gt_boxes[( (self.distance_bin * i)+1, self.distance_bin * (i + 1) )] = EvalBoxes()
                 self.disc_pred_boxes[( (self.distance_bin * i)+1, self.distance_bin * (i + 1) )] = EvalBoxes()
                 self.dist_conf_mats[( (self.distance_bin * i)+1, self.distance_bin * (i + 1) )] = np.zeros((n+1, n+1))
                 self.prop_conf_mats[( (self.distance_bin * i)+1, self.distance_bin * (i + 1) )] = np.zeros(((2**n), (2**n)))
-                self.gt_clusters[( (self.distance_bin * i)+1, self.distance_bin * (i + 1) )] = {}
-                self.pred_clusters[( (self.distance_bin * i)+1, self.distance_bin * (i + 1) )] = {}
-                for sample_token in self.gt_boxes.sample_tokens:
-                    self.gt_clusters[( (self.distance_bin * i)+1, self.distance_bin * (i + 1) )][sample_token] = []
-                    self.pred_clusters[( (self.distance_bin * i)+1, self.distance_bin * (i + 1) )][sample_token] = []
+        
+        self.generate_clusters()
             
         # Segmenting the ground truth and prediction boxes into distance bins
         for gt in self.gt_boxes.all:
@@ -148,6 +140,40 @@ class GenerateConfusionMatrix:
             key = list(self.disc_pred_boxes.keys())[int(dist // self.distance_bin)]     
             self.disc_pred_boxes[key].add_boxes(sample_token=pred.sample_token, boxes=[pred])
 
+    def generate_clusters(self):
+        """generates clusters for the ground truth boxes
+        """
+        
+        '''Hierarchy
+            distance_bin: (0, 10), (11, 20), (21, 30), ... (91, 100) if distance_bin = 10
+                sample_token:
+                    Cluster1, Cluster2 ... Calculated according to s = r*theta where s is self.max_dist_bw_obj and r is the smaller radius
+
+        '''
+        for i in range(self.num_bins):
+            if i = 0:
+                self.gt_clusters[(0, self.distance_bin)] = {}  
+                cluster_theta = self.__calculate_max_radius_bw_obj()
+                    
+                for sample_token in self.gt_boxes.sample_tokens:
+                    self.gt_clusters[(0, self.distance_bin)][sample_token] = []
+                    
+                    for j in range(np.ceil(np.pi/cluster_theta)):
+                        self.gt_clusters[(0, self.distance_bin)][sample_token].append(Cluster(sample_token, 
+                                                                                              None, 
+                                                                                              self.max_dist_bw_obj, 
+                                                                                              (0, self.distance_bin), ))
+            else:
+                self.gt_clusters[( (self.distance_bin*i)+1, (self.distance_bin*(i+1)))] = {}
+        
+        
+        self.gt_clusters[(0, self.distance_bin)] = {}
+        self.pred_clusters[(0, self.distance_bin)] = {}
+                for sample_token in self.gt_boxes.sample_tokens:
+                    self.gt_clusters[(0, self.distance_bin)][sample_token] = []
+                    self.pred_clusters[(0, self.distance_bin)][sample_token] = []
+        
+                    
     def __load_boxes(self) -> None:
         """Loads GT annotations and predictions from respective files and saves them in respective class variables.
         
@@ -346,7 +372,7 @@ class GenerateConfusionMatrix:
                         added = True
                         break
                 
-                if added:
+                if not added:
                     cluster = Cluster(sample_token, ego_veh, 2.0)
                     cluster.add_box(pred)
                     self.pred_clusters[dist_bin][sample_token].append(cluster)
