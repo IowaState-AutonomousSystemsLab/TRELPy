@@ -4,9 +4,15 @@
 import os
 import sys
 from pathlib import Path
+import subprocess
+import pdb
+
+#### Get Repo Root #####
+def getGitRoot():
+    return subprocess.Popen(['git', 'rev-parse', '--show-toplevel'], stdout=subprocess.PIPE).communicate()[0].rstrip().decode('utf-8')
 
 ######## PARMS #########
-model_name = "model2_good"
+model_name = "model_01-05-2024_20_22"
 modality = "lidar"
 is_mini = True
 ########################
@@ -35,7 +41,7 @@ dataset_root = f"{home_dir}/software/mmdetection3d/data/{dataset}/"
 output_dir = f"{home_dir}/nuscenes_dataset/{inf_res}"
 model_dir = str(Path(f"{output_dir}/{model_name}").absolute())
 preds_dir = str(Path(f"{model_dir}/preds").absolute())
-repo_dir = str(Path(f"{home_dir}/nuscenes_dataset/3D_Detection").absolute())
+repo_dir = getGitRoot()
 cm_dir = str(Path(f"{repo_dir}/saved_cms/{modality}/{dataset}/{model_name}").absolute())
 create_dir_if_not_exist(cm_dir)
 cm_fn = f"{cm_dir}/cm.pkl"
