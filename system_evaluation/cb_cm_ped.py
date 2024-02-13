@@ -185,7 +185,7 @@ def compute_probabilities(Ncar, MAX_V):
             # result = M.prob_TL(formula)
             result = M.prob_TL(formula)
             result_param = param_M.prob_TL(formula)
-            pdb.set_trace()
+            # pdb.set_trace()
             print('Probability of eventually reaching good state for initial speed, {}, and max speed, {} is p = {}:'.format(vcar, vmax, result[start_state]))
             # Store results:
             VMAX.append(vmax)
@@ -214,5 +214,5 @@ def save_results(INIT_V, P, P_param):
         json.dump(P_param, f)
 
 if __name__=="__main__":
-    MAX_V = 1
+    MAX_V = 6
     simulate(MAX_V)
