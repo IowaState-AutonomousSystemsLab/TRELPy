@@ -7,12 +7,15 @@ import os
 import pdb
 from pathlib import Path
 from experiment_file import *
+from utils import update_max
 
 def probability_plot(INIT_V, P, fig_name,title=None):
     fig, ax = plt.subplots()
     ax.tick_params(axis='both', which='major', labelsize=15)
+    max_p = update_max()
     for k,v in INIT_V.items():
         probabilities = P[k]
+        max_p = update_max(probabilities, max_p)
         init_speed = INIT_V[k]
         plt.plot(init_speed, probabilities, 'o--', label=f"V={k}")
     leg = plt.legend(loc="best")
@@ -21,7 +24,8 @@ def probability_plot(INIT_V, P, fig_name,title=None):
     plt.xticks(np.arange(1,10,1))
     if title:
         plt.title(title,fontsize=20)
-    ax.set_ylim(0,0.5)
+    y_upper_lim = min(1, max_p+0.1)
+    ax.set_ylim(0,max_p + 0.1)
     plt.savefig(fig_name, format='png', dpi=400, bbox_inches = "tight")
     # plt.show()
 
@@ -125,7 +129,7 @@ def plot_results(results_folder, MAX_V, res_type):
     with open(fname_p_param) as fp_param:
         P_param = json.load(fp_param)
 
-    if res_type == "prop_based":
+    if res_type == "prop":
         probability_plot(INIT_V, P, fig_name, title="Proposition-based")
         probability_plot(INIT_V, P_param, fig_name_param, title="Proposition-based, distance-parametrized")
     else:
@@ -183,8 +187,8 @@ if __name__=="__main__":
     MAX_V = 6
     # plot_results(MAX_V, "prop_based")
     results_folder = Path(f"{cm_dir}/probability_results")
-    # pdb.set_trace()
-    plot_results(results_folder, MAX_V, "prop")
+    result_type = "prop"
+    plot_results(results_folder, MAX_V, result_type)
     #plot_sensitivity_results(MAX_V)
     # plot_sensitivity_results_w_errorbars(MAX_V)
 
