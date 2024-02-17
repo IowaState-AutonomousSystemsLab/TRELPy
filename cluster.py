@@ -4,6 +4,25 @@ import numpy as np
 from pyquaternion import Quaternion
 from nuscenes.eval.common.data_classes import EvalBoxes, EvalBox
 
+def unit_vector(vector):
+        """ Returns the unit vector of the vector.  """
+        return vector / np.linalg.norm(vector)
+
+def angle_between(v1, v2):
+    """ Returns the angle in radians between vectors 'v1' and 'v2'::
+
+            >>> angle_between((1, 0, 0), (0, 1, 0))
+            1.5707963267948966
+            >>> angle_between((1, 0, 0), (1, 0, 0))
+            0.0
+            >>> angle_between((1, 0, 0), (-1, 0, 0))
+            3.141592653589793
+    """
+    v1_u = self.__unit_vector(v1)
+    v2_u = self.__unit_vector(v2)
+    return np.arccos(np.clip(np.dot(v1_u, v2_u), -1.0, 1.0))
+    
+
 class Clusters:
     """Given a distance threshold and a radius band, this class consists of all the Cluster objects therein
     """
@@ -25,8 +44,10 @@ class Clusters:
         self.ego_veh = ego_veh
         self.radius_band = radius_band
         self.clusters: list(Cluster) = []
-    
+        self.max_dist_bw_obj = max_distance_bw_obj
         self.generate_clusters()
+        
+        self.sigma = 0.0001
         
         
     def generate_clusters(self):
@@ -37,11 +58,23 @@ class Clusters:
         
         cluster_radial = self.__calculate_max_radius_bw_obj(self.radius_band[0])
         
-        for i in range(np.ceil(self.radius_band[0]/(2 * np.pi))):
+        for i in range(int(np.ceil(self.radius_band[0]/(2 * np.pi)))):
             self.clusters.append(Cluster(sample_token=self.sample_token,
                                          ego_veh=self.ego_veh,
-                                         dist_threshold=self.dist_threshold,
-                                         radius_band=cluster_radial))
+                                         dist_threshold=self.max_dist_bw_obj,
+                                         radius_band=self.radius_band,
+                                         lower_radian_lim=(0 if i==0 else (i*cluster_radial)+self.sigma),
+                                         upper_radian_lim=(i+1)*cluster_radial)
+            )
+    
+    def add_box(self, box: EvalBox) -> None:
+        # Convert Quaternion into yaw, pitch, roll
+        ego_veh_quat = Quaternion(self.ego_veh['rotation'])
+        ego_veh_yaw, _, _ = ego_veh_quat.yaw_pitch_roll
+        
+        #Calculate the angle between the box and the ego vehicle
+        obj_yaw = self.ego_veh[translation] - box.translation
+        
         
         
     
@@ -55,7 +88,7 @@ class Cluster:
                  sample_token: str,
                  ego_veh,
                  dist_threshold, 
-                 radius_band
+                 radius_band,
                  lower_radian_lim, 
                  upper_radian_lim) -> None:
         """
@@ -74,23 +107,6 @@ class Cluster:
         # self.center_of_mass = -1
         # self.ego_veh_yaw, _, _= Quaternion(ego_veh['rotation']).yaw_pitch_roll()   # Quaternion() returns a tuple not a class object?
         
-    def __unit_vector(self, vector):
-        """ Returns the unit vector of the vector.  """
-        return vector / np.linalg.norm(vector)
-
-    def __angle_between(self, v1, v2):
-        """ Returns the angle in radians between vectors 'v1' and 'v2'::
-
-                >>> angle_between((1, 0, 0), (0, 1, 0))
-                1.5707963267948966
-                >>> angle_between((1, 0, 0), (1, 0, 0))
-                0.0
-                >>> angle_between((1, 0, 0), (-1, 0, 0))
-                3.141592653589793
-        """
-        v1_u = self.__unit_vector(v1)
-        v2_u = self.__unit_vector(v2)
-        return np.arccos(np.clip(np.dot(v1_u, v2_u), -1.0, 1.0))
     
         
     def add_box(self, box: EvalBox) -> None:
@@ -104,7 +120,6 @@ class Cluster:
         #     self.closest_box = box
         #     self.farthest_box = box
         # else:
-            
             
         
     def get_cluster_spread(self) -> np.ndarray:
