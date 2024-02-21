@@ -45,4 +45,5 @@ repo_dir = getGitRoot()
 cm_dir = str(Path(f"{repo_dir}/saved_cms/{modality}/{dataset}/{model_name}").absolute())
 create_dir_if_not_exist(cm_dir)
 cm_fn = f"{cm_dir}/cm.pkl"
+prop_cm_fn = f"{cm_dir}/prop_cm.pkl"
 control_dir = f"{repo_dir}/system_evaluation/controllers/"

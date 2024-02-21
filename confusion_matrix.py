@@ -42,6 +42,9 @@ class ConfusionMatrix:
         self.prop_confusion_matrix = None # Proposition confusion matrix stored in file
         self.model_info = None # ToDo: this needs to be set.
 
+    def set_prop_labels(self, prop_dict):
+        self.prop_labels = prop_dict
+
     def setup_attr(self):
         self.prop_obs = list(powerset(self.obs))
         self.obs.append("empty")

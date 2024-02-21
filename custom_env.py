@@ -5,7 +5,7 @@ import sys
 from pathlib import Path
 
 ######## PARMS #########
-model_name = "model2_good"
+model_name = "model_01-05-2024_20_22"
 modality = "lidar"
 is_mini = True
 ########################
@@ -21,10 +21,10 @@ def is_set_to_mini():
     return is_mini
 
 if is_mini:
-    dataset = "nuscenes-mini"
+    dataset = "nuscenes"
     inf_res = "inference_results_mini"
 else:
-    dataset = "nuscenes"
+    dataset = "nuscenes-full"
     inf_res = "inference_results"
 
 home_dir = str(Path.home())

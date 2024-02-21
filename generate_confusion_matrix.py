@@ -14,6 +14,9 @@ from nuscenes.eval.detection.data_classes import DetectionConfig, DetectionBox
 from nuscenes.eval.common.loaders import load_prediction, load_gt, add_center_dist, filter_eval_boxes
 from nuscenes_render import render_sample_data_with_predictions
 
+from pdb import set_trace as st
+from collections import OrderedDict as od
+
 class GenerateConfusionMatrix:
     """
         This class instantiates a class-labeled confusion matrix.
@@ -74,7 +77,7 @@ class GenerateConfusionMatrix:
         self.distance_bin = distance_bin
         self.max_dist = max_dist
         self.num_bins = int(max_dist // distance_bin)
-        self.list_of_classes = list_of_classes
+        self.classes = list_of_classes
         self.verbose = verbose
         self.dist_conf_mats: dict(Tuple[int, int], np.ndarray) = {}
         self.prop_conf_mats: dict(Tuple[int, int], np.ndarray) = {}
@@ -106,7 +109,7 @@ class GenerateConfusionMatrix:
             None
         """
         
-        n = len(self.list_of_classes)
+        n = len(self.classes)
         
         # initializing all the bins
         for i in range(self.num_bins):
@@ -134,7 +137,6 @@ class GenerateConfusionMatrix:
 
     def __load_boxes(self) -> None:
         """Loads GT annotations and predictions from respective files and saves them in respective class variables.
-        
         Args: 
             None
         """
@@ -196,9 +198,9 @@ class GenerateConfusionMatrix:
             The values are the corresponding proposition labelled confusion matrices.
         """
         for key in list(self.disc_gt_boxes.keys()):
-            self.prop_conf_mats[key] = self.calculate_prop_labelled_conf_mat(self.disc_gt_boxes[key], self.disc_pred_boxes[key], ["ped", "obs"], self.list_of_classes)
+            self.prop_conf_mats[key], prop_dict = self.compute_prop_cm(self.disc_gt_boxes[key], self.disc_pred_boxes[key], ["ped", "obs"], self.classes)
     
-        return self.prop_conf_mats
+        return self.prop_conf_mats, prop_dict
     
 
     def calculate_conf_mat(self,
@@ -208,8 +210,8 @@ class GenerateConfusionMatrix:
                             dist_thresh: float = 2.0,       # in m 
                             yaw_thresh: float = np.pi/2.0): # in radians  -> np.ndarray:
 
-        EMPTY = len(self.list_of_classes)
-        distance_param_conf_mat = np.zeros( (len(self.list_of_classes)+1, len(self.list_of_classes)+1) )
+        EMPTY = len(self.classes)
+        distance_param_conf_mat = np.zeros( (len(self.classes)+1, len(self.classes)+1) )
         c = 0
         # -- For each sample
         # -- -- For each ground truth
@@ -291,7 +293,7 @@ class GenerateConfusionMatrix:
                 pred_boxes: list, 
                 list_of_classes: list) -> np.ndarray:
         
-        n = len(self.list_of_classes)
+        n = len(self.classes)
         gt_vectors:Dict(EvalBox, np.ndarray) = {}
         pred_vectors:Dict(EvalBox, np.ndarray) = {}
         # Make new Eval Boxes object
@@ -323,12 +325,12 @@ class GenerateConfusionMatrix:
                                          list_of_propositions: list, 
                                          class_names:list) -> np.ndarray:
         
-        n = len(self.list_of_classes)
+        n = len(self.classes)
         propn_labelled_conf_mat = np.zeros( ( (2**n), (2**n)) )
 
         propn_indices = list(range(len(list_of_propositions)))
         propn_powerset = list(self.powerset(propn_indices))
-
+        props = list(self.powerset(self.classes))
         for sample_token in gt_boxes.sample_tokens:
             sample_pred_list = pred_boxes[sample_token]
             sample_gt_list = gt_boxes[sample_token]
@@ -345,7 +347,7 @@ class GenerateConfusionMatrix:
             pred_idx = 0
 
             for i, propn in enumerate(propn_powerset):
-
+                st()
                 classes = {} if len(propn) == 0 else {list_of_propositions[c] for c in propn}
 
                 if gt_classes == set(classes):
@@ -356,4 +358,54 @@ class GenerateConfusionMatrix:
             propn_labelled_conf_mat[pred_idx][gt_idx] += 1
             
         return propn_labelled_conf_mat
+
+    def get_propositions(self):
+        n = len(self.classes)
+        propositions = list(self.powerset(self.classes))
+        prop_dict = dict()
+        for k, prop in enumerate(propositions):
+            if any(prop): # if not empty
+                prop_label = set(prop)
+                prop_dict[k] = prop_label
+            else:
+                prop_dict[k] = set(["empty"])
+        return prop_dict
+
+    def compute_prop_cm(self, gt_boxes:EvalBoxes, pred_boxes: list, list_of_propositions: list, 
+                        class_names:list) -> np.ndarray:
+        # Comments: list_of_propositions, self.classes, and class_names are the exact same.
+        # Pass in propositions
+        prop_dict = self.get_propositions()
+        n = len(prop_dict)
+        prop_cm = np.zeros((n,n))        
+
+        for sample_token in gt_boxes.sample_tokens:
+            sample_pred_list = pred_boxes[sample_token]
+            sample_gt_list = gt_boxes[sample_token]
+            taken = set()  # Initially no gt bounding box is matched.
+
+            gt_classes = {gt.detection_name for gt in sample_gt_list}
+            pred_classes = {pred.detection_name for pred in sample_gt_list}
+
+            #TODO convert into generic
+            gt_classes = set({"ped" if x == "pedestrian" else "obs" for x in gt_classes})
+            pred_classes = set({"ped" if x == "pedestrian" else "obs" for x in pred_classes})
+
+            if len(gt_classes) == 0:
+                gt_classes = set({"empty"})
+            if len(pred_classes) == 0:
+                pred_classes = set({"empty"})
+
+            gt_idx = 0
+            pred_idx = 0
+
+            for k, prop_label in prop_dict.items():
+                if gt_classes == prop_label:
+                    gt_idx = k
+                if pred_classes == prop_label:
+                    pred_idx = k
+                
+            prop_cm[pred_idx][gt_idx] += 1
+            
+        return prop_cm, prop_dict
         

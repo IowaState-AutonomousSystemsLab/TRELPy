@@ -13,8 +13,7 @@ from tulip.interfaces import stormpy as stormpy_int
 import os
 from tulip.transys.compositions import synchronous_parallel
 import pickle as pkl
-import pdb
-
+from pdb import set_trace as st
 prop_model_MC = "prop_model_MC.nm"
 # Function to return a list of all combinations of inputs:
 # Input: A dictionary names D
@@ -52,7 +51,10 @@ def construct_backup_controller(Ncar, Vlow, Vhigh):
 # Read confusion matrix from nuscnes file:
 def read_confusion_matrix(cm_fn):
     conf_matrix = pkl.load( open(cm_fn, "rb" ))
-    n = len(conf_matrix[0][0])
+    st()
+    for k,v in conf_matrix.items():
+        n = len(conf_matrix[k][0])
+        break
     cm = np.zeros((n,n))
     for k, v in conf_matrix.items():
         cm += v # Total class based conf matrix w/o distance
@@ -79,7 +81,7 @@ def construct_confusion_matrix_dict(cm):
     total_obs = np.sum(cm[:,1])
     total_ped_obs = np.sum(cm[:,2])
     total_emp = np.sum(cm[:,3])
-
+    st()
     if total_ped!=0.0:
         C["ped", "ped"] = cm[0,0]/total_ped
         C["obj", "ped"] = cm[1,0]/total_ped
@@ -123,7 +125,6 @@ def construct_confusion_matrix_dict(cm):
         C["obj", "empty"] = 0.0
         C["ped,obj", "empty"] =0.0
         C["empty", "empty"] = 0.0
-
 
     return C
 

@@ -13,7 +13,7 @@ from tulip.interfaces import stormpy as stormpy_int
 import os
 from tulip.transys.compositions import synchronous_parallel
 import pickle as pkl
-import pdb
+from pdb import set_trace as st
 
 model_MC = "model_MC.nm"
 # Function to return a list of all combinations of inputs:
@@ -76,7 +76,7 @@ def confusion_matrix(conf_matrix):
 
 def construct_confusion_matrix_dict(cm):
     C = dict()
-
+    st()
     total_ped = np.sum(cm[:,0])
     total_obs = np.sum(cm[:,1])
     total_emp = np.sum(cm[:,2])

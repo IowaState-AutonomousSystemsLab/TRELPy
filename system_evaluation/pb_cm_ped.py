@@ -11,9 +11,9 @@ try:
     from system_evaluation.controllers import construct_controllers as K_des
     from system_evaluation.markov_chain.prop_markov_chain_setup import call_MC, call_MC_param
 except:
-    from markov_chain import construct_mc as cmp
+    from markov_chain import prop_construct_mc as cmp
     from controllers import construct_controllers as K_des
-    from markov_chain.markov_chain_setup import call_MC, call_MC_param
+    from markov_chain.prop_markov_chain_setup import call_MC, call_MC_param
 
 import matplotlib as plt
 # from figure_plot import probability_plot
@@ -152,7 +152,7 @@ def simulate(MAX_V=6):
 
 
 def compute_probabilities(Ncar, MAX_V):
-    C, param_C = cmp.confusion_matrix(cm_fn)
+    C, param_C = cmp.confusion_matrix(prop_cm_fn)
     VMAX = []
     INIT_V = dict()
     P = dict()
@@ -182,11 +182,12 @@ def compute_probabilities(Ncar, MAX_V):
             M = call_MC(S, O, state_to_S, K, K_backup, C, true_env, true_env_type, state_info)
             param_M = call_MC_param(S, O, state_to_S, K, K_backup, param_C, true_env, true_env_type, xped, state_info)
 
+            pdb.set_trace()
             # result = M.prob_TL(formula)
             result = M.prob_TL(formula)
             result_param = param_M.prob_TL(formula)
-            # pdb.set_trace()
             print('Probability of eventually reaching good state for initial speed, {}, and max speed, {} is p = {}:'.format(vcar, vmax, result[start_state]))
+            pdb.set_trace()
             # Store results:
             VMAX.append(vmax)
             INIT_V[vmax].append(vcar)
@@ -214,5 +215,5 @@ def save_results(INIT_V, P, P_param):
         json.dump(P_param, f)
 
 if __name__=="__main__":
-    MAX_V = 6
+    MAX_V = 1
     simulate(MAX_V)
