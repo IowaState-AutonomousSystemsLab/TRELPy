@@ -72,6 +72,7 @@ class GenerateConfusionMatrix:
         self.verbose = verbose
         self.max_dist_bw_obj = max_dist_bw_obj
         self.conf_mat_mapping = conf_mat_mapping
+        self.ego_veh = __load_ego_veh()
         
         self.dist_conf_mats: dict(Tuple[int, int], np.ndarray) = {}
         self.prop_conf_mats: dict(Tuple[int, int], np.ndarray) = {}
@@ -97,6 +98,11 @@ class GenerateConfusionMatrix:
         
         self.sample_tokens = self.gt_boxes.sample_tokens
     
+    def __load_ego_veh(self, sample_token:str):
+        sample = nusc.get('sample', sample_token)
+        sd_record = nusc.get('sample_data', sample['data']['LIDAR_TOP'])
+        return nusc.get('ego_pose', sd_record['ego_pose_token'])
+        
     def __load_boxes(self) -> None:
         """Loads GT annotations and predictions from respective files and saves them in respective class variables.
         
@@ -193,16 +199,16 @@ class GenerateConfusionMatrix:
                     
                 for sample_token in self.sample_tokens:
                     self.ego_centric_gt_boxes[(0, self.distance_bin)][sample_token] = []
-                    self.gt_clusters[(0, self.distance_bin)][sample_token] = 
+                    self.gt_clusters[(0, self.distance_bin)][sample_token] = \
                         RadiusBand(sample_token = sample_token, 
-                                    ego_veh=None, 
+                                    ego_veh=self.__load_ego_veh(sample_token), 
                                     max_dist_bw_obj = self.max_dist_bw_obj, 
                                     radius_band= (0, self.distance_bin))
             else:
                 self.ego_centric_gt_boxes[(self.distance_bin*i)+1, self.distance_bin*(i+1)] = {}
-                self.gt_clusters[( (self.distance_bin*i)+1, (self.distance_bin*(i+1)))] = 
+                self.gt_clusters[( (self.distance_bin*i)+1, (self.distance_bin*(i+1)))] = \
                     RadiusBand(sample_token = sample_token,
-                                ego_veh=None,
+                                ego_veh=self.__load_ego_veh(sample_token),
                                 max_dist_bw_obj = self.max_dist_bw_obj,
                                 radius_band = ((self.distance_bin*i)+1, (self.distance_bin*(i+1))))
                 
@@ -210,13 +216,6 @@ class GenerateConfusionMatrix:
                     self.ego_centric_gt_boxes[(self.distance_bin*i)+1, self.distance_bin*(i+1)][sample_token] = []
         
         load_ego_centric_boxes()
-        
-        
-        self.gt_clusters[(0, self.distance_bin)] = {}
-        self.pred_clusters[(0, self.distance_bin)] = {}
-                for sample_token in self.gt_boxes.sample_tokens:
-                    self.gt_clusters[(0, self.distance_bin)][sample_token] = []
-                    self.pred_clusters[(0, self.distance_bin)][sample_token] = []
     
     def __check_distance_param_settings(self) -> None:
         """

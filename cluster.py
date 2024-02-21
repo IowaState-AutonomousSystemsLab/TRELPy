@@ -47,14 +47,17 @@ class RadiusBand:
         self.max_dist_bw_obj = max_distance_bw_obj
         self.generate_clusters()
         
+        if radius_band[0] <= 0:
+            print("Minimum radius should be greater than 0", error=True)
+            print("Setting min Radius to 1 m", error=True)
+            self.radius_band = (1, radius_band[1])
+        
         self.sigma = 0.0001
         
         
     def generate_clusters(self):
         """generates clusters for the ground truth boxes
         """
-        if self.radius_band[0] <= 0:
-            raise ValueError("Radius band should be greater than 0")
         
         cluster_radial = self.__calculate_max_radius_bw_obj(self.radius_band[0])
         
