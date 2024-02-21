@@ -1,0 +1,5 @@
+- [] Change  `generate_confusion_matrix.py` to get the flat vehicle coordinates
+- [] Parameterize these based on distance from ego vehicle
+- [] Pass these new ones to RadiusBand class
+- [] Configure Radius Band class to utilize `np.arctan2()` to calculate the angle of this object w.r.t the ego
+- [] Finish setup of the Cluster object 

@@ -23,8 +23,8 @@ def angle_between(v1, v2):
     return np.arccos(np.clip(np.dot(v1_u, v2_u), -1.0, 1.0))
     
 
-class Clusters:
-    """Given a distance threshold and a radius band, this class consists of all the Cluster objects therein
+class RadiusBand:
+    """Given a distance threshold between objects and a radius band, this class consists of all the Cluster objects therein
     """
     def __init__(self,
                  sample_token:str,
@@ -74,8 +74,6 @@ class Clusters:
         
         #Calculate the angle between the box and the ego vehicle
         obj_yaw = self.ego_veh[translation] - box.translation
-        
-        
         
     
     def __calculate_max_radius_bw_obj(self, radius: float):
