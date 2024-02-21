@@ -316,6 +316,7 @@ class GenerateConfusionMatrix:
             for gt in sample_gt_list:
                 gt_vectors[gt] = self.__angle_between(gt.ego_translation, something)
             
+
     
     def calculate_prop_labelled_conf_mat(self, 
                                          gt_boxes:EvalBoxes, 

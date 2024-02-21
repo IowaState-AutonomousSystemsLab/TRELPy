@@ -7,9 +7,9 @@ from pathlib import Path
 from experiment_file import *
 # from ..custom_env import cm_dir, is_set_to_mini
 try: 
-    from system_evaluation.markov_chain import prop_construct_mc as cmp
+    from system_evaluation.markov_chain import construct_mc as cmp
     from system_evaluation.controllers import construct_controllers as K_des
-    from system_evaluation.markov_chain.prop_markov_chain_setup import call_MC, call_MC_param
+    from system_evaluation.markov_chain.MC import construct_controllers as K_des
 except:
     from markov_chain import construct_mc as cmp
     from controllers import construct_controllers as K_des
@@ -185,7 +185,7 @@ def compute_probabilities(Ncar, MAX_V):
             # result = M.prob_TL(formula)
             result = M.prob_TL(formula)
             result_param = param_M.prob_TL(formula)
-            pdb.set_trace()
+            # pdb.set_trace()
             print('Probability of eventually reaching good state for initial speed, {}, and max speed, {} is p = {}:'.format(vcar, vmax, result[start_state]))
             # Store results:
             VMAX.append(vmax)
@@ -200,7 +200,7 @@ def save_results(INIT_V, P, P_param):
     results_folder = f"{cm_dir}/probability_results"
     if not os.path.exists(results_folder):
         os.makedirs(results_folder)
-    result_type="prop"
+    result_type="class"
     fname_v = Path(f"{results_folder}/{result_type}_cm_ped_vmax_"+str(MAX_V)+"_initv.json")
     fname_p = Path(f"{results_folder}/{result_type}_cm_ped_vmax_"+str(MAX_V)+"_prob.json")
     fname_param_p = Path(f"{results_folder}/{result_type}_param_cm_ped_vmax_"+str(MAX_V)+"_prob.json")
@@ -214,5 +214,5 @@ def save_results(INIT_V, P, P_param):
         json.dump(P_param, f)
 
 if __name__=="__main__":
-    MAX_V = 1
+    MAX_V = 6
     simulate(MAX_V)

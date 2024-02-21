@@ -32,8 +32,10 @@ def create_dir_if_not_exist(dir_path):
     if not os.path.exists(dir_path):
         print(f"Directory {dir_path} not found. Creating...")
         os.makedirs(dir_path)
-    else:
-        print(f"Not creating {dir_path} because it already exists")
+    # Apurva (2/12): i think the following lines can go since they can be confusing and seem like an error when running multiple 
+    # experiments for the same result
+    # else:
+    #     print(f"Not creating {dir_path} because it already exists, continuing run")
 
 
 home_dir = str(Path.home())
