@@ -65,7 +65,7 @@ def read_confusion_matrix(cm_fn):
 # Make this cleaner; more versatile
 # C is a dicitionary: C(["ped", "nped"]) = N(observation|= "ped" | true_obj |= "nped") (cardinality of observations given as pedestrians while the true state is not a pedestrian)
 # Confusion matrix for second confusion matrix
-def confusion_matrix(conf_matrix):
+def confusion_matrix(conf_matrix, conf_matrix_dict):
     C = dict()
     param_C = dict()
     cm, param_cm = read_confusion_matrix(conf_matrix)
@@ -81,7 +81,7 @@ def construct_confusion_matrix_dict(cm):
     total_obs = np.sum(cm[:,1])
     total_ped_obs = np.sum(cm[:,2])
     total_emp = np.sum(cm[:,3])
-    st()
+    
     if total_ped!=0.0:
         C["ped", "ped"] = cm[0,0]/total_ped
         C["obj", "ped"] = cm[1,0]/total_ped

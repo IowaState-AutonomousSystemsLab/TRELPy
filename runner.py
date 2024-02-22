@@ -75,8 +75,8 @@ print(cm_prop)
 confusion_matrix = ConfusionMatrix(generator, list_of_classes, labels)
 confusion_matrix.set_confusion_matrix(cm, label_type="class")
 cm_file = f"{cm_dir}/cm.pkl"
-confusion_matrix.save_confusion_matrix(cm_file, label_type="class")
+confusion_matrix.save_confusion_matrix(cm_dir, label_type="class")
 prop_cm_file = f"{cm_dir}/prop_cm.pkl"
 confusion_matrix.set_confusion_matrix(cm_prop, label_type="prop")
 confusion_matrix.set_prop_labels(prop_dict)
-confusion_matrix.save_confusion_matrix(prop_cm_file, label_type="prop")
+confusion_matrix.save_confusion_matrix(cm_dir, label_type="prop")

@@ -36,8 +36,7 @@ class ConfusionMatrix:
         self.cm_generator = cm_generator
         self.labels = labels
         self.setup_attr()
-        self.prop_cm_file = None
-        self.cm_file = None
+        self.save_folder = None
         self.confusion_matrix = None # Canonical confusion matrix stored in file
         self.prop_confusion_matrix = None # Proposition confusion matrix stored in file
         self.model_info = None # ToDo: this needs to be set.
@@ -75,18 +74,25 @@ class ConfusionMatrix:
         for k, v in self.confusion_matrix.items():
             self.canonical_cm += v # Total class based conf matrix w/o distance
 
-    def read_confusion_matrix(self, file, label_type="class"):
-        with open(file, "rb") as f:
-            if label_type == "class":
-                if self.cm_file is None:
-                    self.cm_file = file
+    def read_confusion_matrix(self, save_dir, label_type="class"):
+        if self.save_folder is None:
+            self.save_folder = save_dir
+
+        if label_type == "class":
+            file = f"{cm_dir}/cm.pkl"
+            with open(file, "rb") as f:
                 self.confusion_matrix = pkl.load(f)
-            else:
-                if self.prop_cm_file is None:
-                    self.prop_cm_file = file
+            f.close()
+        else:
+            file = f"{cm_dir}/prop_cm.pkl"
+            prop_dict_file = f"{cm_dir}/prop_dict.pkl"
+            with open(file, "rb") as f:
                 self.prop_confusion_matrix = pkl.load(f)
-        f.close()
-    
+            f.close()
+            with open(file, "rb") as f:
+                self.prop_labels = pkl.load(prop_dict_file)
+            f.close()
+        
     def read_from_file(self, cm_file, label_type):
         self.read_confusion_matrix(cm_file, label_type)
         self.assert_labels(label_type)
@@ -97,19 +103,29 @@ class ConfusionMatrix:
         else:
             self.prop_confusion_matrix = cm
     
-    def save_confusion_matrix(self, file, label_type="class"):
+    def save_confusion_matrix(self, save_dir, label_type="class"):
         # Todo: Add script here that creates the new directory if it does 
         # not already exist.
-        with open(file, "wb") as f:
-            if label_type == "class":
-                if self.cm_file is None:
-                    self.cm_file = file
+        if not os.path.exists(save_dir):
+            os.makedirs(save_dir)
+        if self.save_folder is None:
+            self.save_folder = save_dir
+
+        if label_type == "class":
+            file = f"{cm_dir}/cm.pkl"
+            with open(file, "wb") as f:
                 pkl.dump(self.confusion_matrix, f)
-            else:
-                if self.prop_cm_file is None:
-                    self.prop_cm_file = file
-                pkl.dump(self.prop_confusion_matrix, f)
-        f.close()
+            f.close()
+        else:
+            file = f"{cm_dir}/prop_cm.pkl"
+            prop_dict_file = f"{cm_dir}/prop_dict.pkl"
+            with open(file, "wb") as f:
+                pkl.dump(self.prop_confusion_matrix,f)
+            f.close()
+
+            with open(prop_dict_file, "wb") as f: 
+                pkl.dump(self.prop_labels, f)
+            f.close()
 
     def construct_confusion_matrix_dict(cm):
         '''
