@@ -152,7 +152,7 @@ def simulate(MAX_V=6):
 
 
 def compute_probabilities(Ncar, MAX_V):
-    C, param_C = cmp.confusion_matrix(prop_cm_fn)
+    C, param_C = cmp.new_confusion_matrix(prop_cm_fn, prop_dict_file)
     VMAX = []
     INIT_V = dict()
     P = dict()

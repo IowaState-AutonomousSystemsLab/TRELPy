@@ -89,7 +89,7 @@ class ConfusionMatrix:
             with open(file, "rb") as f:
                 self.prop_confusion_matrix = pkl.load(f)
             f.close()
-            with open(file, "rb") as f:
+            with open(prop_dict_file, "rb") as f:
                 self.prop_labels = pkl.load(prop_dict_file)
             f.close()
         
@@ -118,14 +118,13 @@ class ConfusionMatrix:
             f.close()
         else:
             file = f"{cm_dir}/prop_cm.pkl"
-            prop_dict_file = f"{cm_dir}/prop_dict.pkl"
             with open(file, "wb") as f:
                 pkl.dump(self.prop_confusion_matrix,f)
             f.close()
-
-            with open(prop_dict_file, "wb") as f: 
-                pkl.dump(self.prop_labels, f)
-            f.close()
+            prop_dict_file = f"{cm_dir}/prop_dict.pkl"
+            with open(prop_dict_file, "wb") as g: 
+                pkl.dump(self.prop_labels, g)
+            g.close()
 
     def construct_confusion_matrix_dict(cm):
         '''

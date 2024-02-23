@@ -34,9 +34,7 @@ def call_MC(S, O, state_to_S, K, K_backup, C, true_env, true_env_type, state_inf
     # Construct Markov chain:
     M.construct_markov_chain()
     start_state = state_info["start"]
-    bad_states = state_info["bad"]
-    good_state = state_info["good"]
-    MC = M.to_MC(start_state, bad_states, good_state) # For setting initial conditions and assigning bad/good labels
+    MC = M.to_MC(start_state) # For setting initial conditions and assigning bad/good labels
     for k,v in M.M.items():
         s1 = M.reverse_state_dict[k[0]]
         s2 = M.reverse_state_dict[k[1]]
@@ -72,9 +70,7 @@ def call_MC_param(S, O, state_to_S, K, K_backup, param_C, true_env, true_env_typ
 #    pdb.set_trace()
     M.construct_markov_chain(ped_st)
     start_state = state_info["start"]
-    bad_states = state_info["bad"]
-    good_state = state_info["good"]
-    MC = M.to_MC(start_state, bad_states, good_state) # For setting initial conditions and assigning bad/good labels
+    MC = M.to_MC(start_state) # For setting initial conditions and assigning bad/good labels
     for k,v in M.M.items():
         s1 = M.reverse_state_dict[k[0]]
         s2 = M.reverse_state_dict[k[1]]
