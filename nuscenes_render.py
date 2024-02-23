@@ -19,7 +19,11 @@ from nuscenes.nuscenes import NuScenes
 import numpy as np
 from pyquaternion import Quaternion
 
-def convert_EvalBox_to_flat_veh_coords(sample_data_token:str, box:EvalBox, nusc: NuScenes) -> Box:
+def convert_EvalBox_to_flat_veh_coords(sample_data_token:str, box:Box, nusc: NuScenes) -> Box:
+    sd_record = nusc.get('sample_data', sample_data_token)
+    cs_record = nusc.get('calibrated_sensor', sd_record['calibrated_sensor_token'])
+    sensor_record = nusc.get('sensor', cs_record['sensor_token'])
+    pose_record = nusc.get('ego_pose', sd_record['ego_pose_token'])
     yaw = Quaternion(pose_record['rotation']).yaw_pitch_roll[0]
     box.translate(-np.array(pose_record['translation']))
     box.rotate(Quaternion(scalar=np.cos(yaw / 2), vector=[0, 0, np.sin(yaw / 2)]).inverse)

@@ -28,7 +28,7 @@ class RadiusBand:
         self.sample_token = sample_token
         self.ego_veh = ego_veh
         self.radius_band = radius_band
-        self.clusters: list(Cluster) = []
+        self.clusters: list[Cluster] = []
         self.max_dist_bw_obj = max_distance_bw_obj
         self.generate_clusters()
         
@@ -38,7 +38,7 @@ class RadiusBand:
             self.radius_band = (1, radius_band[1])
         
         self.sigma = 0.0001
-        self.num_bins = int(np.ceil((2 * np.pi) / self.radius_band[0]))
+        self.num_clusters = int(np.ceil((2 * np.pi) / self.radius_band[0]))
         
         
     def generate_clusters(self):
@@ -47,7 +47,7 @@ class RadiusBand:
         
         cluster_radial = self.__calculate_max_radius_bw_obj(self.radius_band[0])
         
-        for i in range(self.num_bins):
+        for i in range(self.num_clusters):
             self.clusters.append(Cluster(sample_token=self.sample_token,
                                          ego_veh=self.ego_veh,
                                          dist_threshold=self.max_dist_bw_obj,
@@ -81,7 +81,7 @@ class Cluster:
         """
         self.sample_token = sample_token
         self.distance_threshold = dist_threshold
-        self.boxes: list(EvalBox) = []
+        self.boxes: list(Box) = []
         self.radius_band = None
         self.ego_vehicle = ego_veh
         self.lower_radian_lim = lower_radian_lim
