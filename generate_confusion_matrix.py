@@ -8,6 +8,7 @@ from itertools import chain, combinations
 from nuscenes import NuScenes
 from nuscenes.eval.common.data_classes import EvalBoxes, EvalBox
 from nuscenes.eval.common.utils import center_distance, scale_iou, yaw_diff
+from nuscenes.utils.data_classes import Box
 from nuscenes.utils.geometry_utils import view_points, box_in_image, BoxVisibility
 from nuscenes.eval.detection.data_classes import DetectionConfig, DetectionBox
 from nuscenes.eval.common.loaders import load_prediction, load_gt, add_center_dist, filter_eval_boxes
@@ -73,14 +74,14 @@ class GenerateConfusionMatrix:
         self.verbose = verbose
         self.max_dist_bw_obj = max_dist_bw_obj
         self.conf_mat_mapping = conf_mat_mapping
-        self.ego_veh = __load_ego_veh()
+        self.ego_veh = self.__load_ego_veh()
         
-        self.dist_conf_mats: dict(Tuple[int, int], np.ndarray) = {}
-        self.prop_conf_mats: dict(Tuple[int, int], np.ndarray) = {}
-        self.clustered_conf_mats: dict(Tuple[int, int], np.ndarray) = {}
-        self.disc_gt_boxes: dict(Tuple[int, int], EvalBoxes) = {}
-        self.disc_pred_boxes: dict(Tuple[int, int], EvalBoxes) = {}
-        self.ego_centric_gt_boxes: dict(Tuple[int, int], EvalBoxes) = {}
+        self.dist_conf_mats: Dict(Tuple[int, int], np.ndarray) = {}
+        self.prop_conf_mats: Dict(Tuple[int, int], np.ndarray) = {}
+        self.clustered_conf_mats: Dict(Tuple[int, int], np.ndarray) = {}
+        self.disc_gt_boxes: Dict(Tuple[int, int], EvalBoxes) = {}
+        self.disc_pred_boxes: Dict(Tuple[int, int], EvalBoxes) = {}
+        self.ego_centric_gt_boxes: Dict(Tuple[int, int], EvalBoxes) = {}
         
         self.gt_clusters:dict(Tuple[int, int], RadiusBand) = {}   # {distance_bin: {sample_token: [Cluster1, Cluster2, ...]}
 
@@ -101,9 +102,9 @@ class GenerateConfusionMatrix:
         self.sample_tokens = self.gt_boxes.sample_tokens
     
     def __load_ego_veh(self, sample_token:str):
-        sample = nusc.get('sample', sample_token)
-        sd_record = nusc.get('sample_data', sample['data']['LIDAR_TOP'])
-        return nusc.get('ego_pose', sd_record['ego_pose_token'])
+        sample = self.nusc.get('sample', sample_token)
+        sd_record = self.nusc.get('sample_data', sample['data']['LIDAR_TOP'])
+        return self.nusc.get('ego_pose', sd_record['ego_pose_token'])
         
     def __load_boxes(self) -> None:
         """Loads GT annotations and predictions from respective files and saves them in respective class variables.
@@ -137,8 +138,8 @@ class GenerateConfusionMatrix:
     def load_ego_centric_boxes(self) -> None:
         
         for sample_token in self.sample_tokens:
-            sample = nusc.get('sample', sample_token)
-            _, boxes, _ = nusc.get_sample_data(sample['data']['LIDAR_TOP'],
+            sample = self.nusc.get('sample', sample_token)
+            _, boxes, _ = self.nusc.get_sample_data(sample['data']['LIDAR_TOP'],
                                                box_vis_level=BoxVisibility.ANY,
                                                use_flat_vehicle_coordinates=True)
             
@@ -148,8 +149,6 @@ class GenerateConfusionMatrix:
                 dist_band_idx = np.floor((distance / self.distance_bin))
                 dist_band = list(self.ego_centric_gt_boxes.keys())[dist_band_idx]
                 self.ego_centric_gt_boxes[dist_band][sample_token].append(box)
-                
-    def convert_preds_to_ego_centric(self) -> None:
                 
                 
     def __initialize(self) -> None:
@@ -205,30 +204,33 @@ class GenerateConfusionMatrix:
         for i in range(self.num_bins):
             if i == 0:
                 self.gt_clusters[(0, self.distance_bin)] = {}  
-                self.ego_centric_gt_boxes[(0, self.distance_bin)] = {}
-                cluster_theta = self.__calculate_max_radius_bw_obj()
-                    
+                self.ego_centric_gt_boxes[(0, self.distance_bin)] = {}           
                 for sample_token in self.sample_tokens:
-                    self.ego_centric_gt_boxes[(0, self.distance_bin)][sample_token] = []
-                    self.gt_clusters[(0, self.distance_bin)][sample_token] = \
-                        RadiusBand(sample_token = sample_token, 
-                                    ego_veh=self.__load_ego_veh(sample_token),
-                                    gt_boxes = self.disc_gt_boxes[(0, self.distance_bin)],
-                                    max_dist_bw_obj = self.max_dist_bw_obj, 
-                                    radius_band= (0, self.distance_bin))
+                    self.ego_centric_gt_boxes[(0, self.distance_bin)][sample_token] = []        
             else:
                 self.ego_centric_gt_boxes[(self.distance_bin*i)+1, self.distance_bin*(i+1)] = {}
-                self.gt_clusters[( (self.distance_bin*i)+1, (self.distance_bin*(i+1)))] = \
-                    RadiusBand(sample_token = sample_token,
-                                ego_veh=self.__load_ego_veh(sample_token),
-                                gt_boxes = self.disc_gt_boxes[(self.distance_bin*i)+1, self.distance_bin*(i+1)],
-                                max_dist_bw_obj = self.max_dist_bw_obj,
-                                radius_band = ((self.distance_bin*i)+1, (self.distance_bin*(i+1))))
-                
                 for sample_token in self.sample_tokens:
                     self.ego_centric_gt_boxes[(self.distance_bin*i)+1, self.distance_bin*(i+1)][sample_token] = []
         
-        load_ego_centric_boxes()
+        self.load_ego_centric_boxes()
+        
+        for i in range(self.num_bins):
+            if i == 0:
+                self.gt_clusters[(0, self.distance_bin)][sample_token] = \
+                    RadiusBand(sample_token = sample_token, 
+                                ego_veh=self.__load_ego_veh(sample_token),
+                                gt_boxes = self.ego_centric_gt_boxes[(0, self.distance_bin)][sample_token],
+                                max_dist_bw_obj = self.max_dist_bw_obj, 
+                                radius_band= (0, self.distance_bin))
+            else:
+                self.gt_clusters[( (self.distance_bin*i)+1, (self.distance_bin*(i+1)))][sample_token] = \
+                    RadiusBand(sample_token = sample_token,
+                                ego_veh=self.__load_ego_veh(sample_token),
+                                gt_boxes = self.ego_centric_gt_boxes[(self.distance_bin*i)+1, self.distance_bin*(i+1)][sample_token],
+                                max_dist_bw_obj = self.max_dist_bw_obj,
+                                radius_band = ((self.distance_bin*i)+1, (self.distance_bin*(i+1))))
+            
+            
     
     def __check_distance_param_settings(self) -> None:
         """
@@ -275,7 +277,7 @@ class GenerateConfusionMatrix:
     
     def get_clustered_conf_mat(self):
         for key in list(self.gt_clusters.keys()):
-            self.clustered_conf_mats[key] = self.calculate_clustered_conf_mat(self.gt_clusters[key], # the list of RadiusBands for different sample_tokens for a certain (min_radius, max_radius) distance bin
+            self.clustered_conf_mats[key] = self.calculate_clustered_conf_mat(self.gt_clusters[key], # a Dict object where keys=sample_tokens and value=list of RadiusBands for different sample_tokens for a certain (min_radius, max_radius) distance bin
                                                                               ["ped", "obs"],
                                                                               self.conf_mat_mapping)
     
@@ -390,7 +392,7 @@ class GenerateConfusionMatrix:
         return propn_labelled_conf_mat
     
     def calculate_clustered_conf_mat(self, 
-                                     gt_clusters: idk_yet, 
+                                     gt_clusters: dict,          # Dict[sample token] -> RadiusBand -> Cluster[]
                                      list_of_propositions: list,
                                      conf_mat_mapping: Dict) -> np.ndarray:
         
@@ -398,11 +400,37 @@ class GenerateConfusionMatrix:
         clustered_conf_mat = np.zeros( (n+1, n+1) )
         ego_pred_list = []
         
+        
         for sample_token in self.sample_tokens:
-            for pred in pred_boxes[sample_token]:
-                ego_pred_list.append(self.convert_EvalBox_to_flat_veh_coords(pred, self.ego_veh))
+            sample = self.nusc.get('sample', sample_token)
+            cluster_pred_propn_list = [{}] * gt_clusters[sample_token].num_clusters
+            
+            for pred in self.pred_boxes[sample_token]:
                 
-            for cluster in gt_clusters[sample_token]:
-                cluster.
+                #TODO CURRENTLY DOES NOT RETURN ANYTHING
+                #TODO MODIFY LABEL. Currently it is a String like Vehicle.car but it should be one of the classes in classes.py
+                ego_pred_box = convert_EvalBox_to_flat_veh_coords(sample_data_token=sample["data"]["LIDAR_TOP"], 
+                                                                        box=pred, 
+                                                                        nusc=self.nusc)
+                ego_engle = np.arctan2(ego_pred_box.center[1], ego_pred_box.center[0])
+                ego_engle = ego_engle if ego_engle >= 0 else (2 * np.pi) + ego_engle
+                pred_idx = int(np.ceil(ego_engle / self.radius_band[0]))
+                
+                cluster_pred_propn_list[pred_idx].add(self.conf_mat_mapping[ego_pred_box.label])
+                
+                
+            for radius_band in gt_clusters[sample_token]: # -> RadiusBand object
+                
+                assert type(gt_clusters[sample_token]) == RadiusBand, "Error: gt_clusters[sample_token] is not a RadiusBand object" 
+                
+                
+                cluster_gt_propn_list = [{}] * radius_band.num_clusters
+                
+                for i, gt_cluster in enumerate(radius_band.clusters):
+                    for gt_box in gt_cluster.boxes:
+                        cluster_gt_propn_list[i].add(self.conf_mat_mapping[gt_box.detection_name])
+                        
+                
+                    
                 
         
