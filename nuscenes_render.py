@@ -8,6 +8,7 @@ from nuscenes.utils.geometry_utils import view_points, box_in_image, BoxVisibili
 from nuscenes.utils.map_mask import MapMask
 from nuscenes.utils.color_map import get_colormap
 import os.path as osp
+from nuscenes.eval.common.utils import quaternion_yaw
 
 from PIL import Image
 from nuscenes.nuscenes import NuScenesExplorer 
@@ -18,7 +19,12 @@ from nuscenes.nuscenes import NuScenes
 import numpy as np
 from pyquaternion import Quaternion
 
-def convert_to_flat_veh_coords(sample_data_token:str, box:Box, nusc: NuScenes) -> Box:
+def convert_EvalBox_to_flat_veh_coords(sample_data_token:str, box:EvalBox, nusc: NuScenes) -> Box:
+    yaw = Quaternion(pose_record['rotation']).yaw_pitch_roll[0]
+    box.translate(-np.array(pose_record['translation']))
+    box.rotate(Quaternion(scalar=np.cos(yaw / 2), vector=[0, 0, np.sin(yaw / 2)]).inverse)
+
+def convert_ego_pose_to_flat_veh_coords(sample_data_token:str, box:Box, nusc: NuScenes) -> Box:
     sd_record = nusc.get('sample_data', sample_data_token)
     cs_record = nusc.get('calibrated_sensor', sd_record['calibrated_sensor_token'])
     pose_record = nusc.get('ego_pose', sd_record['ego_pose_token'])
@@ -28,6 +34,12 @@ def convert_to_flat_veh_coords(sample_data_token:str, box:Box, nusc: NuScenes) -
     
     return box
 
+def get_ego_angle(nusc: NuScenes, sample_data_token: str) -> float:
+    sd_record = nusc.get('sample_data', sample_data_token)
+    pose_record = nusc.get('ego_pose', sd_record['ego_pose_token'])
+    rotn = Quaternion(pose_record['rotation'])
+    return quaternion_yaw(rotn) / np.pi * 180
+    
 def render_sample_data_with_predictions( sample_data_token: str,
                            with_anns: bool = True,
                            box_vis_level: BoxVisibility = BoxVisibility.ANY,
@@ -235,6 +247,10 @@ def render_sample_data_with_predictions( sample_data_token: str,
 
             # Show ego vehicle.
             ax.plot(0, 0, 'x', color='red')
+            yaw = get_ego_angle(nusc, sample_data_token)
+            ax.plot([0, 5*np.cos(np.radians(yaw))], [0, 5*np.sin(np.radians(yaw))], color='black')
+            ax.plot([0, 5], [0, 0], color='green')
+            
 
             # Get boxes in lidar frame.
             _, boxes, _ = nusc.get_sample_data(ref_sd_token, box_vis_level=box_vis_level,
@@ -247,7 +263,7 @@ def render_sample_data_with_predictions( sample_data_token: str,
                     box.render(ax, view=np.eye(4), colors=(c, c, c))
                     
                 for box in pred_boxes:
-                    box = convert_to_flat_veh_coords(ref_sd_token, box, nusc)
+                    box = convert_ego_pose_to_flat_veh_coords(ref_sd_token, box, nusc)
                     box.render(ax, view=np.eye(4), colors=('k', 'k', 'k'))
 
             # Limit visible range.

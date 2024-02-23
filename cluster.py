@@ -1,33 +1,18 @@
 #! /usr/bin/python3
 
 import numpy as np
+import pytestp
 from pyquaternion import Quaternion
 from nuscenes.eval.common.data_classes import EvalBoxes, EvalBox
+from nuscenes.utils.data_classes import Box
 
-def unit_vector(vector):
-        """ Returns the unit vector of the vector.  """
-        return vector / np.linalg.norm(vector)
-
-def angle_between(v1, v2):
-    """ Returns the angle in radians between vectors 'v1' and 'v2'::
-
-            >>> angle_between((1, 0, 0), (0, 1, 0))
-            1.5707963267948966
-            >>> angle_between((1, 0, 0), (1, 0, 0))
-            0.0
-            >>> angle_between((1, 0, 0), (-1, 0, 0))
-            3.141592653589793
-    """
-    v1_u = self.__unit_vector(v1)
-    v2_u = self.__unit_vector(v2)
-    return np.arccos(np.clip(np.dot(v1_u, v2_u), -1.0, 1.0))
-    
 
 class RadiusBand:
     """Given a distance threshold between objects and a radius band, this class consists of all the Cluster objects therein
     """
     def __init__(self,
                  sample_token:str,
+                 gt_boxes: list(Box), 
                  ego_veh:dict,
                  radius_band:tuple,
                  max_distance_bw_obj:float,    
@@ -53,6 +38,7 @@ class RadiusBand:
             self.radius_band = (1, radius_band[1])
         
         self.sigma = 0.0001
+        self.num_bins = int(np.ceil((2 * np.pi) / self.radius_band[0]))
         
         
     def generate_clusters(self):
@@ -61,7 +47,7 @@ class RadiusBand:
         
         cluster_radial = self.__calculate_max_radius_bw_obj(self.radius_band[0])
         
-        for i in range(int(np.ceil(self.radius_band[0]/(2 * np.pi)))):
+        for i in range(self.num_bins):
             self.clusters.append(Cluster(sample_token=self.sample_token,
                                          ego_veh=self.ego_veh,
                                          dist_threshold=self.max_dist_bw_obj,
@@ -70,13 +56,11 @@ class RadiusBand:
                                          upper_radian_lim=(i+1)*cluster_radial)
             )
     
-    def add_box(self, box: EvalBox) -> None:
-        # Convert Quaternion into yaw, pitch, roll
-        ego_veh_quat = Quaternion(self.ego_veh['rotation'])
-        ego_veh_yaw, _, _ = ego_veh_quat.yaw_pitch_roll
-        
-        #Calculate the angle between the box and the ego vehicle
-        obj_yaw = self.ego_veh[translation] - box.translation
+    def add_box(self, box: Box) -> None:
+        angle_from_ego = np.arctan2(box.center[1], box.center[0])
+        angle_from_ego = angle_from_ego if angle_from_ego >= 0 else (2 * np.pi) + angle_from_ego
+        bin_index = int(np.ceil(angle_from_ego / self.radius_band[0]))
+        self.clusters[bin_index].add_box(box)
         
     
     def __calculate_max_radius_bw_obj(self, radius: float):
@@ -110,17 +94,15 @@ class Cluster:
         
     
         
-    def add_box(self, box: EvalBox) -> None:
-        self.boxes.append(box)
+    def add_box(self, box: Box) -> None:       
+        angle_from_ego = np.arctan2(box.center[1], box.center[0])
+        angle_from_ego = angle_from_ego if angle_from_ego >= 0 else (2 * np.pi) + angle_from_ego
         
-        
-        # v = np.array(self.ego_vehicle['translation']) - np.array(box.translation)
-        # angle = self.__angle_between(v, )
-        
-        # if len(self.boxes) == 0:
-        #     self.closest_box = box
-        #     self.farthest_box = box
-        # else:
+        if self.lower_radian_lim <= angle_from_ego <= self.upper_radian_lim:
+            self.boxes.append(box)
+    
+    def get_num_items_in_cluster(self) -> int:
+        return len(self.boxes)
             
         
     def get_cluster_spread(self) -> np.ndarray:
@@ -147,6 +129,25 @@ class Cluster:
         dist = np.linalg.norm(com - coord)
         
         return dist < self.dist_thresh
+    
+
+def unit_vector(vector):
+        """ Returns the unit vector of the vector.  """
+        return vector / np.linalg.norm(vector)
+
+def angle_between(v1, v2):
+    """ Returns the angle in radians between vectors 'v1' and 'v2'::
+
+            >>> angle_between((1, 0, 0), (0, 1, 0))
+            1.5707963267948966
+            >>> angle_between((1, 0, 0), (1, 0, 0))
+            0.0
+            >>> angle_between((1, 0, 0), (-1, 0, 0))
+            3.141592653589793
+    """
+    v1_u = self.__unit_vector(v1)
+    v2_u = self.__unit_vector(v2)
+    return np.arccos(np.clip(np.dot(v1_u, v2_u), -1.0, 1.0))
         
     
     
