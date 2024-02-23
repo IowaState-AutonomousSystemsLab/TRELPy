@@ -76,7 +76,6 @@ def confusion_matrix(conf_matrix):
 
 def construct_confusion_matrix_dict(cm):
     C = dict()
-    st()
     total_ped = np.sum(cm[:,0])
     total_obs = np.sum(cm[:,1])
     total_emp = np.sum(cm[:,2])

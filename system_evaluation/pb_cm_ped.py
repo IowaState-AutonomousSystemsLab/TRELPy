@@ -21,96 +21,8 @@ import time
 import json
 import sys
 sys.setrecursionlimit(10000)
-
-def get_state(x, v, Vhigh, Vlow=0):
-    state_num = (Vhigh-Vlow+1)*(x-1)+v
-    state_str = "S"+str(state_num)
-    return state_num, state_str
-
-def get_formula_states(xcar_stop, Vhigh, Vlow=0):
-        bst = set()
-        _, good_state_str = get_state(xcar_stop, 0, Vhigh)
-        gst = {good_state_str}
-        for vi in range(0,Vhigh+1):
-            _, state_str = get_state(xcar_stop, vi, Vhigh)
-            if state_str not in gst:
-                bst |= {state_str}
-        
-        bad = "" # Expression for bad states
-        good = "" # Expression for good states
-        for st in list(gst):
-            if good == "":
-                good = good + "\"" + st+"\""
-            else:
-                good = good + "|\""+st+"\""
-        for st in list(bst):
-            if bad == "":
-                bad = bad + "\"" + st+"\""
-            else:
-                bad = bad + "|\""+st+"\""
-        return good, bad, gst, bst
-
-def set_crosswalk_cell(Ncar, xmax_stop):
-    '''
-    Inputs: 
-    Vhigh: Highest possible speed for a car
-    Ncar: Number of discrete cells for a car
-    xmax_stop: The maximum cell that a car can stop by at its highest initial speed. 
-    Vhigh need not be the car's highest initial speed.
-    '''
-    
-    Nped = Ncar - 1 # Penultimate cell
-    xped = np.random.randint(xmax_stop+1, Ncar) # Pick a pedestrian cell from [xmax_stop+1, Ncar]
-    
-    xcar_stop = xped - 1 # Cell state of the car by which v = 0
-    assert(xcar_stop >= xmax_stop)
-    return xped, xcar_stop
-
-def formula_deprec(xcar_stop, Vhigh, Vlow=0):
-    '''
-    Formula to compute the probability of not reaching a bad state until a good state has been visited.
-    This formula is not used in the results but was kept in the code.
-    '''
-    bad_states = set()
-    good_state = set()
-    
-    good, bad, gst, bst = get_formula_states(xcar_stop, Vhigh, Vlow=0)
-    good_state |= gst
-    bad_states |= bst
-    formula = "P=?[!("+str(bad)+") U "+str(good)+"]"
-    return formula
-
-def formula_visit_bad_states(Ncar, xcar_stop, Vhigh, Vlow=0):
-    '''
-    Probability of never visiting a good state, and never ...
-    '''
-    bad_states = set()
-    good_state = set()
-    
-    good, bad, gst, bst = get_formula_states(xcar_stop, Vhigh, Vlow=0)
-
-    phi1 = "!("+good+")"
-    phi2 = "("+good+") | !("+bad
-
-    for xcar_ii in range(xcar_stop+1, Ncar+1):
-        good, bad, gst, bst = get_formula_states(xcar_ii) # We only want the bad states; ignore the good states output here
-        bad_states |= bst
-        phi2 = phi2 + "|" + bad
-    phi2 = phi2 + ")"
-    formula = "P=?[G("+str(phi1)+") && G("+str(phi2)+")]"
-    return formula
-
-def formula_ev_good(xcar_stop, Vhigh, Vlow=0):
-    '''
-    Probability of eventually reaching a good state
-    '''
-    good_state = set()
-    
-    good, bad, gst, bst = get_formula_states(xcar_stop, Vhigh, Vlow=0)
-    good_state |= gst
-    for st in list(good_state):
-        formula = 'P=?[F(\"'+st+'\")]'
-    return formula
+from formula import *
+from pdb import set_trace as st
 
 def initialize(MAX_V, Ncar, maxv_init=None):
     '''
@@ -129,10 +41,9 @@ def initialize(MAX_V, Ncar, maxv_init=None):
     Vhigh = MAX_V
     
     if maxv_init:
-        xmax_stop = maxv_init*(maxv_init+1)/2 + 1 # earliest stopping point for car 
+        xmax_stop = int(maxv_init*(maxv_init+1)/2 + 1) # earliest stopping point for car 
     else:
-        xmax_stop = Vhigh*(Vhigh+1)/2 + 1 # earliest stopping point for car 
-    
+        xmax_stop = int(Vhigh*(Vhigh+1)/2 + 1) # earliest stopping point for car 
     xped, xcar_stop = set_crosswalk_cell(Ncar, xmax_stop)
     formula = formula_ev_good(xcar_stop, Vhigh, Vlow)
     return Vlow, Vhigh, xped, formula
@@ -168,6 +79,8 @@ def compute_probabilities(Ncar, MAX_V):
         print("Specification: ")
         print(formula)
         for vcar in range(1, vmax+1):  # Initial speed at starting point
+            VMAX.append(vmax)
+            INIT_V[vmax].append(vcar)
             state_f = lambda x,v: (Vhigh-Vlow+1)*(x-1) + v
             start_state = "S"+str(state_f(1,vcar))
             print(start_state)
@@ -180,21 +93,13 @@ def compute_probabilities(Ncar, MAX_V):
             state_info["start"] = start_state
         
             M = call_MC(S, O, state_to_S, K, K_backup, C, true_env, true_env_type, state_info)
-            param_M = call_MC_param(S, O, state_to_S, K, K_backup, param_C, true_env, true_env_type, xped, state_info)
-
-            pdb.set_trace()
-            # result = M.prob_TL(formula)
             result = M.prob_TL(formula)
-            result_param = param_M.prob_TL(formula)
-            print('Probability of eventually reaching good state for initial speed, {}, and max speed, {} is p = {}:'.format(vcar, vmax, result[start_state]))
-            pdb.set_trace()
-            # Store results:
-            VMAX.append(vmax)
-            INIT_V[vmax].append(vcar)
-            # p = result[start_state]
-            # print('Probability of satisfaction for initial speed, {}, and max speed, {} is p = {}:'.format(vcar, vmax, p))
             P[vmax].append(result[start_state])
-            P_param[vmax].append(result_param[start_state])
+            print('Probability of eventually reaching good state for initial speed, {}, and max speed, {} is p = {}:'.format(vcar, vmax, result[start_state]))
+
+            # param_M = call_MC_param(S, O, state_to_S, K, K_backup, param_C, true_env, true_env_type, xped, state_info)            
+            # result_param = param_M.prob_TL(formula)
+            # P_param[vmax].append(result_param[start_state])
     return INIT_V, P, P_param
 
 def save_results(INIT_V, P, P_param):
@@ -215,5 +120,5 @@ def save_results(INIT_V, P, P_param):
         json.dump(P_param, f)
 
 if __name__=="__main__":
-    MAX_V = 1
+    MAX_V = 6
     simulate(MAX_V)

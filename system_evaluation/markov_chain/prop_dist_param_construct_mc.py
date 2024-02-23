@@ -324,14 +324,6 @@ class synth_markov_chain:
         if sinit_st not in self.K_int_state_map_inv[Ki][inp_st].keys():
             poss_st = self.backup[sinit_st]
             test_list = [p for p in poss_st if (p[0]==sinit_st[0] and p[1]==1)]  # If sinit_st is at zero velocity, car should not remain stuck at 0 velocity.
-            # test_list = [p for p in poss_st if p in self.K_int_state_map_inv[Ki].keys()]
-            # if test_list:
-            #     sinit_st = test_list[0] # First state in the dictionary; deterministic controller
-
-            #     init_st_adj=(self.K_int_state_map_inv[Ki])[sinit_st]
-            #     K_instant = Ki_strategy.TulipStrategy()
-            #     K_instant.state = init_st_adj
-            # else:
             flg = 1
             K_instant = None
             if test_list:
@@ -354,36 +346,32 @@ class synth_markov_chain:
 
     # Function that returns the distance bin of a particular discrete state:
     def get_distbin(self, ped_st, init_st):
+        # 1/30/24: ToDo: Fix this logic. The distance bins need to be changed / fixed.
         ped_cell = ped_st[0]
         init_cell = init_st[0]
-        distbin = abs(ped_cell-init_cell)//10
+        distance_z = (abs(ped_cell-init_cell)//10)
+        ld = distance_z*10
+        ud = ld + 10
+        if ld > 0:
+            ld += 1
+        distbin = (ld, ud)
         return distbin
 
     # Constructing the Markov chain
-    # ped_st: pedestrian position: [56,0]
     def construct_markov_chain(self, ped_st): # Construct probabilities and transitions in the markov chain given the controller and confusion matrix
         for Si in list(self.states):
-            # print("Finding initial states in the Markov chain: ")
-            # print(Si)
             init_st = self.reverse_state_dict[Si]
             distbin = self.get_distbin(ped_st, init_st)
-            # The output state can be different depending on the observation as defined by the confusion matrix
+            pdb.set_trace()
             for obs in self.obs:
-                # print("The observation is as follows: ")
-                # print(obs)
                 env_st = self.get_env_state(obs)
                 next_st = self.compute_next_state(obs, env_st, init_st)
-                # print("The next state for this observation is as follows: ")
-                # print(next_st)
                 Sj = self.state_dict[tuple(next_st.values())]
-               #  prob_t = self.param_C[dist][obs, self.true_env_type] # Probability of transitions
-               # self.param_C[dist][np.isnan(self.param_C[dist])] = 0
                 if distbin not in self.param_C.keys():
                     pdb.set_trace()
                 prob_t = self.param_C[distbin][obs, self.true_env_type] # Probability of transitions
                 if np.isnan(prob_t):
                     prob_T = 0.0
-                # pdb.set_trace()
                 if (Si, Sj) in self.M.keys():
                     self.M[Si, Sj] = self.M[Si, Sj] + prob_t
                 else:
@@ -401,19 +389,11 @@ class synth_markov_chain:
         prism_file_path = os.path.join(model_path, "pedestrian.nm")
         path_MC = os.path.join(model_path, prop_model_MC)
         env_MC = os.path.join(model_path, "env_MC.nm")
-        # Print self markov chain:
-        # print(self.MC)
-        # Writing prism files:
         stormpy_int.to_prism_file(self.MC, path_MC)
         stormpy_int.to_prism_file(self.true_env_MC, env_MC)
         composed = synchronous_parallel([self.MC, self.true_env_MC])
-        # print(composed.transitions)
-        result = stormpy_int.model_checking(composed, phi, prism_file_path)
-        # Returns a tulip transys:
-        # MC_ts = stormpy_int.to_tulip_transys(path_MC)
-        result = stormpy_int.model_checking(self.MC, phi, prism_file_path) # Since there is no moving obstacle, try checking only the pedestrian obstacle
-        #for state in self.MC.states:
-        #    print("  State {}, with labels {}, Pr = {}".format(state, self.MC.states[state]["ap"], result[str(state)]))
+        # result = stormpy_int.model_checking(composed, phi, prism_file_path) 
+        result = stormpy_int.model_checking(self.MC, phi, prism_file_path)
         return result
 
     # Function to append labels to a .nm file:
