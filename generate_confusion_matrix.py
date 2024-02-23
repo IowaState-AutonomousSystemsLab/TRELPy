@@ -12,6 +12,8 @@ from nuscenes.utils.geometry_utils import view_points, box_in_image, BoxVisibili
 from nuscenes.eval.detection.data_classes import DetectionConfig, DetectionBox
 from nuscenes.eval.common.loaders import load_prediction, load_gt, add_center_dist, filter_eval_boxes
 from nuscenes_render import convert_EvalBox_to_flat_veh_coords
+from cluster import RadiusBand, Cluster
+from pdb import set_trace as st
 
 class GenerateConfusionMatrix:
     """
@@ -150,7 +152,7 @@ class GenerateConfusionMatrix:
                 self.ego_centric_gt_boxes[dist_band][sample_token].append(box)
                 
     def convert_preds_to_ego_centric(self) -> None:
-                
+        pass
                 
     def __initialize(self) -> None:
         """ initializes all class variables to their default values
@@ -390,7 +392,7 @@ class GenerateConfusionMatrix:
         return propn_labelled_conf_mat
     
     def calculate_clustered_conf_mat(self, 
-                                     gt_clusters: idk_yet, 
+                                     gt_clusters: List[Cluster], 
                                      list_of_propositions: list,
                                      conf_mat_mapping: Dict) -> np.ndarray:
         
@@ -403,6 +405,7 @@ class GenerateConfusionMatrix:
                 ego_pred_list.append(self.convert_EvalBox_to_flat_veh_coords(pred, self.ego_veh))
                 
             for cluster in gt_clusters[sample_token]:
-                cluster.
+                st()
+        
                 
         
