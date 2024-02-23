@@ -70,7 +70,7 @@ cm_prop, prop_dict = generator.get_proposition_labelled_conf_mat()
 cm = generator.get_distance_param_conf_mat()
 # x = generator.get_clustered_conf_mat()
 print(cm_prop)
-
+st()
 
 confusion_matrix = ConfusionMatrix(generator, list_of_classes, labels)
 confusion_matrix.set_confusion_matrix(cm, label_type="class")

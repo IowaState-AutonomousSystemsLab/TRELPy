@@ -289,9 +289,9 @@ class synth_markov_chain:
                 if distbin not in self.param_C.keys():
                     pdb.set_trace()
                 prob_t = self.param_C[distbin][obs, self.true_env_type] # Probability of transitions
-                # ACTIVE DEBUG: for MAX_V = 4 and the following state, the confusion matrix does not have only pedestrians in the range ped, ped.
-                # if Si == "S8":
-                #     pdb.set_trace()
+                # # ACTIVE DEBUG: for MAX_V = 4 and the following state, the confusion matrix does not have only pedestrians in the range ped, ped.
+                if Si == "S8":
+                    pdb.set_trace()
                 if np.isnan(prob_t):
                     prob_T = 0.0
                 if (Si, Sj) in self.M.keys():

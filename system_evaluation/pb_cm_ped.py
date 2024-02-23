@@ -122,5 +122,5 @@ def save_results(INIT_V, P, P_param):
         json.dump(P_param, f)
 
 if __name__=="__main__":
-    MAX_V = 3
+    MAX_V = 4
     simulate(MAX_V)
