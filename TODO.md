@@ -1,5 +1,7 @@
-- [] Change  `generate_confusion_matrix.py` to get the flat vehicle coordinates
-- [] Parameterize these based on distance from ego vehicle
-- [] Pass these new ones to RadiusBand class
-- [] Configure Radius Band class to utilize `np.arctan2()` to calculate the angle of this object w.r.t the ego
-- [] Finish setup of the Cluster object 
+### High priority:
+[] edit `RadiusBand` to add gt boxes to each of the Cluster objects. make a funciton called `populate`
+[] `GenConfMat:429` do IOU computation before accepting a pred as a successful match
+[] `GenConfMat:440+` copy logic from `GenConfMat:383-394` AND add main branch modifications and create the confusion matrix
+
+### Low priority:
+[] Add a list of labels to the Cluster object
