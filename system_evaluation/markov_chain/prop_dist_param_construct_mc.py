@@ -19,6 +19,7 @@ import pickle as pkl
 import pdb
 
 prop_model_MC = "prop_dist_model_MC.nm"
+env_model_MC = "prop_env.nm"
 # Function to return a list of all combinations of inputs:
 # Input: A dictionary names D
 # Each key of D corresponds to a set of values that key can take
@@ -51,83 +52,6 @@ def construct_backup_controller(Ncar, Vlow, Vhigh):
                     end_st.append((xcar_p, vcar+1))
             K_backup[st] = end_st
     return K_backup
-
-# Read confusion matrix from nuscnes file:
-def read_confusion_matrix(cm_fn):
-    conf_matrix = pkl.load( open(cm_fn, "rb" ))
-    n = len(conf_matrix[0][0])
-    cm = np.zeros((n,n))
-    for k, v in conf_matrix.items():
-        cm += v
-    return cm, conf_matrix
-
-# Script for confusion matrix of pedestrian
-# Make this cleaner; more versatile
-# C is a dicitionary: C(["ped", "nped"]) = N(observation|= "ped" | true_obj |= "nped") (cardinality of observations given as pedestrians while the true state is not a pedestrian)
-# Confusion matrix for second confusion matrix
-def confusion_matrix(conf_matrix):
-    C = dict()
-    param_C = dict()
-    #conf_matrix = "conf_matrix.p"
-    cm, param_cm = read_confusion_matrix(conf_matrix)
-    C = construct_confusion_matrix_dict(cm)
-    for k, cm in param_cm.items():
-        param_C[k] = construct_confusion_matrix_dict(cm)
-    return C, param_C
-
-def construct_confusion_matrix_dict(cm):
-    C = dict()
-    total_ped = np.sum(cm[:,0])
-    total_obs = np.sum(cm[:,1])
-    total_ped_obs = np.sum(cm[:,2])
-    total_emp = np.sum(cm[:,3])
-
-    C["ped", "ped"] = cm[0,0]/total_ped
-    C["ped", "obj"] = cm[0,1]/total_obs
-    C["ped", "ped,obj"] = cm[0,2]/total_ped_obs
-    C["ped", "empty"] = cm[0,3]/total_emp
-
-    C["obj", "ped"] = cm[1,0]/total_ped
-    C["obj", "obj"] = cm[1,1]/total_obs
-    C["obj", "ped,obj"] = cm[1,2]/total_ped_obs
-    C["obj", "empty"] = cm[1,3]/total_emp
-
-    C["ped,obj", "ped"] = cm[2,0]/total_ped
-    C["ped,obj", "obj"] = cm[2,1]/total_obs
-    C["ped,obj", "ped,obj"] = cm[2,2]/total_ped_obs
-    C["ped,obj", "empty"] = cm[2,3]/total_emp
-
-    C["empty", "ped"] = cm[3,0]/total_ped
-    C["empty", "obj"] = cm[3,1]/total_obs
-    C["empty", "ped,obj"] = cm[3,2]/total_ped_obs
-    C["empty", "empty"] = cm[3,3]/total_emp
-    return C
-
-# Script for confusion matrix of pedestrian
-# Varying the precision/recall confusion matrix values
-def confusion_matrix_ped2(prec, recall):
-    C = dict()
-    tp = recall*100
-    fn = tp/prec - tp
-    tn = 200 - fn
-    C["ped", "ped"] = (recall*100)/100.0
-    C["ped", "obj"] = (fn/2.0)/100.0
-    C["ped", "empty"] = (fn/2.0)/100.0
-
-    C["obj", "ped"] = ((1-recall)*100.0/2)/100.0
-    C["obj", "obj"] = (tn/2*4.0/5)/100.0
-    C["obj", "empty"] = (tn/2*1/5)/100.0
-
-    C["empty", "ped"] = ((1-recall)*100/2)/100.0
-    C["empty", "obj"] = (tn/2*1.0/5)/100.0
-    C["empty", "empty"] = (tn/2*4.0/5.0)/100.0
-    tol = 1e-4
-    assert(abs(C["ped", "ped"] + C["obj", "ped"] + C["empty", "ped"] - 1.0) < tol)
-    assert(abs(C["ped", "obj"] + C["obj", "obj"] + C["empty", "obj"]- 1.0)< tol)
-    assert(abs(C["ped", "empty"] + C["obj", "empty"] + C["empty", "empty"]- 1.0) < tol)
-
-    return C
-
 
 # Function that converts to a Markov chain from states and actions:
 def _construct_mdpmc(states, transitions, init, actions=None):
@@ -197,14 +121,11 @@ class synth_markov_chain:
         states = set(self.states) # Set of product states of the car
         transitions = set()
         for k in self.M.keys():
-            p_approx = min(1, abs(self.M[k]))
-            if abs(1-self.M[k]) > 1e-2:
-                print(abs(1-self.M[k]))
+            # CHECK: is the following line needed needed?
+            p_approx = min(1, abs(self.M[k])) 
             t = (k[0], k[1], p_approx)
             transitions |= {t}
         assert init in self.states
-       # for state in mc.states:
-       #    mc.states[state]["ap"] == {state}
         self.MC = _construct_mdpmc(states, transitions, init)
         markov_chain = _construct_mdpmc(states, transitions, init)
         for state in self.MC.states:
@@ -216,7 +137,7 @@ class synth_markov_chain:
     def print_MC(self):
         model_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), "models")
         path_MC = os.path.join(model_path, prop_model_MC)
-        env_MC = os.path.join(model_path, "env_MC.nm")
+        env_MC = os.path.join(model_path, env_model_MC)
         path_MC_model = stormpy_int.build_stormpy_model(path_MC)
         env_MC_model = stormpy_int.build_stormpy_model(env_MC)
         stormpy_int.print_stormpy_model(path_MC_model)
@@ -225,16 +146,14 @@ class synth_markov_chain:
    # Function to check if all outgoing transition probabilities for any state in the Markov chain sum to 1.
     def check_MC(self):
         T = self.MC.transitions(data=True)
-        # Printing all states and outgoing transitions
         for st in self.MC.states:
-           # print("State: ", st)
             end_states = [t for t in T if t[0]==st]
-           # print("End states: ")
-           # print(end_states)
             prob = [(t[2])['probability'] for t in end_states]
-           # print("probability of end states: ")
-           # print(prob)
-       #    assert abs(sum(prob)-1)<1e-4 # Checking that probabilities add up to 1 for every state
+            try:
+                assert abs(sum(prob)-1)<1e-4 # Checking that probabilities add up to 1 for every state
+            except:
+                print(f"AssertionError: Sum of outgoing probabilities from state {st} did not sum to 1: ", str(sum(prob)))
+                pdb.set_trace()
 
    # Sets the state of the true environment
     def set_true_env_state(self, st, true_env_type):
@@ -362,7 +281,7 @@ class synth_markov_chain:
         for Si in list(self.states):
             init_st = self.reverse_state_dict[Si]
             distbin = self.get_distbin(ped_st, init_st)
-            pdb.set_trace()
+            
             for obs in self.obs:
                 env_st = self.get_env_state(obs)
                 next_st = self.compute_next_state(obs, env_st, init_st)
@@ -370,6 +289,9 @@ class synth_markov_chain:
                 if distbin not in self.param_C.keys():
                     pdb.set_trace()
                 prob_t = self.param_C[distbin][obs, self.true_env_type] # Probability of transitions
+                # ACTIVE DEBUG: for MAX_V = 4 and the following state, the confusion matrix does not have only pedestrians in the range ped, ped.
+                # if Si == "S8":
+                #     pdb.set_trace()
                 if np.isnan(prob_t):
                     prob_T = 0.0
                 if (Si, Sj) in self.M.keys():
@@ -388,7 +310,7 @@ class synth_markov_chain:
         model_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), "models")
         prism_file_path = os.path.join(model_path, "pedestrian.nm")
         path_MC = os.path.join(model_path, prop_model_MC)
-        env_MC = os.path.join(model_path, "env_MC.nm")
+        env_MC = os.path.join(model_path, env_model_MC)
         stormpy_int.to_prism_file(self.MC, path_MC)
         stormpy_int.to_prism_file(self.true_env_MC, env_MC)
         composed = synchronous_parallel([self.MC, self.true_env_MC])

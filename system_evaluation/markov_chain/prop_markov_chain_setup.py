@@ -28,17 +28,21 @@ def call_MC(S, O, state_to_S, K, K_backup, C, true_env, true_env_type, state_inf
     M.set_confusion_matrix(C)
     M.set_true_env_state(true_env, true_env_type)
     M.set_controller(K, K_strat, K_backup)
-
+    print("-----------------------------------------------")
+    print(" Constructing Markov chain from classical confusion matrix: ")
     M.construct_internal_state_maps()
 
     # Construct Markov chain:
     M.construct_markov_chain()
     start_state = state_info["start"]
     MC = M.to_MC(start_state) # For setting initial conditions and assigning bad/good labels
+
+    print("Markov chain from classical confusion matrix: ")
     for k,v in M.M.items():
         s1 = M.reverse_state_dict[k[0]]
         s2 = M.reverse_state_dict[k[1]]
         print("(start: %s"% (s1,) + ", end: %s"% (s2,) +"): "+str(v))
+    print("-----------------------------------------------")
     return M
 
 def call_MC_param(S, O, state_to_S, K, K_backup, param_C, true_env, true_env_type, xped, state_info):
@@ -62,7 +66,8 @@ def call_MC_param(S, O, state_to_S, K, K_backup, param_C, true_env, true_env_typ
     M.set_confusion_matrix(param_C)
     M.set_true_env_state(true_env, true_env_type)
     M.set_controller(K, K_strat, K_backup)
-
+    print("-----------------------------------------------")
+    print(" Constructing Markov chain from paramterized confusion matrix: ")
     M.construct_internal_state_maps()
 
     # Construct Markov chain:
@@ -71,8 +76,10 @@ def call_MC_param(S, O, state_to_S, K, K_backup, param_C, true_env, true_env_typ
     M.construct_markov_chain(ped_st)
     start_state = state_info["start"]
     MC = M.to_MC(start_state) # For setting initial conditions and assigning bad/good labels
+    print("Markov chain from paramterized confusion matrix: ")
     for k,v in M.M.items():
         s1 = M.reverse_state_dict[k[0]]
         s2 = M.reverse_state_dict[k[1]]
         print("(start: %s"% (s1,) + ", end: %s"% (s2,) +"): "+str(v))
+    print("-----------------------------------------------")
     return M

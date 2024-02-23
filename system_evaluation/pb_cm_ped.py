@@ -20,6 +20,7 @@ import matplotlib as plt
 import time
 import json
 import sys
+import confusion_matrix as cmread
 sys.setrecursionlimit(10000)
 from formula import *
 from pdb import set_trace as st
@@ -58,12 +59,12 @@ def init(MAX_V=6):
 
 def simulate(MAX_V=6):
     Ncar = init(MAX_V=MAX_V)
-    INIT_V, P, P_param = compute_probabilities(Ncar, MAX_V)
+    C, param_C = cmread.new_confusion_matrix(prop_cm_fn, prop_dict_file)
+    INIT_V, P, P_param = compute_probabilities(Ncar, MAX_V, C, param_C)
     save_results(INIT_V, P, P_param)
 
 
-def compute_probabilities(Ncar, MAX_V):
-    C, param_C = cmp.new_confusion_matrix(prop_cm_fn, prop_dict_file)
+def compute_probabilities(Ncar, MAX_V, C, param_C):
     VMAX = []
     INIT_V = dict()
     P = dict()
@@ -95,11 +96,12 @@ def compute_probabilities(Ncar, MAX_V):
             M = call_MC(S, O, state_to_S, K, K_backup, C, true_env, true_env_type, state_info)
             result = M.prob_TL(formula)
             P[vmax].append(result[start_state])
-            print('Probability of eventually reaching good state for initial speed, {}, and max speed, {} is p = {}:'.format(vcar, vmax, result[start_state]))
+            print('Classical CM --- Probability of eventually reaching good state for initial speed, {}, and max speed, {} is p = {}:'.format(vcar, vmax, result[start_state]))
 
-            # param_M = call_MC_param(S, O, state_to_S, K, K_backup, param_C, true_env, true_env_type, xped, state_info)            
-            # result_param = param_M.prob_TL(formula)
-            # P_param[vmax].append(result_param[start_state])
+            param_M = call_MC_param(S, O, state_to_S, K, K_backup, param_C, true_env, true_env_type, xped, state_info)            
+            result_param = param_M.prob_TL(formula)
+            P_param[vmax].append(result_param[start_state])
+            print('Parametrized CM --- Probability of eventually reaching good state for initial speed, {}, and max speed, {} is p = {}:'.format(vcar, vmax, result[start_state]))
     return INIT_V, P, P_param
 
 def save_results(INIT_V, P, P_param):
@@ -120,5 +122,5 @@ def save_results(INIT_V, P, P_param):
         json.dump(P_param, f)
 
 if __name__=="__main__":
-    MAX_V = 6
+    MAX_V = 3
     simulate(MAX_V)
