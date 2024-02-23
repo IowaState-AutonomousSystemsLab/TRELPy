@@ -9,6 +9,7 @@ from nuscenes.utils.map_mask import MapMask
 from nuscenes.utils.color_map import get_colormap
 import os.path as osp
 from nuscenes.eval.common.utils import quaternion_yaw
+from nuscenes.eval.detection.data_classes import DetectionBox
 
 from PIL import Image
 from nuscenes.nuscenes import NuScenesExplorer 
@@ -19,7 +20,9 @@ from nuscenes.nuscenes import NuScenes
 import numpy as np
 from pyquaternion import Quaternion
 
-def convert_EvalBox_to_flat_veh_coords(sample_data_token:str, box:Box, nusc: NuScenes) -> Box:
+from nuscenes.eval.common.data_classes import EvalBox
+
+def convert_EvalBox_to_flat_veh_coords(sample_data_token:str, box:DetectionBox, nusc: NuScenes) -> Box:
     sd_record = nusc.get('sample_data', sample_data_token)
     cs_record = nusc.get('calibrated_sensor', sd_record['calibrated_sensor_token'])
     sensor_record = nusc.get('sensor', cs_record['sensor_token'])
@@ -28,6 +31,15 @@ def convert_EvalBox_to_flat_veh_coords(sample_data_token:str, box:Box, nusc: NuS
     box.translate(-np.array(pose_record['translation']))
     box.rotate(Quaternion(scalar=np.cos(yaw / 2), vector=[0, 0, np.sin(yaw / 2)]).inverse)
 
+    return Box(token=box.sample_token, 
+               center=box.translation, 
+               size=box.size, 
+               orientation=box.rotation, 
+               name=box.name,
+               name=box.detection_name,
+               score=box.detection_score, 
+               score=box.score)
+    
 def convert_ego_pose_to_flat_veh_coords(sample_data_token:str, box:Box, nusc: NuScenes) -> Box:
     sd_record = nusc.get('sample_data', sample_data_token)
     cs_record = nusc.get('calibrated_sensor', sd_record['calibrated_sensor_token'])

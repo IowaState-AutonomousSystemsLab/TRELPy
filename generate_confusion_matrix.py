@@ -4,6 +4,7 @@ from cluster import RadiusBand, Cluster
 from collections.abc import Iterable
 from typing import Tuple, Dict, Any, List
 from itertools import chain, combinations
+from classes import class_names
 
 from nuscenes import NuScenes
 from nuscenes.eval.common.data_classes import EvalBoxes, EvalBox
@@ -151,12 +152,6 @@ class GenerateConfusionMatrix:
                 dist_band_idx = np.floor((distance / self.distance_bin))
                 dist_band = list(self.ego_centric_gt_boxes.keys())[dist_band_idx]
                 self.ego_centric_gt_boxes[dist_band][sample_token].append(box)
-                
-<<<<<<< HEAD
-    def convert_preds_to_ego_centric(self) -> None:
-        pass
-=======
->>>>>>> caa6b9d8e9bc90067a2c7c0ef919142d9f8b8dc3
                 
     def __initialize(self) -> None:
         """ initializes all class variables to their default values
@@ -398,43 +393,51 @@ class GenerateConfusionMatrix:
             
         return propn_labelled_conf_mat
     
+    
     def calculate_clustered_conf_mat(self, 
                                      gt_clusters: dict,          # Dict[sample token] -> RadiusBand -> Cluster[]
                                      list_of_propositions: list) -> np.ndarray:
         
         n = len(self.list_of_classes)
-        clustered_conf_mat = np.zeros( (n+1, n+1) )
-        ego_pred_list = []
+        clustered_conf_mat = np.zeros( ( (2**n), (2**n)) )
+
+        propn_indices = list(range(len(list_of_propositions)))
+        propn_powerset = list(self.powerset(propn_indices))
         
         
         for sample_token in self.sample_tokens:
-            sample = self.nusc.get('sample', sample_token)
+            radius_band = gt_clusters[sample_token]
             cluster_pred_propn_list = [{}] * gt_clusters[sample_token].num_clusters
+            cluster_gt_propn_list = [{}] * radius_band.num_clusters
+            sample = self.nusc.get('sample', sample_token)
+            
+            assert type(gt_clusters[sample_token]) == RadiusBand, "Error: gt_clusters[sample_token] is not a RadiusBand object" 
+        
+            for i, gt_cluster in enumerate(radius_band.clusters):
+                for gt_box in gt_cluster.boxes:
+                    assert self.conf_mat_mapping[gt_box.detection_name] in class_names, "Error: gt_box.detection_name not in list_of_classes"
+                    cluster_gt_propn_list[i].add(self.conf_mat_mapping[gt_box.detection_name])
             
             for pred in self.pred_boxes[sample_token]:
-                
-                #TODO CURRENTLY DOES NOT RETURN ANYTHING
-                #TODO MODIFY LABEL. Currently it is a String like Vehicle.car but it should be one of the classes in classes.py
                 ego_pred_box = convert_EvalBox_to_flat_veh_coords(sample_data_token=sample["data"]["LIDAR_TOP"], 
                                                                         box=pred, 
                                                                         nusc=self.nusc)
                 ego_engle = np.arctan2(ego_pred_box.center[1], ego_pred_box.center[0])
                 ego_engle = ego_engle if ego_engle >= 0 else (2 * np.pi) + ego_engle
                 pred_idx = int(np.ceil(ego_engle / self.radius_band[0]))
-                
+                assert ego_pred_box.label in class_names, "Error: gt_box.detection_name not in list_of_classes"
+                #TODO IOU Computation
                 cluster_pred_propn_list[pred_idx].add(self.conf_mat_mapping[ego_pred_box.label])
                 
+            # Conf Mat Computation 
+            for i, pred_propn in enumerate(cluster_pred_propn_list):
                 
-            for radius_band in gt_clusters[sample_token]: # -> RadiusBand object
+                gt_propn = cluster_gt_propn_list[i]
                 
-                assert type(gt_clusters[sample_token]) == RadiusBand, "Error: gt_clusters[sample_token] is not a RadiusBand object" 
+                gt_classes = {"ped" if x == "pedestrian" else "obs" for x in gt_propn}
+                pred_classes = {"ped" if x == "pedestrian" else "obs" for x in pred_propn}
                 
                 
-                cluster_gt_propn_list = [{}] * radius_band.num_clusters
-                
-                for i, gt_cluster in enumerate(radius_band.clusters):
-                    for gt_box in gt_cluster.boxes:
-                        cluster_gt_propn_list[i].add(self.conf_mat_mapping[gt_box.detection_name])
                         
                 
                     
