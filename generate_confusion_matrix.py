@@ -393,8 +393,7 @@ class GenerateConfusionMatrix:
     
     def calculate_clustered_conf_mat(self, 
                                      gt_clusters: List[Cluster], 
-                                     list_of_propositions: list,
-                                     conf_mat_mapping: Dict) -> np.ndarray:
+                                     list_of_propositions: list) -> np.ndarray:
         
         n = len(self.list_of_classes)
         clustered_conf_mat = np.zeros( (n+1, n+1) )
