@@ -1,5 +1,6 @@
 #! /usr/bin/python3
 
+import sys
 import numpy as np
 # import pytestp
 from typing import List
@@ -13,11 +14,11 @@ class RadiusBand:
     """
     def __init__(self,
                  sample_token:str,
-                 gt_boxes: list(Box), 
+                 gt_boxes, 
                  ego_veh:dict,
                  radius_band:tuple,
-                 max_distance_bw_obj:float,    
-                ) -> None:
+                 max_distance_bw_obj:float, 
+                 verbosity:bool=True) -> None:   
         """
         Args:
             sample_token (str): token of the sample this Cluster belongs to
@@ -25,21 +26,23 @@ class RadiusBand:
             radius_band (tuple): tuple of the radius band, (min_radius, max_radius) between which these Clusters lies
             max_distance_bw_obj (float): maximum distance between objects
         """
-        
+        print("Creating RadiusBand object for sample: ", sample_token, " with radius band: ", radius_band)
         self.sample_token = sample_token
         self.ego_veh = ego_veh
         self.radius_band = radius_band
         self.clusters: list[Cluster] = []
         self.max_dist_bw_obj = max_distance_bw_obj
-        self.generate_clusters()
+
         
         if radius_band[0] <= 0:
-            print("Minimum radius should be greater than 0", error=True)
-            print("Setting min Radius to 1 m", error=True)
+            print("Minimum radius should be greater than 0\n setting min_radius to 1", file=sys.stderr)
             self.radius_band = (1, radius_band[1])
         
         self.sigma = 0.0001
-        self.num_clusters = int(np.ceil((2 * np.pi) / self.radius_band[0]))
+        self.angular_diff = self.__calculate_max_radius_bw_obj(self.radius_band[0])
+        self.num_clusters = int(np.ceil((2 * np.pi) / self.angular_diff))
+        
+        self.generate_clusters()
         self.populate_clusters(gt_boxes)
         
     
@@ -47,18 +50,17 @@ class RadiusBand:
         """generates clusters for the ground truth boxes
         """
         
-        cluster_radial = self.__calculate_max_radius_bw_obj(self.radius_band[0])
-        
         for i in range(self.num_clusters):
+            if i%100 == 0: print(f"Creating cluster {i+1} of {self.num_clusters}")
             self.clusters.append(Cluster(sample_token=self.sample_token,
                                          ego_veh=self.ego_veh,
                                          dist_threshold=self.max_dist_bw_obj,
                                          radius_band=self.radius_band,
-                                         lower_radian_lim=(0 if i==0 else (i*cluster_radial)+self.sigma),
-                                         upper_radian_lim=(i+1)*cluster_radial)
+                                         lower_radian_lim=(0 if i==0 else (i*self.angular_diff)+self.sigma),
+                                         upper_radian_lim=(i+1)*self.angular_diff)
             )
     
-    def populate_clusters(self, unclustered_gt_boxes: List(Box)) -> None:
+    def populate_clusters(self, unclustered_gt_boxes: list) -> None:
         """populates the clusters with the ground truth boxes
         """
         for box in unclustered_gt_boxes:
@@ -68,11 +70,16 @@ class RadiusBand:
     def add_box(self, box: Box) -> None:
         angle_from_ego = np.arctan2(box.center[1], box.center[0])
         angle_from_ego = angle_from_ego if angle_from_ego >= 0 else (2 * np.pi) + angle_from_ego
-        bin_index = int(np.ceil(angle_from_ego / self.radius_band[0]))
+        bin_index = int(np.ceil(angle_from_ego / self.angular_diff))
         self.clusters[bin_index].add_box(box)
         
     
     def __calculate_max_radius_bw_obj(self, radius: float):
+        """ Using s=r * theta, calculate the maximum distance between objects
+        
+        Since we know r (the radius from the ego_veh), and the max allowed dist distance between objects, we calculate theta
+        """
+        #TODO: I'm using arc length formula for straight line distance. 
         return (self.max_dist_bw_obj / radius)
 
 class Cluster:

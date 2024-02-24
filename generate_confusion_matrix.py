@@ -77,7 +77,6 @@ class GenerateConfusionMatrix:
         self.verbose = verbose
         self.max_dist_bw_obj = max_dist_bw_obj
         self.conf_mat_mapping = conf_mat_mapping
-        self.ego_veh = self.__load_ego_veh()
         
         self.dist_conf_mats: Dict(Tuple[int, int], np.ndarray) = {}
         self.prop_conf_mats: Dict(Tuple[int, int], np.ndarray) = {}
@@ -88,6 +87,7 @@ class GenerateConfusionMatrix:
         
         self.gt_clusters:dict(Tuple[int, int], RadiusBand) = {}   # {distance_bin: {sample_token: [Cluster1, Cluster2, ...]}
 
+        self.sample_tokens = None
         self.__load_boxes()
         self.__initialize()
         # self.__check_distance_param_settings()
@@ -101,8 +101,6 @@ class GenerateConfusionMatrix:
             os.makedirs(self.output_dir)
         if not os.path.isdir(self.plot_dir):
             os.makedirs(self.plot_dir)
-        
-        self.sample_tokens = self.gt_boxes.sample_tokens
     
     def __load_ego_veh(self, sample_token:str):
         sample = self.nusc.get('sample', sample_token)
@@ -136,6 +134,7 @@ class GenerateConfusionMatrix:
         if self.verbose:
             print('Filtering ground truth annotations')
         self.gt_boxes = filter_eval_boxes(self.nusc, self.gt_boxes, self.cfg.class_range, verbose=self.verbose)
+        self.sample_tokens = self.gt_boxes.sample_tokens
         
         
     def load_ego_centric_boxes(self) -> None:
@@ -148,8 +147,10 @@ class GenerateConfusionMatrix:
             
             for box in boxes:
                 xy_translation = np.array(box.center[:2])
-                distance = np.norm(xy_translation)
-                dist_band_idx = np.floor((distance / self.distance_bin))
+                distance = np.linalg.norm(xy_translation)
+                #TODO handle case when distance is greater than max_dist. Currently ignoring
+                if distance > self.max_dist: continue
+                dist_band_idx = int(np.floor((distance / self.distance_bin)))
                 dist_band = list(self.ego_centric_gt_boxes.keys())[dist_band_idx]
                 self.ego_centric_gt_boxes[dist_band][sample_token].append(box)
                 
@@ -210,6 +211,7 @@ class GenerateConfusionMatrix:
                 for sample_token in self.sample_tokens:
                     self.ego_centric_gt_boxes[(0, self.distance_bin)][sample_token] = []        
             else:
+                self.gt_clusters[(self.distance_bin*i)+1, self.distance_bin*(i+1)] = {}  
                 self.ego_centric_gt_boxes[(self.distance_bin*i)+1, self.distance_bin*(i+1)] = {}
                 for sample_token in self.sample_tokens:
                     self.ego_centric_gt_boxes[(self.distance_bin*i)+1, self.distance_bin*(i+1)][sample_token] = []
@@ -217,20 +219,21 @@ class GenerateConfusionMatrix:
         self.load_ego_centric_boxes()
         
         for i in range(self.num_bins):
-            if i == 0:
-                self.gt_clusters[(0, self.distance_bin)][sample_token] = \
-                    RadiusBand(sample_token = sample_token, 
-                                ego_veh=self.__load_ego_veh(sample_token),
-                                gt_boxes = self.ego_centric_gt_boxes[(0, self.distance_bin)][sample_token],
-                                max_dist_bw_obj = self.max_dist_bw_obj, 
-                                radius_band= (0, self.distance_bin))
-            else:
-                self.gt_clusters[( (self.distance_bin*i)+1, (self.distance_bin*(i+1)))][sample_token] = \
-                    RadiusBand(sample_token = sample_token,
-                                ego_veh=self.__load_ego_veh(sample_token),
-                                gt_boxes = self.ego_centric_gt_boxes[(self.distance_bin*i)+1, self.distance_bin*(i+1)][sample_token],
-                                max_dist_bw_obj = self.max_dist_bw_obj,
-                                radius_band = ((self.distance_bin*i)+1, (self.distance_bin*(i+1))))
+            for sample_token in self.sample_tokens:
+                if i == 0:
+                        self.gt_clusters[(0, self.distance_bin)][sample_token] = \
+                            RadiusBand(sample_token = sample_token, 
+                                        ego_veh=self.__load_ego_veh(sample_token),
+                                        gt_boxes = self.ego_centric_gt_boxes[(0, self.distance_bin)][sample_token],
+                                        max_distance_bw_obj = self.max_dist_bw_obj, 
+                                        radius_band= (0, self.distance_bin))
+                else:
+                    self.gt_clusters[( (self.distance_bin*i)+1, (self.distance_bin*(i+1)))][sample_token] = \
+                        RadiusBand(sample_token = sample_token,
+                                    ego_veh=self.__load_ego_veh(sample_token),
+                                    gt_boxes = self.ego_centric_gt_boxes[(self.distance_bin*i)+1, self.distance_bin*(i+1)][sample_token],
+                                    max_distance_bw_obj = self.max_dist_bw_obj,
+                                    radius_band = ((self.distance_bin*i)+1, (self.distance_bin*(i+1))))
             
             
     
@@ -279,10 +282,10 @@ class GenerateConfusionMatrix:
     
     def get_clustered_conf_mat(self):   
         for key in list(self.gt_clusters.keys()): # -> loop through distance params
-            self.clustered_conf_mats[key] = self.calculate_clustered_conf_mat(self.gt_clusters[key], # a Dict object where keys=sample_tokens and value=list of RadiusBands for different sample_tokens for a certain (min_radius, max_radius) distance bin
-                                                                              self.disc_pred_boxes[key]
-                                                                              ["ped", "obs"],
-                                                                              self.conf_mat_mapping)
+            self.clustered_conf_mats[key] = self.calculate_clustered_conf_mat(gt_clusters=self.gt_clusters[key], # a Dict object where keys=sample_tokens and value=list of RadiusBands for different sample_tokens for a certain (min_radius, max_radius) distance bin
+                                                                              pred_boxes=self.disc_pred_boxes[key],
+                                                                              list_of_propositions=["ped", "obs"]) # in radians
+                                                                              
     
 
     def calculate_conf_mat(self,
@@ -438,7 +441,7 @@ class GenerateConfusionMatrix:
                                      gt_clusters: Dict,          # Dict[sample token] -> RadiusBand -> Cluster[]
                                      pred_boxes: List, 
                                      list_of_propositions: List,
-                                     dist_thresh: None,       # in m 
+                                     dist_thresh: None = 2,       # in m 
                                      yaw_thresh: float = np.pi/2.0,
                                      iou_thresh:float = 0.65) -> np.ndarray:
         
@@ -466,7 +469,7 @@ class GenerateConfusionMatrix:
             
                     cluster_pred_propn_list[i].add(self.find_preds_for_cluster(gt_cluster, dist_thresh, yaw_thresh, iou_thresh))
             
-            # TODO All this is temporary to check for copilatiokn and runtime erros. Implement
+            # TODO All this is temporary to check for compilation and runtime errors. Implement
             true_count, total = 0, 0
             
             # Conf Mat Computation 
