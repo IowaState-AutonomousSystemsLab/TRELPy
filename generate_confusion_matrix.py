@@ -277,9 +277,10 @@ class GenerateConfusionMatrix:
     
         return self.prop_conf_mats
     
-    def get_clustered_conf_mat(self):
-        for key in list(self.gt_clusters.keys()):
+    def get_clustered_conf_mat(self):   
+        for key in list(self.gt_clusters.keys()): # -> loop through distance params
             self.clustered_conf_mats[key] = self.calculate_clustered_conf_mat(self.gt_clusters[key], # a Dict object where keys=sample_tokens and value=list of RadiusBands for different sample_tokens for a certain (min_radius, max_radius) distance bin
+                                                                              self.disc_pred_boxes[key]
                                                                               ["ped", "obs"],
                                                                               self.conf_mat_mapping)
     
@@ -310,26 +311,26 @@ class GenerateConfusionMatrix:
                 
                 for gt in sample_gt_list:
                         
-                        best_iou = -1       # Initialize best iou for a bbox with a value that cannot be achieved.
-                        best_match = None   # Initialize best matching bbox with None. Tuple of (gt, pred, iou)
-                        match_pred_ids = [] # Initialize list of matched predictions for this gt.
-                        
-                        for i, pred in enumerate(sample_pred_list):
-                                if center_distance(pred, gt) < dist_thresh and yaw_diff(pred, gt) < yaw_thresh and i not in taken:
-                                        match_pred_ids.append(i)
-                                        
-                        for match_idx in match_pred_ids:
-                                iou = scale_iou(sample_pred_list[match_idx], gt)
-                                if best_iou < iou:
-                                        best_iou = iou
-                                        best_match = (sample_pred_list[match_idx], gt, match_idx)
-                        
-                        if len(match_pred_ids) == 0:
-                                distance_param_conf_mat[EMPTY][conf_mat_mapping[gt.detection_name]] += 1
-                                continue
-                        else:
-                                taken.add(best_match[2])
-                                distance_param_conf_mat[conf_mat_mapping[best_match[0].detection_name]][conf_mat_mapping[best_match[1].detection_name]] += 1
+                    best_iou = -1       # Initialize best iou for a bbox with a value that cannot be achieved.
+                    best_match = None   # Initialize best matching bbox with None. Tuple of (gt, pred, iou)
+                    match_pred_ids = [] # Initialize list of matched predictions for this gt.
+                    
+                    for i, pred in enumerate(sample_pred_list):
+                            if center_distance(pred, gt) < dist_thresh and yaw_diff(pred, gt) < yaw_thresh and i not in taken:
+                                    match_pred_ids.append(i)
+                                    
+                    for match_idx in match_pred_ids:
+                            iou = scale_iou(sample_pred_list[match_idx], gt)
+                            if best_iou < iou:
+                                    best_iou = iou
+                                    best_match = (sample_pred_list[match_idx], gt, match_idx)
+                    
+                    if len(match_pred_ids) == 0:
+                            distance_param_conf_mat[EMPTY][conf_mat_mapping[gt.detection_name]] += 1
+                            continue
+                    else:
+                            taken.add(best_match[2])
+                            distance_param_conf_mat[conf_mat_mapping[best_match[0].detection_name]][conf_mat_mapping[best_match[1].detection_name]] += 1
                                 
                 c += 1
                 # print(len(sample_pred_list))
@@ -393,23 +394,68 @@ class GenerateConfusionMatrix:
             
         return propn_labelled_conf_mat
     
+    def find_preds_for_cluster(self, cluster:Cluster,
+                               dist_thresh = None, 
+                               yaw_thresh: int = np.pi/2.0,
+                               iou_thresh:float = 0.60) -> EvalBoxes:
+        
+        dist_thresh = cluster.max_dist_bw_obj if (dist_thresh is None) else dist_thresh
+        inrange_pred_boxes = self.pred_boxes[cluster.radius_band][[cluster.sample_token]]
+        sample = self.nusc.get('sample', cluster.sample_token)
+        matched_pred_boxes_as_DetBoxes = EvalBoxes()
+        matched_pred_boxes = []
+        
+        for gt_idx, gt_box in enumerate(cluster.boxes):
+            
+            for pred_idx, pred in enumerate(inrange_pred_boxes):
+                #TODO: currently this returns a Box object. I create the Box object in this function. Can we get away with creating a DetectionBox obj?
+                ego_pred_box = convert_EvalBox_to_flat_veh_coords(sample_data_token=sample["data"]["LIDAR_TOP"], 
+                                                                        box=pred, 
+                                                                        nusc=self.nusc)
+                ego_angle = np.arctan2(ego_pred_box.center[1], ego_pred_box.center[0])
+                ego_angle = ego_angle if ego_angle >= 0 else (2 * np.pi) + ego_angle
+                pred_idx = int(np.ceil(ego_angle / self.radius_band[0]))
+                
+                assert ego_pred_box.label in class_names, "Error: gt_box.detection_name not in list_of_classes"
+                
+                if cluster.lower_radian_lim <= ego_angle <= cluster.upper_radian_lim:
+                    if center_distance(pred, gt_box) < dist_thresh and yaw_diff(pred, gt_box) < yaw_thresh and scale_iou(inrange_pred_boxes[match_idx], gt_box) > iou_thresh:
+                        matched_pred_boxes.append(pred_idx)
+                                
+            for match_idx in matched_pred_boxes:
+                matched_box:Box = inrange_pred_boxes[match_idx]
+                #TODO how to avoid this object creation in line
+                matched_pred_boxes_as_DetBoxes.add_boxes(sample_token=cluster.sample_token, 
+                                                         boxes=[DetectionBox(sample_token=cluster.sample_token,
+                                                         translation=matched_box.center,
+                                                         size=matched_box.wlh,
+                                                         rotation=matched_box.orientation,
+                                                         detection_name=matched_box.name,
+                                                         detection_score=matched_box.score)])
+        return matched_pred_boxes_as_DetBoxes
     
     def calculate_clustered_conf_mat(self, 
-                                     gt_clusters: dict,          # Dict[sample token] -> RadiusBand -> Cluster[]
-                                     list_of_propositions: list) -> np.ndarray:
+                                     gt_clusters: Dict,          # Dict[sample token] -> RadiusBand -> Cluster[]
+                                     pred_boxes: List, 
+                                     list_of_propositions: List,
+                                     dist_thresh: None,       # in m 
+                                     yaw_thresh: float = np.pi/2.0,
+                                     iou_thresh:float = 0.65) -> np.ndarray:
         
         n = len(self.list_of_classes)
         clustered_conf_mat = np.zeros( ( (2**n), (2**n)) )
-
         propn_indices = list(range(len(list_of_propositions)))
         propn_powerset = list(self.powerset(propn_indices))
         
+        l = []
         
         for sample_token in self.sample_tokens:
             radius_band = gt_clusters[sample_token]
+            dist_thresh = radius_band.max_dist_bw_obj
             cluster_pred_propn_list = [{}] * gt_clusters[sample_token].num_clusters
             cluster_gt_propn_list = [{}] * radius_band.num_clusters
             sample = self.nusc.get('sample', sample_token)
+            inrange_pred_boxes: List = pred_boxes[sample_token]
             
             assert type(gt_clusters[sample_token]) == RadiusBand, "Error: gt_clusters[sample_token] is not a RadiusBand object" 
         
@@ -418,17 +464,11 @@ class GenerateConfusionMatrix:
                     assert self.conf_mat_mapping[gt_box.detection_name] in class_names, "Error: gt_box.detection_name not in list_of_classes"
                     cluster_gt_propn_list[i].add(self.conf_mat_mapping[gt_box.detection_name])
             
-            for pred in self.pred_boxes[sample_token]:
-                ego_pred_box = convert_EvalBox_to_flat_veh_coords(sample_data_token=sample["data"]["LIDAR_TOP"], 
-                                                                        box=pred, 
-                                                                        nusc=self.nusc)
-                ego_engle = np.arctan2(ego_pred_box.center[1], ego_pred_box.center[0])
-                ego_engle = ego_engle if ego_engle >= 0 else (2 * np.pi) + ego_engle
-                pred_idx = int(np.ceil(ego_engle / self.radius_band[0]))
-                assert ego_pred_box.label in class_names, "Error: gt_box.detection_name not in list_of_classes"
-                #TODO IOU Computation
-                cluster_pred_propn_list[pred_idx].add(self.conf_mat_mapping[ego_pred_box.label])
-                
+                    cluster_pred_propn_list[i].add(self.find_preds_for_cluster(gt_cluster, dist_thresh, yaw_thresh, iou_thresh))
+            
+            # TODO All this is temporary to check for copilatiokn and runtime erros. Implement
+            true_count, total = 0, 0
+            
             # Conf Mat Computation 
             for i, pred_propn in enumerate(cluster_pred_propn_list):
                 
@@ -436,6 +476,13 @@ class GenerateConfusionMatrix:
                 
                 gt_classes = {"ped" if x == "pedestrian" else "obs" for x in gt_propn}
                 pred_classes = {"ped" if x == "pedestrian" else "obs" for x in pred_propn}
+                
+                if gt_classes == pred_classes:
+                    true_count += 1
+                
+                total += 1
+                
+            print(f"Accuracy for sample {sample_token} is {true_count/total}")
                 
                 
                         

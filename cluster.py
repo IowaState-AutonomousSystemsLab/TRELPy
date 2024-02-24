@@ -2,6 +2,7 @@
 
 import numpy as np
 # import pytestp
+from typing import List
 from pyquaternion import Quaternion
 from nuscenes.eval.common.data_classes import EvalBoxes, EvalBox
 from nuscenes.utils.data_classes import Box
@@ -39,8 +40,9 @@ class RadiusBand:
         
         self.sigma = 0.0001
         self.num_clusters = int(np.ceil((2 * np.pi) / self.radius_band[0]))
+        self.populate_clusters(gt_boxes)
         
-        
+    
     def generate_clusters(self):
         """generates clusters for the ground truth boxes
         """
@@ -55,6 +57,13 @@ class RadiusBand:
                                          lower_radian_lim=(0 if i==0 else (i*cluster_radial)+self.sigma),
                                          upper_radian_lim=(i+1)*cluster_radial)
             )
+    
+    def populate_clusters(self, unclustered_gt_boxes: List(Box)) -> None:
+        """populates the clusters with the ground truth boxes
+        """
+        for box in unclustered_gt_boxes:
+            self.add_box(box)
+        
     
     def add_box(self, box: Box) -> None:
         angle_from_ego = np.arctan2(box.center[1], box.center[0])
