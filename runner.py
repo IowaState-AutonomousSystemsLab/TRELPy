@@ -65,10 +65,10 @@ generator = GenerateConfusionMatrix(nusc=nusc,
     distance_bin=10
 )
 
-cm_prop = generator.get_proposition_labelled_conf_mat()
+cm_prop, prop_dict = generator.get_proposition_labelled_conf_mat()
 cm = generator.get_distance_param_conf_mat()
 generator.generate_clusters()
-x = generator.get_clustered_conf_mat()
+cm_prop_w_clusters, prop_dict = generator.get_clustered_conf_mat()
 print()
 
 
@@ -79,3 +79,10 @@ confusion_matrix.save_confusion_matrix(cm_file, label_type="class")
 prop_cm_file = f"{cm_dir}/prop_cm.pkl"
 confusion_matrix.set_confusion_matrix(cm_prop, label_type="prop")
 confusion_matrix.save_confusion_matrix(prop_cm_file, label_type="prop")
+
+# Saving clustered confusion matrix:
+# Todo: Integrate the cluster saving into confusion matrix
+prop_cm_file_w_clusters = f"{cm_dir}/prop_cm_cluster.pkl"
+with open(file, "wb") as f:
+    pkl.dump(cm_prop_w_clusters, f)
+f.close()
