@@ -21,6 +21,7 @@ import numpy as np
 from pyquaternion import Quaternion
 
 from nuscenes.eval.common.data_classes import EvalBox
+from pdb import set_trace as st
 
 def convert_EvalBox_to_flat_veh_coords(sample_data_token:str, box:DetectionBox, nusc: NuScenes) -> Box:
     sd_record = nusc.get('sample_data', sample_data_token)
@@ -30,14 +31,12 @@ def convert_EvalBox_to_flat_veh_coords(sample_data_token:str, box:DetectionBox, 
     yaw = Quaternion(pose_record['rotation']).yaw_pitch_roll[0]
     box.translate(-np.array(pose_record['translation']))
     box.rotate(Quaternion(scalar=np.cos(yaw / 2), vector=[0, 0, np.sin(yaw / 2)]).inverse)
-
+    st()
     return Box(token=box.sample_token, 
                center=box.translation, 
                size=box.size, 
                orientation=box.rotation, 
                name=box.name,
-               name=box.detection_name,
-               score=box.detection_score, 
                score=box.score)
     
 def convert_ego_pose_to_flat_veh_coords(sample_data_token:str, box:Box, nusc: NuScenes) -> Box:

@@ -1,6 +1,5 @@
 import os
 import numpy as np
-from cluster import RadiusBand, Cluster
 from collections.abc import Iterable
 from typing import Tuple, Dict, Any, List
 from itertools import chain, combinations
@@ -14,7 +13,7 @@ from nuscenes.utils.geometry_utils import view_points, box_in_image, BoxVisibili
 from nuscenes.eval.detection.data_classes import DetectionConfig, DetectionBox
 from nuscenes.eval.common.loaders import load_prediction, load_gt, add_center_dist, filter_eval_boxes
 from nuscenes_render import convert_EvalBox_to_flat_veh_coords
-from cluster import RadiusBand, Cluster
+from cluster_devel import RadiusBand, Cluster
 from pdb import set_trace as st
 
 class GenerateConfusionMatrix:
@@ -73,11 +72,12 @@ class GenerateConfusionMatrix:
         self.distance_bin = distance_bin
         self.max_dist = max_dist
         self.num_bins = int(max_dist // distance_bin)
+        self.radius_bands = []
         self.list_of_classes = list_of_classes
+        self.list_of_propositions = None
         self.verbose = verbose
         self.max_dist_bw_obj = max_dist_bw_obj
         self.conf_mat_mapping = conf_mat_mapping
-        self.ego_veh = self.__load_ego_veh()
         
         self.dist_conf_mats: Dict(Tuple[int, int], np.ndarray) = {}
         self.prop_conf_mats: Dict(Tuple[int, int], np.ndarray) = {}
@@ -88,8 +88,15 @@ class GenerateConfusionMatrix:
         
         self.gt_clusters:dict(Tuple[int, int], RadiusBand) = {}   # {distance_bin: {sample_token: [Cluster1, Cluster2, ...]}
 
+        self.sample_tokens = None
+
+        if self.list_of_classes is not None:
+            self.set_list_of_classes(self.list_of_classes)
+            self.set_list_of_propositions()
+        self.initialize()
         self.__load_boxes()
-        self.__initialize()
+        self.initialize_clusters()
+        st()
         # self.__check_distance_param_settings()
         
         # Check result file exists.
@@ -101,8 +108,6 @@ class GenerateConfusionMatrix:
             os.makedirs(self.output_dir)
         if not os.path.isdir(self.plot_dir):
             os.makedirs(self.plot_dir)
-        
-        self.sample_tokens = self.gt_boxes.sample_tokens
     
     def __load_ego_veh(self, sample_token:str):
         sample = self.nusc.get('sample', sample_token)
@@ -136,7 +141,7 @@ class GenerateConfusionMatrix:
         if self.verbose:
             print('Filtering ground truth annotations')
         self.gt_boxes = filter_eval_boxes(self.nusc, self.gt_boxes, self.cfg.class_range, verbose=self.verbose)
-        
+        self.sample_tokens = self.gt_boxes.sample_tokens
         
     def load_ego_centric_boxes(self) -> None:
         for sample_token in self.sample_tokens:
@@ -144,38 +149,56 @@ class GenerateConfusionMatrix:
             _, boxes, _ = self.nusc.get_sample_data(sample['data']['LIDAR_TOP'],
                                                box_vis_level=BoxVisibility.ANY,
                                                use_flat_vehicle_coordinates=True)
-            
+
             for box in boxes:
                 xy_translation = np.array(box.center[:2])
-                distance = np.norm(xy_translation)
+                distance = np.linalg.norm(xy_translation)
                 dist_band_idx = np.floor((distance / self.distance_bin))
+                
+                #TODO handle case when distance is greater than max_dist. Currently ignoring
+                if distance > self.max_dist: continue
+                dist_band_idx = int(np.floor((distance / self.distance_bin)))
                 dist_band = list(self.ego_centric_gt_boxes.keys())[dist_band_idx]
                 self.ego_centric_gt_boxes[dist_band][sample_token].append(box)
                 
-    def __initialize(self) -> None:
+    def initialize(self) -> None:
         """ initializes all class variables to their default values
+            Have the option of running this function in main once propositions have been set.
         
         Args:
             None
         """
         
-        n = len(self.list_of_classes)
-        
+        n_class = len(self.list_of_classes)
+        n_prop = len(self.list_of_propositions)
         # initializing all the bins
+
         for i in range(self.num_bins):
-            if i == 0:
-                self.disc_gt_boxes[(0, self.distance_bin)] = EvalBoxes()
-                self.disc_pred_boxes[(0, self.distance_bin)] = EvalBoxes()
-                self.dist_conf_mats[(0, self.distance_bin)] = np.zeros((n+1, n+1))
-                self.prop_conf_mats[(0, self.distance_bin)] = np.zeros(((2**n), (2**n)))
-            else:
-                self.disc_gt_boxes[( (self.distance_bin * i)+1, self.distance_bin * (i + 1) )] = EvalBoxes()
-                self.disc_pred_boxes[( (self.distance_bin * i)+1, self.distance_bin * (i + 1) )] = EvalBoxes()
-                self.dist_conf_mats[( (self.distance_bin * i)+1, self.distance_bin * (i + 1) )] = np.zeros((n+1, n+1))
-                self.prop_conf_mats[( (self.distance_bin * i)+1, self.distance_bin * (i + 1) )] = np.zeros(((2**n), (2**n)))
-        
+            zl = (self.distance_bin * i) + 1
+            zu = self.distance_bin * (i + 1)
+
+            self.disc_gt_boxes[(zl, zu)] =  EvalBoxes()
+            self.disc_pred_boxes[(zl, zu)] =  EvalBoxes()
+            self.dist_conf_mats[(zl, zu)] = np.zeros((n_class+1, n_class+1))
+            self.prop_conf_mats[(zl, zu)] = np.zeros((n_prop+1, n_prop+1))
+            self.clustered_conf_mats[(zl, zu)] = np.zeros((n_prop+1, n_prop+1))
+            self.radius_bands.append((zl,zu))
+
+            # if i == 0:
+            #     self.disc_gt_boxes[(0, self.distance_bin)] = EvalBoxes()
+            #     self.disc_pred_boxes[(0, self.distance_bin)] = EvalBoxes()
+            #     self.dist_conf_mats[(0, self.distance_bin)] = np.zeros((n+1, n+1))
+            #     self.prop_conf_mats[(0, self.distance_bin)] = np.zeros(((2**n), (2**n)))
+            #     self.prop_conf_mats_w_clustering[(0, self.distance_bin)] = np.zeros(((2**n), (2**n)))
+            # else:
+            #     self.disc_gt_boxes[( (self.distance_bin * i)+1, self.distance_bin * (i + 1) )] = EvalBoxes()
+            #     self.disc_pred_boxes[( (self.distance_bin * i)+1, self.distance_bin * (i + 1) )] = EvalBoxes()
+            #     self.dist_conf_mats[( (self.distance_bin * i)+1, self.distance_bin * (i + 1) )] = np.zeros((n+1, n+1))
+            #     self.prop_conf_mats[( (self.distance_bin * i)+1, self.distance_bin * (i + 1) )] = np.zeros(((2**n), (2**n)))
+    
+    def initialize_clusters(self):
         self.generate_clusters()
-            
+     
         # Segmenting the ground truth and prediction boxes into distance bins
         for gt in self.gt_boxes.all:
             gt.ego_translation = (gt.ego_translation[0], gt.ego_translation[1], 0)                         #TODO check if this is working as expected
@@ -199,37 +222,23 @@ class GenerateConfusionMatrix:
                 - Store a RadiusBand Object
                     - RadiusBand Object contains a list of Cluster objects
                         - Each Cluster object contains a list of ground truth boxes for (theta1 + sigma, theta2)
-
         """
-        for i in range(self.num_bins):
-            if i == 0:
-                self.gt_clusters[(0, self.distance_bin)] = {}  
-                self.ego_centric_gt_boxes[(0, self.distance_bin)] = {}           
-                for sample_token in self.sample_tokens:
-                    self.ego_centric_gt_boxes[(0, self.distance_bin)][sample_token] = []        
-            else:
-                self.ego_centric_gt_boxes[(self.distance_bin*i)+1, self.distance_bin*(i+1)] = {}
-                for sample_token in self.sample_tokens:
-                    self.ego_centric_gt_boxes[(self.distance_bin*i)+1, self.distance_bin*(i+1)][sample_token] = []
-        
+        for band in self.radius_bands:
+            self.gt_clusters[band] = {}  
+            self.ego_centric_gt_boxes[band] = {}           
+            for sample_token in self.sample_tokens:
+                self.ego_centric_gt_boxes[band][sample_token] = []        
+            
         self.load_ego_centric_boxes()
         
-        for i in range(self.num_bins):
-            if i == 0:
-                self.gt_clusters[(0, self.distance_bin)][sample_token] = \
+        for band in self.radius_bands:
+            for sample_token in self.sample_tokens:
+                self.gt_clusters[band][sample_token] = \
                     RadiusBand(sample_token = sample_token, 
                                 ego_veh=self.__load_ego_veh(sample_token),
-                                gt_boxes = self.ego_centric_gt_boxes[(0, self.distance_bin)][sample_token],
-                                max_dist_bw_obj = self.max_dist_bw_obj, 
-                                radius_band= (0, self.distance_bin))
-            else:
-                self.gt_clusters[( (self.distance_bin*i)+1, (self.distance_bin*(i+1)))][sample_token] = \
-                    RadiusBand(sample_token = sample_token,
-                                ego_veh=self.__load_ego_veh(sample_token),
-                                gt_boxes = self.ego_centric_gt_boxes[(self.distance_bin*i)+1, self.distance_bin*(i+1)][sample_token],
-                                max_dist_bw_obj = self.max_dist_bw_obj,
-                                radius_band = ((self.distance_bin*i)+1, (self.distance_bin*(i+1))))
-            
+                                gt_boxes = self.ego_centric_gt_boxes[band][sample_token],
+                                max_distance_bw_obj = self.max_dist_bw_obj, 
+                                radius_band=band)
             
     
     def __check_distance_param_settings(self) -> None:
@@ -240,7 +249,46 @@ class GenerateConfusionMatrix:
             assert self.lower_thresh < self.upper_thresh, 'Error: lower_thresh must be lesser than upper_thresh'
             assert self.distance_bin > 0, 'Error: distance_bin must be > 0'
             
-            
+
+    ### ------- Propositions ----------- ####
+    def get_propositions(self):
+        n = len(self.list_of_classes)
+        propositions = list(powerset(self.list_of_classes))
+        self.prop_dict = dict()
+        for k, prop in enumerate(propositions):
+            if any(prop): # if not empty
+                prop_label = set(prop)
+                self.prop_dict[k] = prop_label
+            else:
+                self.prop_dict[k] = set(["empty"])
+
+    def set_list_of_propositions(self):
+        self.get_propositions()
+        n = len(self.prop_dict)
+        self.list_of_propositions = list(self.prop_dict.values())
+
+    def set_list_of_classes(self, list_of_classes):
+        self.list_of_classes = list_of_classes
+        self.class_dict = {k:c for k,c in enumerate(list_of_classes)}
+        if "empty" not in list_of_classes or "Empty" not in list_of_classes or "EMPTY" not in list_of_classes:
+            self.list_of_classes.append("empty")
+            kempty = len(self.list_of_classes)
+            self.class_dict.update({kempty-1: "empty"})
+        
+    def get_list_of_classes(self):
+        return self.list_of_classes, self.class_dict
+
+    def get_list_of_propositions(self):
+        return self.list_of_propositions, self.prop_dict
+        
+    def custom_propositions(self):
+        # Class to set custom propositions.
+        pass
+
+    ### ------- End of Propositions ----------- ####
+
+    ### ------- Code to compute class labeled confusion matrices ----------- ####
+
     def get_distance_param_conf_mat(self) -> Dict[Tuple[int, int], np.ndarray]:
         """Get a dictionary with the distance parametrized confusion matrices for each distance bin.
         
@@ -252,63 +300,11 @@ class GenerateConfusionMatrix:
             The values are the corresponding distance parameterized confusion matrices. 
         """
         for key in list(self.disc_gt_boxes.keys()):
-            self.dist_conf_mats[key] = self.calculate_conf_mat(self.disc_gt_boxes[key], self.disc_pred_boxes[key], self.conf_mat_mapping)
+            self.dist_conf_mats[key] = self.compute_class_labeled_cm(self.disc_gt_boxes[key], self.disc_pred_boxes[key], self.conf_mat_mapping)
 
         return self.dist_conf_mats
     
-    
-    def get_proposition_labelled_conf_mat(self):
-        """Get a dictionary with the proposition labelled confusion matrices for each distance bin.
-        
-        Args:
-            None
-            
-        Returns:
-            A dictionary where the keys are tuples of the form (lower_dist_thresh, upper_dist_thresh)
-            The values are the corresponding proposition labelled confusion matrices.
-        """
-        prop_dict = self.get_propositions()
-        n = len(prop_dict)
-
-        # Looping over radius bands
-        for key in list(self.disc_gt_boxes.keys()):
-            self.prop_conf_mats[key] = np.zeros((n,n))
-
-            # Loop over samples:
-            for sample_token in self.sample_tokens:
-                evaluation, prop_dict = self.compute_prop_cm(self.disc_gt_boxes[key][sample_token], 
-                                                self.disc_pred_boxes[key][sample_token], 
-                                                ["ped", "obs"])
-                self.prop_conf_mats[key] += evaluation
-    
-        return self.prop_conf_mats, prop_dict
-    
-    def get_list_of_propositions(self):
-        prop_dict = self.get_propositions()
-        n = len(prop_dict)
-        list_of_propositions = list(prop_dict.values())
-        return list_of_propositions
-
-    def custom_propositions(self):
-        pass
-
-    def get_clustered_conf_mat(self, list_of_propositions):
-        # Looping over radius bands
-        for key in list(self.disc_gt_boxes.keys()):
-            self.prop_conf_mats_w_clustering[key] = np.zeros((n,n))
-
-            # Loop over samples:
-            for sample_token in self.sample_tokens:
-                radius_band = self.gt_clusters[key][sample_token]
-                for cluster_idx, cluster in enumerate(radius_band.clusters):
-                    cluster_pred_boxes = self.find_pred_boxes_in_cluster(cluster)
-                    evaluation, prop_dict = self.compute_prop_cm(cluster.boxes, 
-                                                    cluster_preds_boxes, 
-                                                    list_of_propositions)
-                    self.prop_conf_mats[key] += evaluation
-        return self.prop_conf_mats_w_clustering, prop_dict  
-
-    def calculate_conf_mat(self,
+    def compute_class_labeled_cm(self,
                             gt_boxes:EvalBoxes, 
                             pred_boxes: EvalBoxes, 
                             conf_mat_mapping: Dict,
@@ -317,7 +313,6 @@ class GenerateConfusionMatrix:
 
         EMPTY = len(self.list_of_classes)
         distance_param_conf_mat = np.zeros( (len(self.list_of_classes)+1, len(self.list_of_classes)+1) )
-        c = 0
         # -- For each sample
         # -- -- For each ground truth
         # -- -- -- For each prediction
@@ -355,37 +350,77 @@ class GenerateConfusionMatrix:
                             taken.add(best_match[2])
                             distance_param_conf_mat[conf_mat_mapping[best_match[0].detection_name]][conf_mat_mapping[best_match[1].detection_name]] += 1
                             
-            c += 1
             # print(len(sample_pred_list))
             # if self.validation and (sample_token in list_of_validation_tokens):
             #         render_sample_data_with_predictions(self.nusc.get('sample', sample_token)['data']['LIDAR_TOP'], sample_pred_list, nusc=self.nusc)
                 
-        # assert c == 81
-        return distance_param_conf_mat
-    
-    def powerset(self, iterable: Iterable):
-        """powerset function to generate all possible subsets of any iterable
+        return distance_param_conf_mat 
 
+    ### ------- End of Code to compute class labeled confusion matrices ----------- ####
+
+    ### ------- Code to compute proposition labeled confusion matrices ----------- ####
+    
+    def get_prop_labeled_cm(self):
+        """Get a dictionary with the proposition labelled confusion matrices for each distance bin.
+        
         Args:
-            iterable (Iterable): The iterable to create the powerset of
-
+            None
+            
         Returns:
-            An iterable chain object containing all possible subsets of the input iterable
+            A dictionary where the keys are tuples of the form (lower_dist_thresh, upper_dist_thresh)
+            The values are the corresponding proposition labelled confusion matrices.
         """
-        s = list(iterable)
-        return chain.from_iterable(combinations(s, r) for r in range(len(s)+1))   
+        n = len(self.list_of_propositions)
+
+        # Looping over radius bands
+        for key in list(self.disc_gt_boxes.keys()):
+            self.prop_conf_mats[key] = np.zeros((n,n))
+
+            # Loop over samples:
+            for sample_token in self.sample_tokens:
+                evaluation = self.single_evaluation_prop_cm(self.disc_gt_boxes[key][sample_token], 
+                                                self.disc_pred_boxes[key][sample_token])
+                self.prop_conf_mats[key] += evaluation
     
-    def find_pred_boxes_in_cluster(self, cluster:Cluster,
-                               dist_thresh = float = 2.0, 
-                               yaw_thresh: int = np.pi/2.0,
+        return self.prop_conf_mats
+
+    def get_clustered_conf_mat(self):   
+        n = len(self.list_of_propositions)
+        for radius_band in list(self.gt_clusters.keys()): # -> loop through distance params
+            self.clustered_conf_mats[radius_band] = np.zeros((n,n))
+            # Loop over samples:
+            for sample_token in self.sample_tokens:
+                # Radius band object. 
+                radius_band_obj = self.gt_clusters[radius_band][sample_token]
+                for cluster in radius_band_obj.clusters:
+                    pred_boxes_in_cluster = self.find_preds_for_cluster(cluster, dist_thresh=2.0)
+                    evaluation = self.single_evaluation_prop_cm(cluster.boxes, pred_boxes_in_cluster) # in radians
+                    self.clustered_conf_mats[radius_band] += evaluation
+
+    
+    def find_preds_for_cluster(self, cluster:Cluster,
+                               dist_thresh = None, 
+                               yaw_thresh: float = np.pi/2.0,
                                iou_thresh:float = 0.60) -> EvalBoxes:
-        # dist_thresh = cluster.max_dist_bw_obj if (dist_thresh is None) else dist_thresh
-        inrange_pred_boxes = self.pred_boxes[cluster.radius_band][[cluster.sample_token]]
+        '''
+        Move this code to the cluster file.
+        Inputs:
+        TODO: Describe the inputs and outputs
+        cluster: Cluster object.
+        dist_thresh: float
+        yaw_thresh: float
+        iou_thresh: float
+        '''
+        
+        dist_thresh = cluster.max_dist_bw_obj if (dist_thresh is None) else dist_thresh
+        inrange_pred_boxes = self.disc_pred_boxes[cluster.radius_band][cluster.sample_token]
         sample = self.nusc.get('sample', cluster.sample_token)
         matched_pred_boxes_as_DetBoxes = EvalBoxes()
+        matched_pred_box_idx = []
         matched_pred_boxes = []
-        
+        st()
         for gt_idx, gt_box in enumerate(cluster.boxes):
+            
             for pred_idx, pred in enumerate(inrange_pred_boxes):
                 #TODO: currently this returns a Box object. I create the Box object in this function. Can we get away with creating a DetectionBox obj?
                 ego_pred_box = convert_EvalBox_to_flat_veh_coords(sample_data_token=sample["data"]["LIDAR_TOP"], 
@@ -399,116 +434,83 @@ class GenerateConfusionMatrix:
                 
                 if cluster.lower_radian_lim <= ego_angle <= cluster.upper_radian_lim:
                     if center_distance(pred, gt_box) < dist_thresh and yaw_diff(pred, gt_box) < yaw_thresh and scale_iou(inrange_pred_boxes[match_idx], gt_box) > iou_thresh:
-                        matched_pred_boxes.append(pred_idx)
-                                
-            for match_idx in matched_pred_boxes:
+                        matched_pred_box_idx.append(pred_idx)
+            
+            st()
+            for match_idx in matched_pred_box_idx:
                 matched_box:Box = inrange_pred_boxes[match_idx]
                 #TODO how to avoid this object creation in line
-                matched_pred_boxes_as_DetBoxes.add_boxes(sample_token=cluster.sample_token, 
-                                                         boxes=[DetectionBox(sample_token=cluster.sample_token,
-                                                         translation=matched_box.center,
-                                                         size=matched_box.wlh,
-                                                         rotation=matched_box.orientation,
-                                                         detection_name=matched_box.name,
-                                                         detection_score=matched_box.score)])
-        return matched_pred_boxes_as_DetBoxes
-    
-    def calculate_clustered_conf_mat(self, 
-                                     gt_clusters: dict,          # Dict[sample token] -> RadiusBand -> Cluster[]
-                                     list_of_propositions: list) -> np.ndarray:
-        
-        n = len(self.list_of_classes)
-        clustered_conf_mat = np.zeros( ( (2**n), (2**n)) )
-
-        propn_indices = list(range(len(list_of_propositions)))
-        propn_powerset = list(self.powerset(propn_indices))
-        
-        
-        for sample_token in self.sample_tokens:
-            radius_band = gt_clusters[sample_token]
-            cluster_pred_propn_list = [{}] * gt_clusters[sample_token].num_clusters
-            cluster_gt_propn_list = [{}] * radius_band.num_clusters
-            sample = self.nusc.get('sample', sample_token)
-            
-            assert type(gt_clusters[sample_token]) == RadiusBand, "Error: gt_clusters[sample_token] is not a RadiusBand object" 
-        
-            for i, gt_cluster in enumerate(radius_band.clusters):
-                for gt_box in gt_cluster.boxes:
-                    assert self.conf_mat_mapping[gt_box.detection_name] in class_names, "Error: gt_box.detection_name not in list_of_classes"
-                    cluster_gt_propn_list[i].add(self.conf_mat_mapping[gt_box.detection_name])
-            
-            for pred in self.pred_boxes[sample_token]:
-                ego_pred_box = convert_EvalBox_to_flat_veh_coords(sample_data_token=sample["data"]["LIDAR_TOP"], 
-                                                                        box=pred, 
-                                                                        nusc=self.nusc)
-                ego_engle = np.arctan2(ego_pred_box.center[1], ego_pred_box.center[0])
-                ego_engle = ego_engle if ego_engle >= 0 else (2 * np.pi) + ego_engle
-                pred_idx = int(np.ceil(ego_engle / self.radius_band[0]))
-                assert ego_pred_box.label in class_names, "Error: gt_box.detection_name not in list_of_classes"
-                #TODO IOU Computation
-                cluster_pred_propn_list[pred_idx].add(self.conf_mat_mapping[ego_pred_box.label])
-                
-            # Conf Mat Computation 
-            gt_idx, pred_idx = self.get_cm_indices(sample_gt_boxes, sample_pred_boxes, prop_dict)
-            if (gt_idx is not None) and (pred_idx is not None):
-                prop_cm[pred_idx][gt_idx] += 1   
-            if (gt_idx is None and pred_idx is not None) or (pred_idx is None and gt_idx is not None):
-                print("Error: One of the confusion matrix indices is returned as None. Check")
+                matched_detbox=[DetectionBox(sample_token=cluster.sample_token,
+                                    translation=matched_box.center,
+                                    size=matched_box.wlh,
+                                    rotation=matched_box.orientation,
+                                    detection_name=matched_box.name,
+                                    detection_score=matched_box.score)]
+                matched_pred_boxes_as_DetBoxes.add_boxes(sample_token=cluster.sample_token, boxes=matched_detbox)
+                matched_pred_boxes.append(matched_detbox)
                 st()
-        return prop_cm, prop_dict
-            
-                
-    def get_propositions(self):
-        n = len(self.list_of_classes)
-        propositions = list(self.powerset(self.list_of_classes))
-        prop_dict = dict()
-        for k, prop in enumerate(propositions):
-            if any(prop): # if not empty
-                prop_label = set(prop)
-                prop_dict[k] = prop_label
-            else:
-                prop_dict[k] = set(["empty"])
-        return prop_dict
+        return matched_pred_boxes            
+    
+    def single_evaluation_prop_cm(self, gt_boxes:EvalBoxes, pred_boxes: EvalBoxes) -> np.ndarray:
+        # single evaluation for proposition labeled confusion matrix
+        n = len(self.list_of_propositions)
+        prop_cm = np.zeros((n,n))   
+        gt_idx, pred_idx = self.get_prop_cm_indices(gt_boxes, pred_boxes)
+        if (gt_idx is not None) and (pred_idx is not None):
+            prop_cm[pred_idx][gt_idx] += 1   
+        if (gt_idx is None and pred_idx is not None) or (pred_idx is None and gt_idx is not None):
+            print("Error: One of the confusion matrix indices is returned as None. Check")
+        return prop_cm
+    
+    ### ---- Finding indices for proposition labeled confusion matrices ----- ###
 
-    def get_cm_indices(self, gt_boxes, pred_boxes, prop_dict):
+    def get_prop_cm_indices(self, gt_boxes, pred_boxes):
         """
         Returns the predicted and ground truth indices of a confusion
         matrix for the given set of gt_classes and pred_classes
+        gt_boxes: List[Box]
+        pred_boxes: List[Box]
         """
         gt_idx = None
         pred_idx = None
 
-        gt_classes = {gt.detection_name for gt in gt_boxes}
-        pred_classes = {pred.detection_name for pred in pred_boxes}
+        try:    
+            gt_classes = {gt.detection_name for gt in gt_boxes}
+            pred_classes = {pred.detection_name for pred in pred_boxes}
+        except:
+            st()
 
         # Todo: Use a conf_mat_mapping to make this more generic
         gt_classes = set({"ped" if x == "pedestrian" else "obs" for x in gt_classes})
         pred_classes = set({"ped" if x == "pedestrian" else "obs" for x in pred_classes})
+
+        # # Conf_mat mapping:
+        # # ToDo check if the following works correctly.
+        # gt_classes = set({self.conf_mat_mapping[gt_box.detection_name] for gt_box in gt_boxes})
+        # pred_classes = set({self.conf_mat_mapping[pred_box.detection_name] for pred_box in pred_boxes})
+        
 
         if len(gt_classes) == 0:
             gt_classes = set({"empty"})
         if len(pred_classes) == 0:
             pred_classes = set({"empty"})
 
-        for k, prop_label in prop_dict.items():
+        for k, prop_label in self.prop_dict.items():
             if gt_classes == prop_label:
                 gt_idx = k
             if pred_classes == prop_label:
                 pred_idx = k
         return gt_idx, pred_idx
 
+#### --------- Utils functions --------- #####
+def powerset(iterable: Iterable):
+    """powerset function to generate all possible subsets of any iterable
 
-    def compute_prop_cm(self, gt_boxes:EvalBoxes, pred_boxes: EvalBoxes, list_of_propositions=None:list) -> np.ndarray:
-        # Comments: list_of_propositions, self.classes, and class_names are the exact same.
-        # Pass in propositions
-        # Todo: Pass in a list of propositions here instead of the default choice of taking 
-        # powerset of class names
-        n = len(list_of_propositions)
-        prop_cm = np.zeros((n,n))   
-        gt_idx, pred_idx = self.get_cm_indices(sample_gt_boxes, sample_pred_boxes, prop_dict)
-        if (gt_idx is not None) and (pred_idx is not None):
-            prop_cm[pred_idx][gt_idx] += 1   
-        if (gt_idx is None and pred_idx is not None) or (pred_idx is None and gt_idx is not None):
-            print("Error: One of the confusion matrix indices is returned as None. Check")
-        return prop_cm, prop_dict
+    Args:
+        iterable (Iterable): The iterable to create the powerset of
 
+    Returns:
+        An iterable chain object containing all possible subsets of the input iterable
+    """
+    s = list(iterable)
+    return chain.from_iterable(combinations(s, r) for r in range(len(s)+1))  
