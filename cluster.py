@@ -70,7 +70,7 @@ class RadiusBand:
     def add_box(self, box: Box) -> None:
         angle_from_ego = np.arctan2(box.center[1], box.center[0])
         angle_from_ego = angle_from_ego if angle_from_ego >= 0 else (2 * np.pi) + angle_from_ego
-        bin_index = int(np.ceil(angle_from_ego / self.angular_diff))
+        bin_index = int(np.floor(angle_from_ego / self.angular_diff))
         self.clusters[bin_index].add_box(box)
         
     

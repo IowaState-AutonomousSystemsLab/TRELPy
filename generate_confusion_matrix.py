@@ -4,7 +4,7 @@ from cluster import RadiusBand, Cluster
 from collections.abc import Iterable
 from typing import Tuple, Dict, Any, List
 from itertools import chain, combinations
-from classes import class_names
+from classes import class_names, cls_attr_dist
 
 from nuscenes import NuScenes
 from nuscenes.eval.common.data_classes import EvalBoxes, EvalBox
@@ -437,6 +437,19 @@ class GenerateConfusionMatrix:
                                                          detection_score=matched_box.score)])
         return matched_pred_boxes_as_DetBoxes
     
+    def get_generic_class(self, full_label):
+        if full_label in ["human.pedestrian.adult", "human.pedestrian.child", 
+                          "human.pedestrian.construction_worker", "human.pedestrian.police_officer"]:
+            return "pedestrian"
+        
+        if full_label in ["movable_object.barrier", "movable_object.debris", "movable_object.trafficcone"]:
+            return "barrier"
+        
+        if full_label in ["vehicle.bicycle", "vehicle.bus.bendy", "vehicle.bus.rigid", "vehicle.car", 
+                          "vehicle.construction", "vehicle.emergency.ambulance", "vehicle.emergency.police", 
+                          "vehicle.motorcycle", "vehicle.trailer", "vehicle.truck"]:
+            return "obstacle"
+    
     def calculate_clustered_conf_mat(self, 
                                      gt_clusters: Dict,          # Dict[sample token] -> RadiusBand -> Cluster[]
                                      pred_boxes: List, 
@@ -455,8 +468,8 @@ class GenerateConfusionMatrix:
         for sample_token in self.sample_tokens:
             radius_band = gt_clusters[sample_token]
             dist_thresh = radius_band.max_dist_bw_obj
-            cluster_pred_propn_list = [{}] * gt_clusters[sample_token].num_clusters
-            cluster_gt_propn_list = [{}] * radius_band.num_clusters
+            cluster_pred_propn_list = [set()] * gt_clusters[sample_token].num_clusters
+            cluster_gt_propn_list = [set()] * radius_band.num_clusters
             sample = self.nusc.get('sample', sample_token)
             inrange_pred_boxes: List = pred_boxes[sample_token]
             
@@ -464,8 +477,9 @@ class GenerateConfusionMatrix:
         
             for i, gt_cluster in enumerate(radius_band.clusters):
                 for gt_box in gt_cluster.boxes:
-                    assert self.conf_mat_mapping[gt_box.detection_name] in class_names, "Error: gt_box.detection_name not in list_of_classes"
-                    cluster_gt_propn_list[i].add(self.conf_mat_mapping[gt_box.detection_name])
+                    label = self.get_generic_class(str(gt_box.name))
+                    assert label in class_names, "Your label is not part of the class_lables list"
+                    cluster_gt_propn_list[i].add(self.conf_mat_mapping[label])
             
                     cluster_pred_propn_list[i].add(self.find_preds_for_cluster(gt_cluster, dist_thresh, yaw_thresh, iou_thresh))
             

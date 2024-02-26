@@ -35,9 +35,7 @@ def convert_EvalBox_to_flat_veh_coords(sample_data_token:str, box:DetectionBox, 
                center=box.translation, 
                size=box.size, 
                orientation=box.rotation, 
-               name=box.name,
                name=box.detection_name,
-               score=box.detection_score, 
                score=box.score)
     
 def convert_ego_pose_to_flat_veh_coords(sample_data_token:str, box:Box, nusc: NuScenes) -> Box:
