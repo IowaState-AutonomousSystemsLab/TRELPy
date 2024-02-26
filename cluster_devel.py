@@ -40,9 +40,10 @@ class RadiusBand:
             print("Minimum radius should be greater than 0\n setting min_radius to 1", file=sys.stderr)
             self.radius_band = (1, radius_band[1])
         
-        self.sigma = 0.0001
+        self.sigma = 0.0001 #TODO Remove sigma and ensure all ranges are accounted for
         self.angular_diff = self.__calculate_max_radius_bw_obj(self.radius_band[0])
         self.num_clusters = int(np.ceil((2 * np.pi) / self.angular_diff))
+        self.angular_diff = (2 * np.pi / self.num_clusters)
         
         self.generate_clusters()
         self.populate_clusters(gt_boxes)
@@ -53,8 +54,8 @@ class RadiusBand:
         for cluster in self.clusters:
             total_gt_boxes_in_band += len(cluster.boxes)
         print("Total number of objects in band: ", str(total_gt_boxes_in_band))
-        if total_gt_boxes_in_band > 0:
-            st()
+        # if total_gt_boxes_in_band > 0:
+            # st()
 
     def generate_clusters(self):
         """generates clusters for the ground truth boxes
@@ -79,12 +80,12 @@ class RadiusBand:
     
     def add_box(self, box: Box) -> None:
         angle_from_ego = np.arctan2(box.center[1], box.center[0])
-        angle_from_ego = angle_from_ego if angle_from_ego >= 0 else (np.pi) + angle_from_ego
+        angle_from_ego = angle_from_ego if angle_from_ego >= 0 else (np.pi * 2.0) + angle_from_ego
         
-        bin_index = int(np.ceil(angle_from_ego / self.angular_diff)) - 1
+        bin_index = int(np.floor(angle_from_ego / self.angular_diff))
         try:
             assert bin_index < len(self.clusters) and bin_index >= 0
-            self.clusters[bin_index-1].add_box(box)
+            self.clusters[bin_index].add_box(box)
         except:
             st()
         
@@ -113,7 +114,7 @@ class Cluster:
         """
         self.sample_token = sample_token
         self.distance_threshold = dist_threshold
-        self.boxes: list(Box) = []
+        self.boxes: List = []
         self.radius_band = radius_band
         self.ego_vehicle = ego_veh
         self.lower_radian_lim = lower_radian_lim
@@ -127,11 +128,10 @@ class Cluster:
         
     def add_box(self, box: Box) -> None:       
         angle_from_ego = np.arctan2(box.center[1], box.center[0])
-        angle_from_ego = angle_from_ego if angle_from_ego >= 0 else (2 * np.pi) + angle_from_ego
+        angle_from_ego = angle_from_ego if angle_from_ego >= 0 else (np.pi * 2.0) + angle_from_ego
         
         if self.lower_radian_lim <= angle_from_ego <= self.upper_radian_lim:
             self.boxes.append(box)
-            st()
         else:
             print("Box not added!")
 
