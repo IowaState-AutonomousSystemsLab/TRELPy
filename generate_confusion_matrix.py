@@ -451,6 +451,7 @@ class GenerateConfusionMatrix:
                 # st()
         return matched_pred_boxes            
     
+    
     def single_evaluation_prop_cm(self, gt_boxes:EvalBoxes, pred_boxes: EvalBoxes) -> np.ndarray:
         # single evaluation for proposition labeled confusion matrix
         n = len(self.list_of_propositions)
