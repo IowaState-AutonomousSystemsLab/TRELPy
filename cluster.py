@@ -61,7 +61,9 @@ class RadiusBand:
         angle_from_ego = angle_from_ego if angle_from_ego >= 0 else (2 * np.pi) + angle_from_ego
         bin_index = int(np.ceil(angle_from_ego / self.radius_band[0]))
         self.clusters[bin_index].add_box(box)
-        
+    
+    def add_to_cluster(self, box: Box) -> None:
+        vector_origin_to_ego = 
     
     def __calculate_max_radius_bw_obj(self, radius: float):
         return (self.max_dist_bw_obj / radius)

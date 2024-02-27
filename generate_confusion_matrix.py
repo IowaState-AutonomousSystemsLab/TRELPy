@@ -93,10 +93,13 @@ class GenerateConfusionMatrix:
         if self.list_of_classes is not None:
             self.set_list_of_classes(self.list_of_classes)
             self.set_list_of_propositions()
+            self.add_empty_label(self.list_of_classes, self.class_dict)
+            self.add_empty_label(self.list_of_propositions, self.prop_dict)
+
         self.initialize()
         self.__load_boxes()
         self.initialize_clusters()
-        st()
+        
         # self.__check_distance_param_settings()
         
         # Check result file exists.
@@ -255,6 +258,7 @@ class GenerateConfusionMatrix:
         n = len(self.list_of_classes)
         propositions = list(powerset(self.list_of_classes))
         self.prop_dict = dict()
+        
         for k, prop in enumerate(propositions):
             if any(prop): # if not empty
                 prop_label = set(prop)
@@ -270,11 +274,17 @@ class GenerateConfusionMatrix:
     def set_list_of_classes(self, list_of_classes):
         self.list_of_classes = list_of_classes
         self.class_dict = {k:c for k,c in enumerate(list_of_classes)}
-        if "empty" not in list_of_classes or "Empty" not in list_of_classes or "EMPTY" not in list_of_classes:
-            self.list_of_classes.append("empty")
-            kempty = len(self.list_of_classes)
-            self.class_dict.update({kempty-1: "empty"})
-        
+    
+    def add_empty_label(self, label_list, label_dict):
+        if type(label_list[0]) == str:
+            empty_elem = "empty"    
+        else:
+            empty_elem = set(["empty"])
+        if empty_elem not in label_list and empty_elem not in list(label_dict.items()):
+            label_list.append(empty_elem)
+            kempty = len(label_dict)
+            label_dict.update({kempty:empty_elem})
+
     def get_list_of_classes(self):
         return self.list_of_classes, self.class_dict
 
