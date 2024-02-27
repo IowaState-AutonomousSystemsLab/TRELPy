@@ -64,8 +64,9 @@ generator = GenerateConfusionMatrix(nusc=nusc,
     max_dist=100,
     distance_bin=10
 )
-generator.set_list_of_classes(list_of_classes)
-generator.set_list_of_propositions()
+
+# generator.set_list_of_classes(list_of_classes)
+# generator.set_list_of_propositions()
 cm_prop = generator.get_prop_labeled_cm()
 cm = generator.get_distance_param_conf_mat()
 generator.generate_clusters()

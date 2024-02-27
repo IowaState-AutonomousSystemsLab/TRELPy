@@ -99,7 +99,7 @@ class GenerateConfusionMatrix:
         self.initialize()
         self.__load_boxes()
         self.initialize_clusters()
-        
+        # st()
         # self.__check_distance_param_settings()
         
         # Check result file exists.
@@ -428,7 +428,7 @@ class GenerateConfusionMatrix:
         matched_pred_boxes_as_DetBoxes = EvalBoxes()
         matched_pred_box_idx = []
         matched_pred_boxes = []
-        st()
+        # st()
         for gt_idx, gt_box in enumerate(cluster.boxes):
             
             for pred_idx, pred in enumerate(inrange_pred_boxes):
@@ -446,7 +446,7 @@ class GenerateConfusionMatrix:
                     if center_distance(pred, gt_box) < dist_thresh and yaw_diff(pred, gt_box) < yaw_thresh and scale_iou(inrange_pred_boxes[match_idx], gt_box) > iou_thresh:
                         matched_pred_box_idx.append(pred_idx)
             
-            st()
+            # st()
             for match_idx in matched_pred_box_idx:
                 matched_box:Box = inrange_pred_boxes[match_idx]
                 #TODO how to avoid this object creation in line
@@ -458,8 +458,9 @@ class GenerateConfusionMatrix:
                                     detection_score=matched_box.score)]
                 matched_pred_boxes_as_DetBoxes.add_boxes(sample_token=cluster.sample_token, boxes=matched_detbox)
                 matched_pred_boxes.append(matched_detbox)
-                st()
+                # st()
         return matched_pred_boxes            
+    
     
     def single_evaluation_prop_cm(self, gt_boxes:EvalBoxes, pred_boxes: EvalBoxes) -> np.ndarray:
         # single evaluation for proposition labeled confusion matrix
@@ -490,7 +491,7 @@ class GenerateConfusionMatrix:
         except:
             st()
 
-        # Todo: Use a conf_mat_mapping to make this more generic
+        # TODO: Use a conf_mat_mapping to make this more generic
         gt_classes = set({"ped" if x == "pedestrian" else "obs" for x in gt_classes})
         pred_classes = set({"ped" if x == "pedestrian" else "obs" for x in pred_classes})
 
