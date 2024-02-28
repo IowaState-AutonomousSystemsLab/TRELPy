@@ -78,8 +78,8 @@ class RadiusBand:
             self.add_box(box)
         
     
-    def add_box(self, box: Box) -> None:
-        angle_from_ego = np.arctan2(box.center[1], box.center[0])
+    def add_box(self, box: EvalBox) -> None:
+        angle_from_ego = np.arctan2(box.translation[1], box.translation[0])
         angle_from_ego = angle_from_ego if angle_from_ego >= 0 else (np.pi * 2.0) + angle_from_ego
         
         bin_index = int(np.floor(angle_from_ego / self.angular_diff))
@@ -126,14 +126,14 @@ class Cluster:
         
     
         
-    def add_box(self, box: Box) -> None:       
-        angle_from_ego = np.arctan2(box.center[1], box.center[0])
+    def add_box(self, box:EvalBox) -> None:       
+        angle_from_ego = np.arctan2(box.translation[1], box.translation[0])
         angle_from_ego = angle_from_ego if angle_from_ego >= 0 else (np.pi * 2.0) + angle_from_ego
         
         if self.lower_radian_lim <= angle_from_ego <= self.upper_radian_lim:
             self.boxes.append(box)
         else:
-            print("Box not added!")
+            print(f"Box not added because {self.lower_radian_lim} <= {angle_from_ego} <= {self.upper_radian_lim}")
 
     
     def get_num_items_in_cluster(self) -> int:
