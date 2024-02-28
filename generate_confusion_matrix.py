@@ -4,6 +4,7 @@ from collections.abc import Iterable
 from typing import Tuple, Dict, Any, List
 from itertools import chain, combinations
 from classes import class_names
+from pyquaternion import Quaternion
 
 from nuscenes import NuScenes
 from nuscenes.eval.common.data_classes import EvalBoxes, EvalBox
@@ -93,6 +94,9 @@ class GenerateConfusionMatrix:
         if self.list_of_classes is not None:
             self.set_list_of_classes(self.list_of_classes)
             self.set_list_of_propositions()
+            self.add_empty_label(self.list_of_classes, self.class_dict)
+            self.add_empty_label(self.list_of_propositions, self.prop_dict)
+
         self.initialize()
         self.__load_boxes()
         self.initialize_clusters()
@@ -159,7 +163,7 @@ class GenerateConfusionMatrix:
                 if distance > self.max_dist: continue
                 dist_band_idx = int(np.floor((distance / self.distance_bin)))
                 dist_band = list(self.ego_centric_gt_boxes.keys())[dist_band_idx]
-                self.ego_centric_gt_boxes[dist_band][sample_token].append(box)
+                self.ego_centric_gt_boxes[dist_band][sample_token].append(convert_from_Box_to_EvalBox(box))
                 
     def initialize(self) -> None:
         """ initializes all class variables to their default values
@@ -255,6 +259,7 @@ class GenerateConfusionMatrix:
         n = len(self.list_of_classes)
         propositions = list(powerset(self.list_of_classes))
         self.prop_dict = dict()
+        
         for k, prop in enumerate(propositions):
             if any(prop): # if not empty
                 prop_label = set(prop)
@@ -270,11 +275,17 @@ class GenerateConfusionMatrix:
     def set_list_of_classes(self, list_of_classes):
         self.list_of_classes = list_of_classes
         self.class_dict = {k:c for k,c in enumerate(list_of_classes)}
-        if "empty" not in list_of_classes or "Empty" not in list_of_classes or "EMPTY" not in list_of_classes:
-            self.list_of_classes.append("empty")
-            kempty = len(self.list_of_classes)
-            self.class_dict.update({kempty-1: "empty"})
-        
+    
+    def add_empty_label(self, label_list, label_dict):
+        if type(label_list[0]) == str:
+            empty_elem = "empty"    
+        else:
+            empty_elem = set(["empty"])
+        if empty_elem not in label_list and empty_elem not in list(label_dict.items()):
+            label_list.append(empty_elem)
+            kempty = len(label_dict)
+            label_dict.update({kempty:empty_elem})
+
     def get_list_of_classes(self):
         return self.list_of_classes, self.class_dict
 
@@ -393,7 +404,11 @@ class GenerateConfusionMatrix:
                 # Radius band object. 
                 radius_band_obj = self.gt_clusters[radius_band][sample_token]
                 for cluster in radius_band_obj.clusters:
-                    pred_boxes_in_cluster = self.find_preds_for_cluster(cluster, dist_thresh=2.0)
+                    try:
+                        pred_boxes_in_cluster = self.find_preds_for_cluster(cluster, dist_thresh=2.0)
+                    except:
+                        print()
+                        # st()
                     evaluation = self.single_evaluation_prop_cm(cluster.boxes, pred_boxes_in_cluster) # in radians
                     self.clustered_conf_mats[radius_band] += evaluation
 
@@ -479,11 +494,15 @@ class GenerateConfusionMatrix:
             gt_classes = {gt.detection_name for gt in gt_boxes}
             pred_classes = {pred.detection_name for pred in pred_boxes}
         except:
-            st()
+            print()
+            # st()
 
         # TODO: Use a conf_mat_mapping to make this more generic
-        gt_classes = set({"ped" if x == "pedestrian" else "obs" for x in gt_classes})
-        pred_classes = set({"ped" if x == "pedestrian" else "obs" for x in pred_classes})
+        try:
+            gt_classes = set({"ped" if x == "pedestrian" else "obs" for x in gt_classes})
+            pred_classes = set({"ped" if x == "pedestrian" else "obs" for x in pred_classes})
+        except:
+            print("making a set from get_prop_cm_indices:502")
 
         # # Conf_mat mapping:
         # # ToDo check if the following works correctly.
@@ -514,4 +533,87 @@ def powerset(iterable: Iterable):
         An iterable chain object containing all possible subsets of the input iterable
     """
     s = list(iterable)
-    return chain.from_iterable(combinations(s, r) for r in range(len(s)+1))  
+    return chain.from_iterable(combinations(s, r) for r in range(len(s)+1)) 
+
+def convert_from_EvalBox_to_Box(eval_box:EvalBox) -> Box:
+    """Converts an EvalBox object to a Box object
+    """
+    
+    print(f"Rotation of an EvalBox {(eval_box.rotation)}")
+
+    box = Box(
+        center=eval_box.translation,
+        size=eval_box.size,
+        orientation=eval_box.rotation,
+        velocity=eval_box.velocity,
+        token=eval_box.sample_token
+    )
+    if type(eval_box) == DetectionBox:
+        box.name = eval_box.detection_name
+        box.score = eval_box.detection_score
+        
+    return box
+    
+def convert_from_Box_to_EvalBox(box:Box) -> EvalBox:
+    """Converts a Box object to an EvalBox object
+    """
+    
+    print(f"*******Rotation of an Box***| {box.orientation.elements.tolist()} |***********")
+    print(f"-------> Velocity of an Box ---> {box.velocity} <---------")
+    
+    return DetectionBox(
+        translation = box.center,
+        size = box.wlh,
+        rotation = box.orientation.elements.tolist(),
+        velocity = (np.nan, np.nan),
+        sample_token=box.token,
+        detection_name=convert_specificLabel_to_genericLabel(box.name)
+    )
+    
+def convert_specificLabel_to_genericLabel(label:str) -> str:
+    """Converts a specific label to a generic label
+    """
+    if label in {
+        "human.pedestrian.adult",
+        "human.pedestrian.child",
+        'human.pedestrian.construction_worker',
+        "human.pedestrian.personal_mobility",
+        "human.pedestrian.police_officer",
+        "human.pedestrian.stroller",
+        "human.pedestrian.wheelchair",
+    }:
+        return "pedestrian"
+
+    if label in {
+        "movable_object.barrier",
+        "movable_object.debris",
+        "movable_object.pushable_pullable",
+        "static_object.bicycle_rack",
+    }:
+        return "barrier"
+
+    if label == "movable_object.trafficcone":
+        return "traffic_cone"
+
+    if label == "vehicle.bicycle":
+        return "bicycle"
+
+    if label in {"vehicle.bus.bendy", "vehicle.bus.rigid"}:
+        return "bus"
+
+    if label in {"vehicle.car", "vehicle.emergency.police"}:
+        return "car"
+
+    if label == "vehicle.motorcycle":
+        return "motorcycle"
+
+    if label in {"vehicle.truck", "vehicle.emergency.ambulance"}:
+        return "truck"
+
+    if label == "vehicle.construction":
+        return "construction_vehicle"
+
+    if label == "vehicle.trailer":
+        return "trailer"
+    
+    raise ValueError(f"GenConfMat/label:618   Error: label {label} not found in the list of classes")

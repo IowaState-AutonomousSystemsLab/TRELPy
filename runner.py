@@ -5,7 +5,7 @@ import numpy as np
 from typing import Tuple, Dict, Any, List
 from itertools import chain, combinations
 from pdb import set_trace as st
-
+import pickle as pkl
 from custom_env import dataset_root as dataroot
 
 from mmdet3d.evaluation.metrics import nuscenes_metric as nus_metric
@@ -72,7 +72,7 @@ cm = generator.get_distance_param_conf_mat()
 generator.generate_clusters()
 cm_prop_w_clusters = generator.get_clustered_conf_mat()
 propositions, prop_dict = generator.get_list_of_propositions()
-print()
+print("Generated clustered conf mat")
 
 
 confusion_matrix = ConfusionMatrix(generator, list_of_classes, labels)
@@ -86,6 +86,6 @@ confusion_matrix.save_confusion_matrix(prop_cm_file, label_type="prop")
 # Saving clustered confusion matrix:
 # Todo: Integrate the cluster saving into confusion matrix
 prop_cm_file_w_clusters = f"{cm_dir}/prop_cm_cluster.pkl"
-with open(file, "wb") as f:
+with open(prop_cm_file_w_clusters, "wb") as f:
     pkl.dump(cm_prop_w_clusters, f)
 f.close()
