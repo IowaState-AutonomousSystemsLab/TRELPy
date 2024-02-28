@@ -1,7 +1,19 @@
 ### High priority:
-[] edit `RadiusBand` to add gt boxes to each of the Cluster objects. make a funciton called `populate`
-[] `GenConfMat:429` do IOU computation before accepting a pred as a successful match
-[] `GenConfMat:440+` copy logic from `GenConfMat:383-394` AND add main branch modifications and create the confusion matrix
+- [ ] fix `nuscenes_render.py:34-36`. rotate is upset
+- [ ] fix detection class issue where Box.detection name is too specific and we need a generic name
+- [ ] Is it adding things to clusters successfully
+- [ ] Why is Box not added being thrown by `cluster_devel.py`?
+- [ ] Should so many RadiusBands have no gt assigned to them?
+- [ ] Convert_from_Box_to_EvalBox conversion of Quaternion has an issue
 
 ### Low priority:
 [] Add a list of labels to the Cluster object
+
+
+
+
+EvalBox
+    dist_cm
+    prop_cm
+
+gt(global_frame) -> ego_frame (Box) 
