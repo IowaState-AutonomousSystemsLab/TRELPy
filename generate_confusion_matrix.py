@@ -162,7 +162,7 @@ class GenerateConfusionMatrix:
                 if distance > self.max_dist: continue
                 dist_band_idx = int(np.floor((distance / self.distance_bin)))
                 dist_band = list(self.ego_centric_gt_boxes.keys())[dist_band_idx]
-                self.ego_centric_gt_boxes[dist_band][sample_token].append(box)
+                self.ego_centric_gt_boxes[dist_band][sample_token].append(convert_from_Box_to_EvalBox(box))
                 
     def initialize(self) -> None:
         """ initializes all class variables to their default values
@@ -406,7 +406,8 @@ class GenerateConfusionMatrix:
                     try:
                         pred_boxes_in_cluster = self.find_preds_for_cluster(cluster, dist_thresh=2.0)
                     except:
-                        st()
+                        print()
+                        # st()
                     evaluation = self.single_evaluation_prop_cm(cluster.boxes, pred_boxes_in_cluster) # in radians
                     self.clustered_conf_mats[radius_band] += evaluation
 
@@ -492,11 +493,15 @@ class GenerateConfusionMatrix:
             gt_classes = {gt.detection_name for gt in gt_boxes}
             pred_classes = {pred.detection_name for pred in pred_boxes}
         except:
-            st()
+            print()
+            # st()
 
         # TODO: Use a conf_mat_mapping to make this more generic
-        gt_classes = set({"ped" if x == "pedestrian" else "obs" for x in gt_classes})
-        pred_classes = set({"ped" if x == "pedestrian" else "obs" for x in pred_classes})
+        try:
+            gt_classes = set({"ped" if x == "pedestrian" else "obs" for x in gt_classes})
+            pred_classes = set({"ped" if x == "pedestrian" else "obs" for x in pred_classes})
+        except:
+            print("making a set from get_prop_cm_indices:502")
 
         # # Conf_mat mapping:
         # # ToDo check if the following works correctly.
@@ -527,4 +532,34 @@ def powerset(iterable: Iterable):
         An iterable chain object containing all possible subsets of the input iterable
     """
     s = list(iterable)
-    return chain.from_iterable(combinations(s, r) for r in range(len(s)+1))  
+    return chain.from_iterable(combinations(s, r) for r in range(len(s)+1)) 
+
+def convert_from_EvalBox_to_Box(eval_box:EvalBox) -> Box:
+    """Converts an EvalBox object to a Box object
+    """
+
+    box = Box(
+        center=eval_box.translation,
+        size=eval_box.size,
+        orientation=eval_box.rotation,
+        velocity=eval_box.velocity,
+        token=eval_box.sample_token
+    )
+    if type(eval_box) == DetectionBox:
+        box.name = eval_box.detection_name
+        box.score = eval_box.detection_score
+        
+    return box
+    
+def convert_from_Box_to_EvalBox(box:Box) -> EvalBox:
+    """Converts a Box object to an EvalBox object
+    """
+    
+    return DetectionBox(
+        translation = box.center,
+        size = box.wlh,
+        rotation = box.orientation,
+        velocity = box.velocity,
+        sample_token=box.token,
+        detection_name=box.name
+    )

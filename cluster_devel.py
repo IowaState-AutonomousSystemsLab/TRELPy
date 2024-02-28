@@ -53,7 +53,7 @@ class RadiusBand:
         total_gt_boxes_in_band = 0
         for cluster in self.clusters:
             total_gt_boxes_in_band += len(cluster.boxes)
-        print("Total number of objects in band: ", str(total_gt_boxes_in_band))
+        # print("Total number of objects in band: ", str(total_gt_boxes_in_band))
         # if total_gt_boxes_in_band > 0:
             # st()
 

@@ -34,7 +34,7 @@ def convert_EvalBox_to_flat_veh_coords(sample_data_token:str, box:DetectionBox, 
     box.center = np.dot(quaternion.rotation_matrix, box.translation)
     box.orientation = quaternion * box.rotation
     box.velocity = np.dot(quaternion.rotation_matrix, box.velocity)
-    # st()
+
     return Box(token=box.sample_token, 
                center=box.translation, 
                size=box.size, 
