@@ -403,7 +403,10 @@ class GenerateConfusionMatrix:
                 # Radius band object. 
                 radius_band_obj = self.gt_clusters[radius_band][sample_token]
                 for cluster in radius_band_obj.clusters:
-                    pred_boxes_in_cluster = self.find_preds_for_cluster(cluster, dist_thresh=2.0)
+                    try:
+                        pred_boxes_in_cluster = self.find_preds_for_cluster(cluster, dist_thresh=2.0)
+                    except:
+                        st()
                     evaluation = self.single_evaluation_prop_cm(cluster.boxes, pred_boxes_in_cluster) # in radians
                     self.clustered_conf_mats[radius_band] += evaluation
 

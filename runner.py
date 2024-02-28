@@ -72,7 +72,7 @@ cm = generator.get_distance_param_conf_mat()
 generator.generate_clusters()
 cm_prop_w_clusters = generator.get_clustered_conf_mat()
 propositions, prop_dict = generator.get_list_of_propositions()
-print()
+print("Generated clustered conf mat")
 
 
 confusion_matrix = ConfusionMatrix(generator, list_of_classes, labels)
