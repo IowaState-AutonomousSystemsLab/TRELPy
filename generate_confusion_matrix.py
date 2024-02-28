@@ -258,7 +258,7 @@ class GenerateConfusionMatrix:
     def get_propositions(self):
         n = len(self.list_of_classes)
         propositions = list(powerset(self.list_of_classes))
-        self.prop_dict = dict()
+        self.prop_dict = {}
         
         for k, prop in enumerate(propositions):
             if any(prop): # if not empty
@@ -558,8 +558,8 @@ def convert_from_Box_to_EvalBox(box:Box) -> EvalBox:
     """Converts a Box object to an EvalBox object
     """
     
-    print(f"*******Rotation of an Box***| {box.orientation.elements.tolist()} |***********")
-    print(f"-------> Velocity of an Box ---> {box.velocity} <---------")
+    # print(f"*******Rotation of an Box***| {box.orientation.elements.tolist()} |***********")
+    # print(f"-------> Velocity of an Box ---> {box.velocity} <---------")
     
     return DetectionBox(
         translation = box.center,
