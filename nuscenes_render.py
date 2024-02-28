@@ -29,8 +29,11 @@ def convert_EvalBox_to_flat_veh_coords(sample_data_token:str, box:DetectionBox, 
     sensor_record = nusc.get('sensor', cs_record['sensor_token'])
     pose_record = nusc.get('ego_pose', sd_record['ego_pose_token'])
     yaw = Quaternion(pose_record['rotation']).yaw_pitch_roll[0]
-    box.center += (-np.array(pose_record['translation']))
-    box.rotate(Quaternion(scalar=np.cos(yaw / 2), vector=[0, 0, np.sin(yaw / 2)]).inverse)
+    box.translation += (-np.array(pose_record['translation']))
+    quaternion = Quaternion(scalar=np.cos(yaw / 2), vector=[0, 0, np.sin(yaw / 2)]).inverse
+    box.center = np.dot(quaternion.rotation_matrix, box.translation)
+    box.orientation = quaternion * box.rotation
+    box.velocity = np.dot(quaternion.rotation_matrix, box.velocity)
     # st()
     return Box(token=box.sample_token, 
                center=box.translation, 
