@@ -11,7 +11,7 @@ from pyquaternion import Quaternion
 from nuscenes import NuScenes
 from nuscenes.eval.common.data_classes import EvalBoxes, EvalBox
 from nuscenes.eval.common.utils import center_distance, scale_iou, yaw_diff
-from nuscenes.utils.data_classes import Box
+from nuscenes.utils.data_classes import Bo  x
 from nuscenes.utils.geometry_utils import view_points, box_in_image, BoxVisibility
 from nuscenes.eval.detection.data_classes import DetectionConfig, DetectionBox
 from nuscenes.eval.common.loaders import load_prediction, load_gt, add_center_dist, filter_eval_boxes
@@ -476,6 +476,13 @@ class GenerateConfusionMatrix:
         # single evaluation for proposition labeled confusion matrix
         n = len(self.list_of_propositions)
         prop_cm = np.zeros((n,n))   
+        try:
+            assert type(gt_boxes) == EvalBoxes, "Error: gt_boxes is not of type EvalBoxes"
+            assert type(pred_boxes) == EvalBoxes, "Error: pred_boxes is not of type EvalBoxes"
+        except:
+            traceback.print_exc()
+            raise ValueError("Error: 479-484 in single_evaluation_prop_cm, the inputs are not EvalBoxes objects")
+            # st()
         gt_idx, pred_idx = self.get_prop_cm_indices(gt_boxes, pred_boxes)
         if (gt_idx is not None) and (pred_idx is not None):
             prop_cm[pred_idx][gt_idx] += 1   
@@ -508,6 +515,7 @@ class GenerateConfusionMatrix:
 
         # TODO: Use a conf_mat_mapping to make this more generic
         try:
+            traceback.print_exc()
             gt_classes = set({"ped" if x == "pedestrian" else "obs" for x in gt_classes})
             pred_classes = set({"ped" if x == "pedestrian" else "obs" for x in pred_classes})
         except:
