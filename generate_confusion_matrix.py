@@ -13,7 +13,7 @@ from nuscenes.utils.data_classes import Box
 from nuscenes.utils.geometry_utils import view_points, box_in_image, BoxVisibility
 from nuscenes.eval.detection.data_classes import DetectionConfig, DetectionBox
 from nuscenes.eval.common.loaders import load_prediction, load_gt, add_center_dist, filter_eval_boxes
-from nuscenes_render import convert_EvalBox_to_flat_veh_coords
+from nuscenes_render import convert_EvalBox_to_flat_veh_coords, render_sample_data_with_predictions
 from cluster_devel import RadiusBand, Cluster
 from pdb import set_trace as st
 
@@ -99,6 +99,7 @@ class GenerateConfusionMatrix:
 
         self.initialize()
         self.__load_boxes()
+        self.group_boxes_into_bands() # 
         self.initialize_clusters()
         # st()
         # self.__check_distance_param_settings()
@@ -148,6 +149,8 @@ class GenerateConfusionMatrix:
         self.sample_tokens = self.gt_boxes.sample_tokens
         
     def load_ego_centric_boxes(self) -> None:
+        # TODO: Review this function and make consistent with using self.radius_bands in place of dist_bin
+
         for sample_token in self.sample_tokens:
             sample = self.nusc.get('sample', sample_token)
             _, boxes, _ = self.nusc.get_sample_data(sample['data']['LIDAR_TOP'],
@@ -175,8 +178,8 @@ class GenerateConfusionMatrix:
         
         n_class = len(self.list_of_classes)
         n_prop = len(self.list_of_propositions)
-        # initializing all the bins
 
+        # initializing all the bins
         for i in range(self.num_bins):
             zl = (self.distance_bin * i) + 1
             zu = self.distance_bin * (i + 1)
@@ -187,22 +190,23 @@ class GenerateConfusionMatrix:
             self.prop_conf_mats[(zl, zu)] = np.zeros((n_prop+1, n_prop+1))
             self.clustered_conf_mats[(zl, zu)] = np.zeros((n_prop+1, n_prop+1))
             self.radius_bands.append((zl,zu))
-
+            
             # if i == 0:
             #     self.disc_gt_boxes[(0, self.distance_bin)] = EvalBoxes()
             #     self.disc_pred_boxes[(0, self.distance_bin)] = EvalBoxes()
             #     self.dist_conf_mats[(0, self.distance_bin)] = np.zeros((n+1, n+1))
             #     self.prop_conf_mats[(0, self.distance_bin)] = np.zeros(((2**n), (2**n)))
             #     self.prop_conf_mats_w_clustering[(0, self.distance_bin)] = np.zeros(((2**n), (2**n)))
+            #     self.radius_bands.append((0, self.distance_bin))
             # else:
             #     self.disc_gt_boxes[( (self.distance_bin * i)+1, self.distance_bin * (i + 1) )] = EvalBoxes()
             #     self.disc_pred_boxes[( (self.distance_bin * i)+1, self.distance_bin * (i + 1) )] = EvalBoxes()
             #     self.dist_conf_mats[( (self.distance_bin * i)+1, self.distance_bin * (i + 1) )] = np.zeros((n+1, n+1))
             #     self.prop_conf_mats[( (self.distance_bin * i)+1, self.distance_bin * (i + 1) )] = np.zeros(((2**n), (2**n)))
+            #     self.radius_bands.append(( (self.distance_bin * i)+1, self.distance_bin * (i + 1) ))
+        
     
-    def initialize_clusters(self):
-        self.generate_clusters()
-     
+    def group_boxes_into_bands(self):
         # Segmenting the ground truth and prediction boxes into distance bins
         for gt in self.gt_boxes.all:
             gt.ego_translation = (gt.ego_translation[0], gt.ego_translation[1], 0)                         #TODO check if this is working as expected
@@ -217,7 +221,7 @@ class GenerateConfusionMatrix:
             self.disc_pred_boxes[key].add_boxes(sample_token=pred.sample_token, boxes=[pred])
 
 
-    def generate_clusters(self):
+    def initialize_clusters(self):
         """generates clusters for the ground truth boxes
         
         Hierarchy is as follows:
@@ -233,7 +237,7 @@ class GenerateConfusionMatrix:
             for sample_token in self.sample_tokens:
                 self.ego_centric_gt_boxes[band][sample_token] = []        
             
-        self.load_ego_centric_boxes()
+        self.load_ego_centric_boxes() # Populating self.ego_centric_gt_boxes
         
         for band in self.radius_bands:
             for sample_token in self.sample_tokens:
@@ -407,9 +411,10 @@ class GenerateConfusionMatrix:
                     try:
                         pred_boxes_in_cluster = self.find_preds_for_cluster(cluster, dist_thresh=2.0)
                     except:
-                        print()
+                        print("Find preds for cluster failed")
                         # st()
                     evaluation = self.single_evaluation_prop_cm(cluster.boxes, pred_boxes_in_cluster) # in radians
+                    st()
                     self.clustered_conf_mats[radius_band] += evaluation
 
     
@@ -480,6 +485,13 @@ class GenerateConfusionMatrix:
     
     ### ---- Finding indices for proposition labeled confusion matrices ----- ###
 
+    def get_labels_for_boxes(self, boxes):
+        classes = {box.detection_name for box in boxes}
+        classes = set({"ped" if x == "pedestrian" else "obs" for x in classes})
+        if len(classes) == 0:
+            classes = set({"empty"})
+        return classes
+
     def get_prop_cm_indices(self, gt_boxes, pred_boxes):
         """
         Returns the predicted and ground truth indices of a confusion
@@ -504,16 +516,27 @@ class GenerateConfusionMatrix:
         except:
             print("making a set from get_prop_cm_indices:502")
 
-        # # Conf_mat mapping:
-        # # ToDo check if the following works correctly.
-        # gt_classes = set({self.conf_mat_mapping[gt_box.detection_name] for gt_box in gt_boxes})
-        # pred_classes = set({self.conf_mat_mapping[pred_box.detection_name] for pred_box in pred_boxes})
-        
-
         if len(gt_classes) == 0:
             gt_classes = set({"empty"})
         if len(pred_classes) == 0:
             pred_classes = set({"empty"})
+
+        # TODO: Check the following line of code:
+        # try:
+        #     gt_labels = self.get_labels_for_boxes(gt_boxes)
+        #     pred_labels = self.get_labels_for_boxes(pred_boxes)
+        # except:
+        #     st()
+
+        # # Conf_mat mapping:
+        # # TODO check if the following works correctly.
+        # gt_classes = set({self.conf_mat_mapping[gt_box.detection_name] for gt_box in gt_boxes})
+        # pred_classes = set({self.conf_mat_mapping[pred_box.detection_name] for pred_box in pred_boxes})
+        
+        # # Apurva's debugging:
+        if gt_classes != pred_classes:
+            self.render_predictions(gt_boxes, pred_boxes)
+            st()
 
         for k, prop_label in self.prop_dict.items():
             if gt_classes == prop_label:
@@ -521,6 +544,56 @@ class GenerateConfusionMatrix:
             if pred_classes == prop_label:
                 pred_idx = k
         return gt_idx, pred_idx
+
+    def render_predictions(self, gt_boxes, pred_boxes):
+        plot_folder = "plots/prop_cm_debug_plots/"
+        if not os.path.exists(plot_folder):
+            os.makedirs(plot_folder)
+        
+
+        if gt_boxes == []:
+            assert pred_boxes != []
+            sample_token = pred_boxes[0].sample_token
+        else:
+            sample_token = gt_boxes[0].sample_token
+
+        gt_info = []
+        pred_info = []
+        
+        for box in gt_boxes:
+            evalbox_to_box = self.convert_from_EvalBox_to_Box_v2(box)
+            label = self.get_labels_for_boxes([box])
+            gt_info.append(evalbox_to_box)
+            st()
+        
+        for box in pred_boxes:
+            evalbox_to_box = self.convert_from_EvalBox_to_Box_v2(box)
+            label = self.get_labels_for_boxes([box])
+            pred_info.append(evalbox_to_box)
+        
+        # render_specific_gt_and_predictions(sample_token, gt_info, pred_info, self.nusc, plot_folder)
+        pass
+    
+    def convert_from_EvalBox_to_Box_v2(self, eval_box:DetectionBox) -> Box:
+        sample_data_token = eval_box.sample_token
+        sd_record = self.nusc.get('sample_data', sample_data_token)
+        cs_record = self.nusc.get('calibrated_sensor', sd_record['calibrated_sensor_token'])
+        sensor_record = self.nusc.get('sensor', cs_record['sensor_token'])
+        pose_record = self.nusc.get('ego_pose', sd_record['ego_pose_token'])
+
+        yaw = Quaternion(pose_record['rotation']).yaw_pitch_roll[0]
+        box.translation += (-np.array(pose_record['translation']))
+        quaternion = Quaternion(scalar=np.cos(yaw / 2), vector=[0, 0, np.sin(yaw / 2)]).inverse
+        box.center = np.dot(quaternion.rotation_matrix, box.translation)
+        box.orientation = quaternion * box.rotation
+        box.velocity = np.dot(quaternion.rotation_matrix, box.velocity)
+        return Box(token=box.sample_token, 
+                center=box.translation, 
+                size=box.size, 
+                orientation=box.rotation, 
+                name=box.name,
+                score=box.score)
+
 
 #### --------- Utils functions --------- #####
 def powerset(iterable: Iterable):
@@ -535,31 +608,33 @@ def powerset(iterable: Iterable):
     s = list(iterable)
     return chain.from_iterable(combinations(s, r) for r in range(len(s)+1)) 
 
+
+
 def convert_from_EvalBox_to_Box(eval_box:EvalBox) -> Box:
     """Converts an EvalBox object to a Box object
     """
     
     print(f"Rotation of an EvalBox {(eval_box.rotation)}")
-
     box = Box(
         center=eval_box.translation,
         size=eval_box.size,
-        orientation=eval_box.rotation,
+        orientation=Quaternion(eval_box.rotation),
         velocity=eval_box.velocity,
         token=eval_box.sample_token
     )
+    st()
     if type(eval_box) == DetectionBox:
         box.name = eval_box.detection_name
         box.score = eval_box.detection_score
-        
+    st()
     return box
     
 def convert_from_Box_to_EvalBox(box:Box) -> EvalBox:
     """Converts a Box object to an EvalBox object
     """
     
-    print(f"*******Rotation of an Box***| {box.orientation.elements.tolist()} |***********")
-    print(f"-------> Velocity of an Box ---> {box.velocity} <---------")
+    # print(f"*******Rotation of an Box***| {box.orientation.elements.tolist()} |***********")
+    # print(f"-------> Velocity of an Box ---> {box.velocity} <---------")
     
     return DetectionBox(
         translation = box.center,

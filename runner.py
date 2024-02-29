@@ -6,6 +6,7 @@ from typing import Tuple, Dict, Any, List
 from itertools import chain, combinations
 from pdb import set_trace as st
 import pickle as pkl
+from pathlib import Path
 from custom_env import dataset_root as dataroot
 
 from mmdet3d.evaluation.metrics import nuscenes_metric as nus_metric
@@ -68,6 +69,15 @@ generator = GenerateConfusionMatrix(nusc=nusc,
 # generator.set_list_of_classes(list_of_classes)
 # generator.set_list_of_propositions()
 cm_prop = generator.get_prop_labeled_cm()
+cm_prop_full = sum(cm_prop_k for cm_prop_k in cm_prop.values())
+# Printing old prop_cm:
+old_prop_cm_pkl_file = Path("/home/apurvabadithela/software/run_nuscenes_evaluations/saved_cms/lidar/mini/prop_cm.pkl")
+with open(old_prop_cm_pkl_file, "rb") as f:
+    old_prop_cm = pkl.load(f)
+f.close()
+old_prop_cm_full = sum(cm_prop_k for cm_prop_k in old_prop_cm.values())
+st()
+
 cm = generator.get_distance_param_conf_mat()
 generator.generate_clusters()
 cm_prop_w_clusters = generator.get_clustered_conf_mat()
