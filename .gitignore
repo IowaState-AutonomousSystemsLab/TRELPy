@@ -5,3 +5,4 @@ mini_val_files/
 ./custom_env.py
 saved_cms
 custom_env.py
+nohup.out

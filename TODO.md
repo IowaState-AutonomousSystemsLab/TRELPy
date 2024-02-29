@@ -7,7 +7,9 @@
 - [ ] Convert_from_Box_to_EvalBox conversion of Quaternion has an issue
 
 ### Low priority:
-[] Add a list of labels to the Cluster object
+- [ ] Add a list of labels to the Cluster object
+- [ ] Return a new list of objects that are within 0 - min_radius
+- [ ] `NuScenesRender.py` ignores velocity for now
 
 
 
