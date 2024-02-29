@@ -502,7 +502,8 @@ class GenerateConfusionMatrix:
             gt_classes = {gt.detection_name for gt in gt_boxes}
             pred_classes = {pred.detection_name for pred in pred_boxes}
         except:
-            print()
+            traceback.print_exc()
+            print("get_prop_cm_indices:505")
             # st()
 
         # TODO: Use a conf_mat_mapping to make this more generic

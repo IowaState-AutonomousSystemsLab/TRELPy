@@ -31,8 +31,8 @@ def convert_EvalBox_to_flat_veh_coords(sample_data_token:str, box:DetectionBox, 
     yaw = Quaternion(pose_record['rotation']).yaw_pitch_roll[0]
     box.translation += (-np.array(pose_record['translation']))
     quaternion = Quaternion(scalar=np.cos(yaw / 2), vector=[0, 0, np.sin(yaw / 2)]).inverse
-    box.center = np.dot(quaternion.rotation_matrix, box.translation)
-    box.orientation = quaternion * box.rotation
+    box.translation = np.dot(quaternion.rotation_matrix, box.translation)
+    box.rotation = quaternion * box.rotation
     #TODO ignores velocity for now
     # box.velocity = np.dot(quaternion.rotation_matrix, box.velocity)
 
