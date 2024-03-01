@@ -67,7 +67,7 @@ class RadiusBand:
                                          ego_veh=self.ego_veh,
                                          dist_threshold=self.max_dist_bw_obj,
                                          radius_band=self.radius_band,
-                                         lower_radian_lim=(0 if i==0 else (i*self.angular_diff)+self.sigma),
+                                         lower_radian_lim=(0 if i==0 else (i*self.angular_diff)),
                                          upper_radian_lim=(i+1)*self.angular_diff)
             )
     
@@ -130,7 +130,7 @@ class Cluster:
         angle_from_ego = np.arctan2(box.translation[1], box.translation[0])
         angle_from_ego = angle_from_ego if angle_from_ego >= 0 else (np.pi * 2.0) + angle_from_ego
         
-        if self.lower_radian_lim <= angle_from_ego <= self.upper_radian_lim:
+        if self.lower_radian_lim <= angle_from_ego < self.upper_radian_lim:
             self.boxes.append(box)
         else:
             print(f"Box not added because {self.lower_radian_lim} <= {angle_from_ego} <= {self.upper_radian_lim}")

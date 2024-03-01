@@ -602,7 +602,7 @@ def convert_from_EvalBox_to_Box(eval_box:EvalBox) -> Box:
     """Converts an EvalBox object to a Box object
     """
     
-    print(f"Rotation of an EvalBox {(eval_box.rotation)}")
+    # print(f"Rotation of an EvalBox {(eval_box.rotation)}")
     box = Box(
         center=eval_box.translation,
         size=eval_box.size,
