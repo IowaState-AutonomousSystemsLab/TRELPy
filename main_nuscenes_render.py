@@ -8,8 +8,6 @@ from nuscenes.utils.geometry_utils import view_points, box_in_image, BoxVisibili
 from nuscenes.utils.map_mask import MapMask
 from nuscenes.utils.color_map import get_colormap
 import os.path as osp
-from nuscenes.eval.common.utils import quaternion_yaw
-from nuscenes.eval.detection.data_classes import DetectionBox
 
 from PIL import Image
 from nuscenes.nuscenes import NuScenesExplorer 
@@ -19,226 +17,16 @@ from typing import List, Tuple, Union
 from nuscenes.nuscenes import NuScenes
 import numpy as np
 from pyquaternion import Quaternion
-import os
-from nuscenes.eval.common.data_classes import EvalBox
-from pdb import set_trace as st
 
-def convert_EvalBox_to_flat_veh_coords(sample_data_token:str, box:DetectionBox, nusc: NuScenes) -> Box:
-    sd_record = nusc.get('sample_data', sample_data_token)
-    cs_record = nusc.get('calibrated_sensor', sd_record['calibrated_sensor_token'])
-    sensor_record = nusc.get('sensor', cs_record['sensor_token'])
-    pose_record = nusc.get('ego_pose', sd_record['ego_pose_token'])
-
-    yaw = Quaternion(pose_record['rotation']).yaw_pitch_roll[0]
-    box.translation += (-np.array(pose_record['translation']))
-    quaternion = Quaternion(scalar=np.cos(yaw / 2), vector=[0, 0, np.sin(yaw / 2)]).inverse
-    box.center = np.dot(quaternion.rotation_matrix, box.translation)
-    box.rotation = quaternion * box.rotation
-
-    return Box(token=box.sample_token, 
-               center=box.translation, 
-               size=box.size, 
-               orientation=box.rotation, 
-               name=box.name,
-               score=box.score)
-    
-def convert_ego_pose_to_flat_veh_coords(sample_data_token:str, box:Box, nusc: NuScenes) -> Box:
+def convert_to_flat_veh_coords(sample_data_token:str, box:Box, nusc: NuScenes) -> Box:
     sd_record = nusc.get('sample_data', sample_data_token)
     cs_record = nusc.get('calibrated_sensor', sd_record['calibrated_sensor_token'])
     pose_record = nusc.get('ego_pose', sd_record['ego_pose_token'])
     yaw = Quaternion(pose_record['rotation']).yaw_pitch_roll[0]
     box.translate(-np.array(pose_record['translation']))
     box.rotate(Quaternion(scalar=np.cos(yaw / 2), vector=[0, 0, np.sin(yaw / 2)]).inverse)
+    
     return box
-
-def get_ego_angle(nusc: NuScenes, sample_data_token: str) -> float:
-    sd_record = nusc.get('sample_data', sample_data_token)
-    pose_record = nusc.get('ego_pose', sd_record['ego_pose_token'])
-    rotn = Quaternion(pose_record['rotation'])
-    return quaternion_yaw(rotn) / np.pi * 180
-
-def generate_fig_fn(out_path, sample_token):    
-    folder_fn = os.path.join(out_path, "sample_token_" + sample_token)
-    if not os.path.exists(folder_fn):
-        os.makedirs(folder_fn)
-    fig_fn = os.path.join(folder_fn, "mismatch_")
-    i=1
-    while os.path.isfile('{}{:d}.png'.format(fig_fn, i)):
-        i += 1
-    fig_fn = '{}{:d}.png'.format(fig_fn, i)
-    return fig_fn
-
-def render_specific_gt_and_predictions(sample_token: str, gt_info:list=[], pred_info:list=[], nusc=None, out_path:str=None):
-    '''
-    Inputs:
-    sample_data_token: token
-    gt_info: List of tuples containing EvalBox and the associated label
-    pred_info: List of tuples containing the EvalBox and the associated label
-    nusc: nuscenes object
-    out_path: plotting folder where the plot is saved
-
-    # Default parameters:
-    :param with_anns: Whether to draw box annotations.
-    :param box_vis_level: If sample_data is an image, this sets required visibility for boxes.
-    :param axes_limit: Axes limit for lidar and radar (measured in meters).
-    :param ax: Axes onto which to render.
-    :param nsweeps: Number of sweeps for lidar and radar.
-    :param out_path: Optional path to save the rendered figure to disk.
-    :param underlay_map: When set to true, lidar data is plotted onto the map. This can be slow.
-    :param use_flat_vehicle_coordinates: Instead of the current sensor's coordinate frame, use ego frame which is
-        aligned to z-plane in the world. Note: Previously this method did not use flat vehicle coordinates, which
-        can lead to small errors when the vertical axis of the global frame and lidar are not aligned. The new
-        setting is more correct and rotates the plot by ~90 degrees.
-    :param show_lidarseg: When set to True, the lidar data is colored with the segmentation labels. When set
-        to False, the colors of the lidar data represent the distance from the center of the ego vehicle.
-    :param show_lidarseg_legend: Whether to display the legend for the lidarseg labels in the frame.
-    :param filter_lidarseg_labels: Only show lidar points which belong to the given list of classes. If None
-        or the list is empty, all classes will be displayed.
-    :param lidarseg_preds_bin_path: A path to the .bin file which contains the user's lidar segmentation
-                                    predictions for the sample.
-    :param verbose: Whether to display the image after it is rendered.
-    :param show_panoptic: When set to True, the lidar data is colored with the panoptic labels. When set
-        to False, the colors of the lidar data represent the distance from the center of the ego vehicle.
-        If show_lidarseg is True, show_panoptic will be set to False.
-    '''
-    with_anns: bool = True
-    box_vis_level: BoxVisibility = BoxVisibility.ANY
-    axes_limit: float = 40
-    ax: Axes = None
-    nsweeps: int = 1
-    underlay_map: bool = True
-    use_flat_vehicle_coordinates: bool = True
-    show_lidarseg_legend: bool = False
-    filter_lidarseg_labels: List = None
-    lidarseg_preds_bin_path: str = None
-    verbose: bool = True
-    show_panoptic: bool = False
-
-    fig_fn = generate_fig_fn(out_path, sample_token)
-
-    nusc_exp = NuScenesExplorer(nusc)
-    color_map = get_colormap()
-    # Get sensor modality.
-    sample = nusc.get('sample', sample_token)
-    sample_data_token = sample["data"]["LIDAR_TOP"]
-    sd_record = nusc.get('sample_data', sample_data_token)
-    sensor_modality = sd_record['sensor_modality']
-    sample_rec = nusc.get('sample', sd_record['sample_token'])
-    chan = sd_record['channel']
-    ref_chan = 'LIDAR_TOP'
-    ref_sd_token = sample_rec['data'][ref_chan]
-    ref_sd_record = nusc.get('sample_data', ref_sd_token)
-    
-    pc, times = LidarPointCloud.from_file_multisweep(nusc, sample_rec, chan, ref_chan,
-                                                    nsweeps=nsweeps)
-    velocities = None
-    if use_flat_vehicle_coordinates:
-        # Retrieve transformation matrices for reference point cloud.
-        cs_record = nusc.get('calibrated_sensor', ref_sd_record['calibrated_sensor_token'])
-        pose_record = nusc.get('ego_pose', ref_sd_record['ego_pose_token'])
-        ref_to_ego = transform_matrix(translation=cs_record['translation'],
-                                        rotation=Quaternion(cs_record["rotation"]))
-
-        # Compute rotation between 3D vehicle pose and "flat" vehicle pose (parallel to global z plane).
-        ego_yaw = Quaternion(pose_record['rotation']).yaw_pitch_roll[0]
-        rotation_vehicle_flat_from_vehicle = np.dot(
-            Quaternion(scalar=np.cos(ego_yaw / 2), vector=[0, 0, np.sin(ego_yaw / 2)]).rotation_matrix,
-            Quaternion(pose_record['rotation']).inverse.rotation_matrix)
-        vehicle_flat_from_vehicle = np.eye(4)
-        vehicle_flat_from_vehicle[:3, :3] = rotation_vehicle_flat_from_vehicle
-        viewpoint = np.dot(vehicle_flat_from_vehicle, ref_to_ego)
-    else:
-        viewpoint = np.eye(4)
-
-    # Init axes.
-    if ax is None:
-        _, ax = plt.subplots(1, 1, figsize=(9, 9))
-
-    # Render map if requested.
-    if underlay_map:
-        assert use_flat_vehicle_coordinates, 'Error: underlay_map requires use_flat_vehicle_coordinates, as ' \
-                                                'otherwise the location does not correspond to the map!'
-        nusc_exp.render_ego_centric_map(sample_data_token=sample_data_token, axes_limit=axes_limit, ax=ax)
-
-    points = view_points(pc.points[:3, :], viewpoint, normalize=False)
-    dists = np.sqrt(np.sum(pc.points[:2, :] ** 2, axis=0))
-    colors = np.minimum(1, dists / axes_limit / np.sqrt(2))
-    
-    ax.plot(0, 0, 'x', color='red')
-    
-    # Show boxes.
-    if with_anns:
-        for (box, label) in gt_info:
-            box = convert_ego_pose_to_flat_veh_coords(ref_sd_token, box, nusc)
-            c = np.array(color_map[box.name]) / 255.0
-            render(box, label, ax, view=np.eye(4), colors=(c, c, c))
-            
-        for (box, label) in pred_info:
-            box = convert_ego_pose_to_flat_veh_coords(ref_sd_token, box, nusc)
-            render(box, label, ax, view=np.eye(4), colors=('k', 'k', 'k'))
-
-    ax.axis('off')
-    ax.set_title('{} {labels_type}'.format(
-        sd_record['channel'], labels_type='(predictions)' if lidarseg_preds_bin_path else ''))
-    ax.set_aspect('equal')
-
-    if out_path is not None:
-        plt.savefig(fig_fn, bbox_inches='tight', pad_inches=0, dpi=200)
-
-    if verbose:
-        plt.show()
-
-def get_colormap():
-    """
-    Get the defined colormap.
-    :return: A mapping from the class names to the respective RGB values.
-    """
-
-    classname_to_color = {  # RGB.
-        "noise": (0, 0, 0),  # Black.
-        "animal": (70, 130, 180),  # Steelblue
-        "pedestrian": (0, 0, 230),  # Blue
-        "barrier": (112, 128, 144),  # Slategrey
-        "traffic_cone": (222, 184, 135),  # Burlywood
-        "human.pedestrian.adult": (0, 0, 230),  # Blue
-        "human.pedestrian.child": (135, 206, 235),  # Skyblue,
-        "human.pedestrian.construction_worker": (100, 149, 237),  # Cornflowerblue
-        "human.pedestrian.personal_mobility": (219, 112, 147),  # Palevioletred
-        "human.pedestrian.police_officer": (0, 0, 128),  # Navy,
-        "human.pedestrian.stroller": (240, 128, 128),  # Lightcoral
-        "human.pedestrian.wheelchair": (138, 43, 226),  # Blueviolet
-        "movable_object.barrier": (112, 128, 144),  # Slategrey
-        "movable_object.debris": (210, 105, 30),  # Chocolate
-        "movable_object.pushable_pullable": (105, 105, 105),  # Dimgrey
-        "movable_object.trafficcone": (47, 79, 79),  # Darkslategrey
-        "static_object.bicycle_rack": (188, 143, 143),  # Rosybrown
-        "vehicle.bicycle": (220, 20, 60),  # Crimson
-        "bicycle": (220, 20, 60),  # Crimson
-        "vehicle.bus.bendy": (255, 127, 80),  # Coral
-        "bus": (255, 127, 80),  # Coral
-        "vehicle.bus.rigid": (255, 69, 0),  # Orangered
-        "vehicle.car": (255, 158, 0),  # Orange
-        "car": (255, 158, 0),  # Orange
-        "vehicle.construction": (233, 150, 70),  # Darksalmon
-        "vehicle.emergency.ambulance": (255, 83, 0),
-        "vehicle.emergency.police": (255, 215, 0),  # Gold
-        "vehicle.motorcycle": (255, 61, 99),  # Red
-        "motorcycle": (255, 61, 99),  # Red
-        "vehicle.trailer": (255, 140, 0),  # Darkorange
-        "trailer": (255, 140, 0),  # Darkorange
-        "vehicle.truck": (255, 99, 71),  # Tomato
-        "truck": (255, 99, 71),  # Tomato
-        "flat.driveable_surface": (0, 207, 191),  # nuTonomy green
-        "flat.other": (175, 0, 75),
-        "flat.sidewalk": (75, 0, 75),
-        "flat.terrain": (112, 180, 60),
-        "static.manmade": (222, 184, 135),  # Burlywood
-        "static.other": (255, 228, 196),  # Bisque
-        "static.vegetation": (0, 175, 0),  # Green
-        "vehicle.ego": (255, 240, 245)
-    }
-
-    return classname_to_color
 
 def render_sample_data_with_predictions( sample_data_token: str,
                            with_anns: bool = True,
@@ -447,10 +235,6 @@ def render_sample_data_with_predictions( sample_data_token: str,
 
             # Show ego vehicle.
             ax.plot(0, 0, 'x', color='red')
-            yaw = get_ego_angle(nusc, sample_data_token)
-            ax.plot([0, 5*np.cos(np.radians(yaw))], [0, 5*np.sin(np.radians(yaw))], color='black')
-            ax.plot([0, 5], [0, 0], color='green')
-            
 
             # Get boxes in lidar frame.
             _, boxes, _ = nusc.get_sample_data(ref_sd_token, box_vis_level=box_vis_level,
@@ -463,7 +247,7 @@ def render_sample_data_with_predictions( sample_data_token: str,
                     box.render(ax, view=np.eye(4), colors=(c, c, c))
                     
                 for box in pred_boxes:
-                    box = convert_ego_pose_to_flat_veh_coords(ref_sd_token, box, nusc)
+                    box = convert_to_flat_veh_coords(ref_sd_token, box, nusc)
                     box.render(ax, view=np.eye(4), colors=('k', 'k', 'k'))
 
             # Limit visible range.
@@ -505,45 +289,3 @@ def render_sample_data_with_predictions( sample_data_token: str,
 
         if verbose:
             plt.show()
-
-def render(box:Box, title:str,axis: Axes,view: np.ndarray = np.eye(3),normalize: bool = False, colors: Tuple = ('b', 'r', 'k'),
-    linewidth: float = 2) -> None:
-    """
-    Renders the box in the provided Matplotlib axis.
-    :param axis: Axis onto which the box should be drawn.
-    :param view: <np.array: 3, 3>. Define a projection in needed (e.g. for drawing projection in an image).
-    :param normalize: Whether to normalize the remaining coordinate.
-    :param colors: (<Matplotlib.colors>: 3). Valid Matplotlib colors (<str> or normalized RGB tuple) for front,
-        back and sides.
-    :param linewidth: Width in pixel of the box sides.
-    """
-    corners = view_points(box.corners(), view, normalize=normalize)[:2, :]
-
-    def draw_rect(selected_corners, color):
-        prev = selected_corners[-1]
-        for corner in selected_corners:
-            axis.plot([prev[0], corner[0]], [prev[1], corner[1]], color=color, linewidth=linewidth)
-            prev = corner
-
-    # Draw the sides
-    for i in range(4):
-        axis.plot([corners.T[i][0], corners.T[i + 4][0]],
-                    [corners.T[i][1], corners.T[i + 4][1]],
-                    color=colors[2], linewidth=linewidth)
-
-    # Draw front (first 4 corners) and rear (last 4 corners) rectangles(3d)/lines(2d)
-    draw_rect(corners.T[:4], colors[0])
-    draw_rect(corners.T[4:], colors[1])
-
-    # Draw line indicating the front
-    center_bottom_forward = np.mean(corners.T[2:4], axis=0)
-    center_bottom = np.mean(corners.T[[2, 3, 7, 6]], axis=0)
-    axis.plot([center_bottom[0], center_bottom_forward[0]],
-                [center_bottom[1], center_bottom_forward[1]],
-                color=colors[0], linewidth=linewidth)
-
-    if "gt" in title:
-        axis.text(center_bottom_forward[0]+1, center_bottom_forward[1]-1, title, fontsize='small')
-    
-    if "pred" in title:
-        axis.text(center_bottom_forward[0]+1, center_bottom_forward[1]+1, title, fontsize='small')

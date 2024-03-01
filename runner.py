@@ -65,11 +65,18 @@ generator = GenerateConfusionMatrix(nusc=nusc,
     max_dist=100,
     distance_bin=10
 )
-
+generator.set_debug(True)
 # generator.set_list_of_classes(list_of_classes)
 # generator.set_list_of_propositions()
 cm_prop = generator.get_prop_labeled_cm()
 cm_prop_full = sum(cm_prop_k for cm_prop_k in cm_prop.values())
+
+# Saving prop cm:
+confusion_matrix = ConfusionMatrix(generator, list_of_classes, labels)
+prop_cm_file = f"{cm_dir}/new_prop_cm.pkl"
+confusion_matrix.set_confusion_matrix(cm_prop, label_type="prop")
+confusion_matrix.save_confusion_matrix(prop_cm_file, label_type="prop")
+
 # Printing old prop_cm:
 old_prop_cm_pkl_file = Path("/home/ranai/software/run_nuscenes_evaluations/saved_cms/lidar/mini/prop_cm.pkl")
 old_prop_cm_pkl_file = f"{repo_dir}/saved_cms/lidar/mini/prop_cm.pkl"
@@ -77,22 +84,35 @@ with open(old_prop_cm_pkl_file, "rb") as f:
     old_prop_cm = pkl.load(f)
 f.close()
 old_prop_cm_full = sum(cm_prop_k for cm_prop_k in old_prop_cm.values())
-st()
+print("===================================")
+print("Old Prop-Labeled CM:")
+print(old_prop_cm_full)
+print("New Prop-Labeled CM:")
+print(cm_prop_full)
+print("===================================")
+
 
 cm = generator.get_distance_param_conf_mat()
-# generator.generate_clusters()
+cm_full = sum(cm_k for cm_k in cm.values())
+confusion_matrix.set_confusion_matrix(cm, label_type="class")
+cm_file = f"{cm_dir}/new_cm.pkl"
+confusion_matrix.save_confusion_matrix(cm_file, label_type="class")
+# Printing old class_cm:
+old_cm_pkl_file = Path("/home/apurvabadithela/software/run_nuscenes_evaluations/saved_cms/lidar/mini/cm.pkl")
+with open(old_cm_pkl_file, "rb") as f:
+    old_cm = pkl.load(f)
+f.close()
+old_cm_full = sum(cm_k for cm_k in old_cm.values())
+print("===================================")
+print("Old Class Labeled CM:")
+print(old_cm_full)
+print("New Class Labeled CM:")
+print(cm_full)
+print("===================================")
+st()
 cm_prop_w_clusters = generator.get_clustered_conf_mat()
 propositions, prop_dict = generator.get_list_of_propositions()
 print("Generated clustered conf mat")
-
-
-confusion_matrix = ConfusionMatrix(generator, list_of_classes, labels)
-confusion_matrix.set_confusion_matrix(cm, label_type="class")
-cm_file = f"{cm_dir}/cm.pkl"
-confusion_matrix.save_confusion_matrix(cm_file, label_type="class")
-prop_cm_file = f"{cm_dir}/prop_cm.pkl"
-confusion_matrix.set_confusion_matrix(cm_prop, label_type="prop")
-confusion_matrix.save_confusion_matrix(prop_cm_file, label_type="prop")
 
 # Saving clustered confusion matrix:
 # Todo: Integrate the cluster saving into confusion matrix
