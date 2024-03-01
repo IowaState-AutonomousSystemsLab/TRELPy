@@ -391,8 +391,8 @@ class GenerateConfusionMatrix:
 
             # Loop over samples:
             for sample_token in self.sample_tokens:
-                evaluation = self.single_evaluation_prop_cm(self.disc_gt_boxes[key][sample_token], 
-                                                self.disc_pred_boxes[key][sample_token])
+                evaluation = self.single_evaluation_prop_cm(EvalBoxes(self.disc_gt_boxes[key][sample_token]), 
+                                                EvalBoxes(self.disc_pred_boxes[key][sample_token]))
                 self.prop_conf_mats[key] += evaluation
     
         return self.prop_conf_mats
