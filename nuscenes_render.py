@@ -58,15 +58,18 @@ def get_ego_angle(nusc: NuScenes, sample_data_token: str) -> float:
     rotn = Quaternion(pose_record['rotation'])
     return quaternion_yaw(rotn) / np.pi * 180
 
-def generate_fig_fn(out_path, sample_data_token):
-    fig_fn = out_path + "sample_token_" + sample_data_token + "/mismatch_"
+def generate_fig_fn(out_path, sample_token):    
+    folder_fn = os.path.join(out_path, "sample_token_" + sample_token)
+    if not os.path.exists(folder_fn):
+        os.makedirs(folder_fn)
+    fig_fn = os.path.join(folder_fn, "mismatch_")
     i=1
     while os.path.isfile('{}{:d}.png'.format(fig_fn, i)):
         i += 1
     fig_fn = '{}{:d}.png'.format(fig_fn, i)
     return fig_fn
 
-def render_specific_gt_and_predictions(sample_data_token: str, gt_info:list=[], pred_info:list=[], nusc=None, out_path:str=None):
+def render_specific_gt_and_predictions(sample_token: str, gt_info:list=[], pred_info:list=[], nusc=None, out_path:str=None):
     '''
     Inputs:
     sample_data_token: token
@@ -112,11 +115,13 @@ def render_specific_gt_and_predictions(sample_data_token: str, gt_info:list=[], 
     verbose: bool = True
     show_panoptic: bool = False
 
-    fig_fn = generate_fig_fn(out_path, sample_data_token)
+    fig_fn = generate_fig_fn(out_path, sample_token)
 
     nusc_exp = NuScenesExplorer(nusc)
-    st()   
+    color_map = get_colormap()
     # Get sensor modality.
+    sample = nusc.get('sample', sample_token)
+    sample_data_token = sample["data"]["LIDAR_TOP"]
     sd_record = nusc.get('sample_data', sample_data_token)
     sensor_modality = sd_record['sensor_modality']
     sample_rec = nusc.get('sample', sd_record['sample_token'])
@@ -165,14 +170,14 @@ def render_specific_gt_and_predictions(sample_data_token: str, gt_info:list=[], 
     # Show boxes.
     if with_anns:
         for (box, label) in gt_info:
-            c = np.array(nusc_exp.get_color(box.name)) / 255.0
-            box.render(ax, view=np.eye(4), colors=(c, c, c))
-
+            box = convert_ego_pose_to_flat_veh_coords(ref_sd_token, box, nusc)
+            c = np.array(color_map[box.name]) / 255.0
+            render(box, label, ax, view=np.eye(4), colors=(c, c, c))
             
         for (box, label) in pred_info:
             box = convert_ego_pose_to_flat_veh_coords(ref_sd_token, box, nusc)
-            box.render(ax, view=np.eye(4), colors=('k', 'k', 'k'))
-    
+            render(box, label, ax, view=np.eye(4), colors=('k', 'k', 'k'))
+
     ax.axis('off')
     ax.set_title('{} {labels_type}'.format(
         sd_record['channel'], labels_type='(predictions)' if lidarseg_preds_bin_path else ''))
@@ -183,9 +188,58 @@ def render_specific_gt_and_predictions(sample_data_token: str, gt_info:list=[], 
 
     if verbose:
         plt.show()
-    st()
 
+def get_colormap():
+    """
+    Get the defined colormap.
+    :return: A mapping from the class names to the respective RGB values.
+    """
 
+    classname_to_color = {  # RGB.
+        "noise": (0, 0, 0),  # Black.
+        "animal": (70, 130, 180),  # Steelblue
+        "pedestrian": (0, 0, 230),  # Blue
+        "barrier": (112, 128, 144),  # Slategrey
+        "traffic_cone": (222, 184, 135),  # Burlywood
+        "human.pedestrian.adult": (0, 0, 230),  # Blue
+        "human.pedestrian.child": (135, 206, 235),  # Skyblue,
+        "human.pedestrian.construction_worker": (100, 149, 237),  # Cornflowerblue
+        "human.pedestrian.personal_mobility": (219, 112, 147),  # Palevioletred
+        "human.pedestrian.police_officer": (0, 0, 128),  # Navy,
+        "human.pedestrian.stroller": (240, 128, 128),  # Lightcoral
+        "human.pedestrian.wheelchair": (138, 43, 226),  # Blueviolet
+        "movable_object.barrier": (112, 128, 144),  # Slategrey
+        "movable_object.debris": (210, 105, 30),  # Chocolate
+        "movable_object.pushable_pullable": (105, 105, 105),  # Dimgrey
+        "movable_object.trafficcone": (47, 79, 79),  # Darkslategrey
+        "static_object.bicycle_rack": (188, 143, 143),  # Rosybrown
+        "vehicle.bicycle": (220, 20, 60),  # Crimson
+        "bicycle": (220, 20, 60),  # Crimson
+        "vehicle.bus.bendy": (255, 127, 80),  # Coral
+        "bus": (255, 127, 80),  # Coral
+        "vehicle.bus.rigid": (255, 69, 0),  # Orangered
+        "vehicle.car": (255, 158, 0),  # Orange
+        "car": (255, 158, 0),  # Orange
+        "vehicle.construction": (233, 150, 70),  # Darksalmon
+        "vehicle.emergency.ambulance": (255, 83, 0),
+        "vehicle.emergency.police": (255, 215, 0),  # Gold
+        "vehicle.motorcycle": (255, 61, 99),  # Red
+        "motorcycle": (255, 61, 99),  # Red
+        "vehicle.trailer": (255, 140, 0),  # Darkorange
+        "trailer": (255, 140, 0),  # Darkorange
+        "vehicle.truck": (255, 99, 71),  # Tomato
+        "truck": (255, 99, 71),  # Tomato
+        "flat.driveable_surface": (0, 207, 191),  # nuTonomy green
+        "flat.other": (175, 0, 75),
+        "flat.sidewalk": (75, 0, 75),
+        "flat.terrain": (112, 180, 60),
+        "static.manmade": (222, 184, 135),  # Burlywood
+        "static.other": (255, 228, 196),  # Bisque
+        "static.vegetation": (0, 175, 0),  # Green
+        "vehicle.ego": (255, 240, 245)
+    }
+
+    return classname_to_color
 
 def render_sample_data_with_predictions( sample_data_token: str,
                            with_anns: bool = True,
@@ -452,3 +506,45 @@ def render_sample_data_with_predictions( sample_data_token: str,
 
         if verbose:
             plt.show()
+
+def render(box:Box, title:str,axis: Axes,view: np.ndarray = np.eye(3),normalize: bool = False, colors: Tuple = ('b', 'r', 'k'),
+    linewidth: float = 2) -> None:
+    """
+    Renders the box in the provided Matplotlib axis.
+    :param axis: Axis onto which the box should be drawn.
+    :param view: <np.array: 3, 3>. Define a projection in needed (e.g. for drawing projection in an image).
+    :param normalize: Whether to normalize the remaining coordinate.
+    :param colors: (<Matplotlib.colors>: 3). Valid Matplotlib colors (<str> or normalized RGB tuple) for front,
+        back and sides.
+    :param linewidth: Width in pixel of the box sides.
+    """
+    corners = view_points(box.corners(), view, normalize=normalize)[:2, :]
+
+    def draw_rect(selected_corners, color):
+        prev = selected_corners[-1]
+        for corner in selected_corners:
+            axis.plot([prev[0], corner[0]], [prev[1], corner[1]], color=color, linewidth=linewidth)
+            prev = corner
+
+    # Draw the sides
+    for i in range(4):
+        axis.plot([corners.T[i][0], corners.T[i + 4][0]],
+                    [corners.T[i][1], corners.T[i + 4][1]],
+                    color=colors[2], linewidth=linewidth)
+
+    # Draw front (first 4 corners) and rear (last 4 corners) rectangles(3d)/lines(2d)
+    draw_rect(corners.T[:4], colors[0])
+    draw_rect(corners.T[4:], colors[1])
+
+    # Draw line indicating the front
+    center_bottom_forward = np.mean(corners.T[2:4], axis=0)
+    center_bottom = np.mean(corners.T[[2, 3, 7, 6]], axis=0)
+    axis.plot([center_bottom[0], center_bottom_forward[0]],
+                [center_bottom[1], center_bottom_forward[1]],
+                color=colors[0], linewidth=linewidth)
+
+    if "gt" in title:
+        axis.text(center_bottom_forward[0]+1, center_bottom_forward[1]-1, title, fontsize='small')
+    
+    if "pred" in title:
+        axis.text(center_bottom_forward[0]+1, center_bottom_forward[1]+1, title, fontsize='small')

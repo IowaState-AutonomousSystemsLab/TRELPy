@@ -5,7 +5,7 @@ from typing import Tuple, Dict, Any, List
 from itertools import chain, combinations
 from classes import class_names
 from pyquaternion import Quaternion
-
+import datetime
 from nuscenes import NuScenes
 from nuscenes.eval.common.data_classes import EvalBoxes, EvalBox
 from nuscenes.eval.common.utils import center_distance, scale_iou, yaw_diff
@@ -13,9 +13,10 @@ from nuscenes.utils.data_classes import Box
 from nuscenes.utils.geometry_utils import view_points, box_in_image, BoxVisibility
 from nuscenes.eval.detection.data_classes import DetectionConfig, DetectionBox
 from nuscenes.eval.common.loaders import load_prediction, load_gt, add_center_dist, filter_eval_boxes
-from nuscenes_render import convert_EvalBox_to_flat_veh_coords, render_sample_data_with_predictions
+from nuscenes_render import convert_EvalBox_to_flat_veh_coords, render_sample_data_with_predictions, render_specific_gt_and_predictions
 from cluster_devel import RadiusBand, Cluster
 from pdb import set_trace as st
+import pickle as pkl
 
 class GenerateConfusionMatrix:
     """
@@ -387,6 +388,13 @@ class GenerateConfusionMatrix:
         """
         n = len(self.list_of_propositions)
 
+        # Debugging figures stored here:
+        self.plot_folder = os.path.join("plots/prop_cm_debug_plots",datetime.datetime.now().strftime('%Y-%m-%d_%H-%M-%S'))
+        if not os.path.exists(self.plot_folder):
+            os.makedirs(self.plot_folder)
+        
+        self.mismatched_samples = []
+
         # Looping over radius bands
         for key in list(self.disc_gt_boxes.keys()):
             self.prop_conf_mats[key] = np.zeros((n,n))
@@ -502,97 +510,77 @@ class GenerateConfusionMatrix:
         gt_idx = None
         pred_idx = None
 
-        try:    
-            gt_classes = {gt.detection_name for gt in gt_boxes}
-            pred_classes = {pred.detection_name for pred in pred_boxes}
-        except:
-            print()
-            # st()
-
-        # TODO: Use a conf_mat_mapping to make this more generic
         try:
-            gt_classes = set({"ped" if x == "pedestrian" else "obs" for x in gt_classes})
-            pred_classes = set({"ped" if x == "pedestrian" else "obs" for x in pred_classes})
+            gt_labels = self.get_labels_for_boxes(gt_boxes)
+            pred_labels = self.get_labels_for_boxes(pred_boxes)
         except:
-            print("making a set from get_prop_cm_indices:502")
+            st()
 
-        if len(gt_classes) == 0:
-            gt_classes = set({"empty"})
-        if len(pred_classes) == 0:
-            pred_classes = set({"empty"})
-
-        # TODO: Check the following line of code:
-        # try:
-        #     gt_labels = self.get_labels_for_boxes(gt_boxes)
-        #     pred_labels = self.get_labels_for_boxes(pred_boxes)
-        # except:
-        #     st()
+        if gt_labels != pred_labels:
+            self.render_predictions(gt_boxes, pred_boxes)
 
         # # Conf_mat mapping:
         # # TODO check if the following works correctly.
         # gt_classes = set({self.conf_mat_mapping[gt_box.detection_name] for gt_box in gt_boxes})
-        # pred_classes = set({self.conf_mat_mapping[pred_box.detection_name] for pred_box in pred_boxes})
-        
-        # # Apurva's debugging:
-        if gt_classes != pred_classes:
-            self.render_predictions(gt_boxes, pred_boxes)
-            st()
+        # pred_classes = set({self.conf_mat_mapping[pred_box.detection_name] for pred_box in pred_boxes})        
 
         for k, prop_label in self.prop_dict.items():
-            if gt_classes == prop_label:
+            if gt_labels == prop_label:
                 gt_idx = k
-            if pred_classes == prop_label:
+            if pred_labels == prop_label:
                 pred_idx = k
         return gt_idx, pred_idx
 
     def render_predictions(self, gt_boxes, pred_boxes):
-        plot_folder = "plots/prop_cm_debug_plots/"
-        if not os.path.exists(plot_folder):
-            os.makedirs(plot_folder)
-        
-
         if gt_boxes == []:
             assert pred_boxes != []
             sample_token = pred_boxes[0].sample_token
         else:
             sample_token = gt_boxes[0].sample_token
 
+        if sample_token not in self.mismatched_samples:
+            self.mismatched_samples.append(sample_token)
+
         gt_info = []
         pred_info = []
         
         for box in gt_boxes:
-            evalbox_to_box = self.convert_from_EvalBox_to_Box_v2(box)
-            label = self.get_labels_for_boxes([box])
-            gt_info.append(evalbox_to_box)
-            st()
+            evalbox_to_box = convert_from_EvalBox_to_Box(box)
+            [label] = self.get_labels_for_boxes([box])
+            gt_info.append((evalbox_to_box, "gt: " + label))
         
         for box in pred_boxes:
-            evalbox_to_box = self.convert_from_EvalBox_to_Box_v2(box)
-            label = self.get_labels_for_boxes([box])
-            pred_info.append(evalbox_to_box)
+            evalbox_to_box = convert_from_EvalBox_to_Box(box)
+            [label] = self.get_labels_for_boxes([box])
+            pred_info.append((evalbox_to_box, "pred: " + label))
+        render_specific_gt_and_predictions(sample_token, gt_info, pred_info, self.nusc, self.plot_folder)
         
-        # render_specific_gt_and_predictions(sample_token, gt_info, pred_info, self.nusc, plot_folder)
-        pass
+        mismatched_samples_pkl = f"{self.plot_folder}/mismatched_sample_tokens.pkl"
+        with open(mismatched_samples_pkl, "wb") as f:
+            pkl.dump(self.mismatched_samples, f)
+        f.close() 
     
     def convert_from_EvalBox_to_Box_v2(self, eval_box:DetectionBox) -> Box:
-        sample_data_token = eval_box.sample_token
-        sd_record = self.nusc.get('sample_data', sample_data_token)
+        sample_token = eval_box.sample_token
+        sample = self.nusc.get('sample', sample_token)
+        sd_record = self.nusc.get('sample_data', sample["data"]["LIDAR_TOP"])
         cs_record = self.nusc.get('calibrated_sensor', sd_record['calibrated_sensor_token'])
         sensor_record = self.nusc.get('sensor', cs_record['sensor_token'])
         pose_record = self.nusc.get('ego_pose', sd_record['ego_pose_token'])
 
         yaw = Quaternion(pose_record['rotation']).yaw_pitch_roll[0]
-        box.translation += (-np.array(pose_record['translation']))
+        eval_box.translation += (-np.array(pose_record['translation']))
         quaternion = Quaternion(scalar=np.cos(yaw / 2), vector=[0, 0, np.sin(yaw / 2)]).inverse
-        box.center = np.dot(quaternion.rotation_matrix, box.translation)
-        box.orientation = quaternion * box.rotation
-        box.velocity = np.dot(quaternion.rotation_matrix, box.velocity)
-        return Box(token=box.sample_token, 
-                center=box.translation, 
-                size=box.size, 
-                orientation=box.rotation, 
-                name=box.name,
-                score=box.score)
+        eval_box.center = np.dot(quaternion.rotation_matrix, eval_box.translation)
+        orientation = quaternion * eval_box.rotation
+        box = Box(token=eval_box.sample_token, 
+                center=eval_box.translation, 
+                size=eval_box.size, 
+                orientation=orientation)        
+        
+        box.name = eval_box.detection_name
+        box.score = eval_box.detection_score
+        return box
 
 
 #### --------- Utils functions --------- #####
@@ -619,14 +607,12 @@ def convert_from_EvalBox_to_Box(eval_box:EvalBox) -> Box:
         center=eval_box.translation,
         size=eval_box.size,
         orientation=Quaternion(eval_box.rotation),
-        velocity=eval_box.velocity,
         token=eval_box.sample_token
     )
-    st()
+    
     if type(eval_box) == DetectionBox:
         box.name = eval_box.detection_name
         box.score = eval_box.detection_score
-    st()
     return box
     
 def convert_from_Box_to_EvalBox(box:Box) -> EvalBox:
