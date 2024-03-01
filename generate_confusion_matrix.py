@@ -150,7 +150,7 @@ class GenerateConfusionMatrix:
         self.gt_boxes = filter_eval_boxes(self.nusc, self.gt_boxes, self.cfg.class_range, verbose=self.verbose)
         self.sample_tokens = self.gt_boxes.sample_tokens
 
-    def set_debug(debug:bool):
+    def set_debug(self, debug:bool):
         self.debug = debug
 
     def load_ego_centric_boxes(self) -> None:
@@ -331,8 +331,9 @@ class GenerateConfusionMatrix:
                             dist_thresh: float = 2.0,       # in m 
                             yaw_thresh: float = np.pi/2.0): # in radians  -> np.ndarray:
 
-        EMPTY = len(self.list_of_classes)
-        distance_param_conf_mat = np.zeros( (len(self.list_of_classes)+1, len(self.list_of_classes)+1) )
+        n_class = len(self.list_of_classes)
+        EMPTY = n_class-1
+        distance_param_conf_mat = np.zeros((n_class, n_class))
         # -- For each sample
         # -- -- For each ground truth
         # -- -- -- For each prediction

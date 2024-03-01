@@ -65,7 +65,7 @@ generator = GenerateConfusionMatrix(nusc=nusc,
     max_dist=100,
     distance_bin=10
 )
-# generator.set_debug(True)
+generator.set_debug(True)
 # generator.set_list_of_classes(list_of_classes)
 # generator.set_list_of_propositions()
 cm_prop = generator.get_prop_labeled_cm()
@@ -108,7 +108,7 @@ print(old_cm_full)
 print("New Class Labeled CM:")
 print(cm_full)
 print("===================================")
-
+st()
 cm_prop_w_clusters = generator.get_clustered_conf_mat()
 propositions, prop_dict = generator.get_list_of_propositions()
 print("Generated clustered conf mat")
