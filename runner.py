@@ -65,13 +65,19 @@ generator = GenerateConfusionMatrix(nusc=nusc,
     distance_bin=10
 )
 
-# Todo: Ensure that the confusion matrix comes with class labels.
+fin_prop = np.zeros((4,4), dtype=np.float64)
+
+# TODO: Ensure that the confusion matrix comes with class labels.
 cm_prop, prop_dict = generator.get_proposition_labelled_conf_mat()
 cm = generator.get_distance_param_conf_mat()
 # x = generator.get_clustered_conf_mat()
-print(cm_prop)
-st()
+# print(cm_prop)
+for dist_bin in cm_prop.keys(): fin_prop += cm_prop[dist_bin]
 
+print (fin_prop) 
+# st()
+
+# print(fin_prop)
 confusion_matrix = ConfusionMatrix(generator, list_of_classes, labels)
 confusion_matrix.set_confusion_matrix(cm, label_type="class")
 confusion_matrix.save_confusion_matrix(cm_dir, label_type="class")
