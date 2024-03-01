@@ -1,3 +1,8 @@
 software.code-workspace
 outputs
 __pycache__/
+mini_val_files/
+./custom_env.py
+saved_cms
+custom_env.py
+plots
