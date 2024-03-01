@@ -11,7 +11,7 @@ from pyquaternion import Quaternion
 from nuscenes import NuScenes
 from nuscenes.eval.common.data_classes import EvalBoxes, EvalBox
 from nuscenes.eval.common.utils import center_distance, scale_iou, yaw_diff
-from nuscenes.utils.data_classes import Bo  x
+from nuscenes.utils.data_classes import Box
 from nuscenes.utils.geometry_utils import view_points, box_in_image, BoxVisibility
 from nuscenes.eval.detection.data_classes import DetectionConfig, DetectionBox
 from nuscenes.eval.common.loaders import load_prediction, load_gt, add_center_dist, filter_eval_boxes
