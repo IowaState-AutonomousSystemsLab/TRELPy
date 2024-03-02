@@ -391,8 +391,8 @@ class GenerateConfusionMatrix:
 
             # Loop over samples:
             for sample_token in self.sample_tokens:
-                evaluation = self.single_evaluation_prop_cm(EvalBoxes(self.disc_gt_boxes[key][sample_token]), 
-                                                EvalBoxes(self.disc_pred_boxes[key][sample_token]))
+                evaluation = self.single_evaluation_prop_cm(self.disc_gt_boxes[key][sample_token], 
+                                                self.disc_pred_boxes[key][sample_token])
                 self.prop_conf_mats[key] += evaluation
     
         return self.prop_conf_mats
@@ -413,6 +413,8 @@ class GenerateConfusionMatrix:
                         # st()
                     evaluation = self.single_evaluation_prop_cm(cluster.boxes, pred_boxes_in_cluster) # in radians
                     self.clustered_conf_mats[radius_band] += evaluation
+        
+        return self.clustered_conf_mats
 
     
     def find_preds_for_cluster(self, 
@@ -433,8 +435,7 @@ class GenerateConfusionMatrix:
         dist_thresh = cluster.max_dist_bw_obj if (dist_thresh is None) else dist_thresh
         inrange_pred_boxes = self.disc_pred_boxes[cluster.radius_band][cluster.sample_token]
         sample = self.nusc.get('sample', cluster.sample_token)
-        matched_pred_box_idx = []
-        matched_pred_boxes = EvalBoxes()
+        matched_pred_boxes = []
         # st()
         for gt_idx, gt_box in enumerate(cluster.boxes):
             
@@ -453,7 +454,7 @@ class GenerateConfusionMatrix:
                     
                     if cluster.lower_radian_lim <= ego_angle <= cluster.upper_radian_lim:
                         if center_distance(pred, gt_box) < dist_thresh and yaw_diff(pred, gt_box) < yaw_thresh and scale_iou(pred, gt_box) > iou_thresh:
-                            matched_pred_box_idx.append(pred_idx)
+                            matched_pred_boxes.append(pred)
                 except:
                     print("441-455 Error in find_preds_for_cluster")
                     traceback.print_exc()
@@ -461,27 +462,27 @@ class GenerateConfusionMatrix:
                     sys.exit()
             
             # st()
-            try:
-                # matched_pred_boxes.add_boxes([inrange_pred_boxes[match_idx] for match_idx in matched_pred_box_idx])
-                for match_idx in matched_pred_box_idx:
-                    matched_box:DetectionBox = inrange_pred_boxes[match_idx]
-                    matched_pred_boxes.add_boxes([matched_box])
-            except:
-                print("Error: 459-469 in find_preds_for_cluster")
-                # st()
+            # try:
+            #     # matched_pred_boxes.add_boxes([inrange_pred_boxes[match_idx] for match_idx in matched_pred_box_idx])
+            #     for match_idx in matched_pred_box_idx:
+            #         matched_box:DetectionBox = inrange_pred_boxes[match_idx]
+            #         matched_pred_boxes.add_boxes([matched_box])
+            # except:
+            #     print("Error: 459-469 in find_preds_for_cluster")
+            #     # st()
         return matched_pred_boxes            
     
     
-    def single_evaluation_prop_cm(self, gt_boxes:EvalBoxes, pred_boxes: EvalBoxes) -> np.ndarray:
+    def single_evaluation_prop_cm(self, gt_boxes:List, pred_boxes: List) -> np.ndarray:
         # single evaluation for proposition labeled confusion matrix
         n = len(self.list_of_propositions)
         prop_cm = np.zeros((n,n))   
-        try:
-            assert type(gt_boxes) == EvalBoxes, "Error: gt_boxes is not of type EvalBoxes"
-            assert type(pred_boxes) == EvalBoxes, "Error: pred_boxes is not of type EvalBoxes"
-        except:
-            traceback.print_exc()
-            raise ValueError("Error: 479-484 in single_evaluation_prop_cm, the inputs are not EvalBoxes objects")
+        # try:
+        #     assert type(gt_boxes) == EvalBoxes, "Error: gt_boxes is not of type EvalBoxes"
+        #     assert type(pred_boxes) == EvalBoxes, "Error: pred_boxes is not of type EvalBoxes"
+        # except:
+        #     traceback.print_exc()
+        #     raise ValueError("Error: 479-484 in single_evaluation_prop_cm, the inputs are not EvalBoxes objects")
             # st()
         gt_idx, pred_idx = self.get_prop_cm_indices(gt_boxes, pred_boxes)
         if (gt_idx is not None) and (pred_idx is not None):
@@ -492,7 +493,7 @@ class GenerateConfusionMatrix:
     
     ### ---- Finding indices for proposition labeled confusion matrices ----- ###
 
-    def get_prop_cm_indices(self, gt_boxes, pred_boxes):
+    def get_prop_cm_indices(self, gt_boxes:List[EvalBox], pred_boxes:List[EvalBox]):
         """
         Returns the predicted and ground truth indices of a confusion
         matrix for the given set of gt_classes and pred_classes
@@ -502,31 +503,37 @@ class GenerateConfusionMatrix:
         gt_idx = None
         pred_idx = None
         
-        pred_classes = {}
-        gt_classes = {}
+        pred_classes = set()
+        gt_classes = set()
+            
+        for pred in pred_boxes:
+            if type(pred) != DetectionBox:
+                traceback.print_exc()
+                sys.exit(1)
+            pred_classes.add(pred.detection_name)
 
         try:    
             gt_classes = {gt.detection_name for gt in gt_boxes}
             pred_classes = {pred.detection_name for pred in pred_boxes}
         except:
             traceback.print_exc()
-            print("get_prop_cm_indices:505")
+            print("get_prop_cm_indices:521")
             # st()
 
         # TODO: Use a conf_mat_mapping to make this more generic
         try:
-            traceback.print_exc()
             gt_classes = set({"ped" if x == "pedestrian" else "obs" for x in gt_classes})
             pred_classes = set({"ped" if x == "pedestrian" else "obs" for x in pred_classes})
         except:
+            traceback.print_exc()
             print("making a set from get_prop_cm_indices:502")
 
         # # Conf_mat mapping:
-        # # ToDo check if the following works correctly.
+        # # TODO check if the following works correctly.
         # gt_classes = set({self.conf_mat_mapping[gt_box.detection_name] for gt_box in gt_boxes})
         # pred_classes = set({self.conf_mat_mapping[pred_box.detection_name] for pred_box in pred_boxes})
         
-        print(pred_classes)
+        # print(f"GenConfMat:529 {pred_classes}")
 
         if len(gt_classes) == 0:
             gt_classes = set({"empty"})

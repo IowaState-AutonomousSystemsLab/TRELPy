@@ -74,6 +74,14 @@ cm_prop_w_clusters = generator.get_clustered_conf_mat()
 propositions, prop_dict = generator.get_list_of_propositions()
 print("Generated clustered conf mat")
 
+for i, prop in enumerate(list(cm_prop_w_clusters.keys())):
+    if i == 0:
+        total_conf_mat = cm_prop_w_clusters[prop]
+    else:
+        total_conf_mat += cm_prop_w_clusters[prop]
+
+print("Total Confusion Matrix\n", total_conf_mat)
+
 
 confusion_matrix = ConfusionMatrix(generator, list_of_classes, labels)
 confusion_matrix.set_confusion_matrix(cm, label_type="class")

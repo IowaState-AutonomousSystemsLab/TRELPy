@@ -40,7 +40,6 @@ class RadiusBand:
             print("Minimum radius should be greater than 0\n setting min_radius to 1", file=sys.stderr)
             self.radius_band = (1, radius_band[1])
         
-        self.sigma = 0.0001 #TODO Remove sigma and ensure all ranges are accounted for
         self.angular_diff = self.__calculate_max_radius_bw_obj(self.radius_band[0])
         self.num_clusters = int(np.ceil((2 * np.pi) / self.angular_diff))
         self.angular_diff = (2 * np.pi / self.num_clusters)
@@ -67,7 +66,7 @@ class RadiusBand:
                                          ego_veh=self.ego_veh,
                                          dist_threshold=self.max_dist_bw_obj,
                                          radius_band=self.radius_band,
-                                         lower_radian_lim=(0 if i==0 else (i*self.angular_diff)+self.sigma),
+                                         lower_radian_lim=(0 if i==0 else (i*self.angular_diff)),
                                          upper_radian_lim=(i+1)*self.angular_diff)
             )
     
