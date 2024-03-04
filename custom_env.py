@@ -6,7 +6,8 @@ from pathlib import Path
 import subprocess
 
 ######## PARMS #########
-model_name = "model_01-05-2024_20_22"
+## ONLY Change model_name here to make it work with your version.
+model_name = "model2_good"
 modality = "lidar"
 is_mini = True
 ########################
@@ -25,7 +26,7 @@ def is_set_to_mini():
     return is_mini
 
 if is_mini:
-    dataset = "nuscenes"
+    dataset = "nuscenes-mini"
     size = "mini"
     inf_res = "inference_results_mini"
 else:
@@ -38,6 +39,6 @@ dataset_root = f"{home_dir}/software/mmdetection3d/data/{dataset}/"
 output_dir = f"{home_dir}/nuscenes_dataset/{inf_res}"
 model_dir = str(Path(f"{output_dir}/{model_name}").absolute())
 preds_dir = str(Path(f"{model_dir}/preds").absolute())
-repo_dir = getGitRoot()
+repo_dir = f"{home_dir}/nuscenes_dataset/3D_Detection"
 cm_dir = str(Path(f"{repo_dir}/saved_cms/{modality}/{size}/{model_name}").absolute())
 create_dir_if_not_exist(cm_dir)
