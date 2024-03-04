@@ -433,13 +433,13 @@ class GenerateConfusionMatrix:
         '''
         
         dist_thresh = cluster.max_dist_bw_obj if (dist_thresh is None) else dist_thresh
-        inrange_pred_boxes = self.disc_pred_boxes[cluster.radius_band][cluster.sample_token]
+        inband_pred_boxes = self.disc_pred_boxes[cluster.radius_band][cluster.sample_token]
         sample = self.nusc.get('sample', cluster.sample_token)
         matched_pred_boxes = []
         # st()
         for gt_idx, gt_box in enumerate(cluster.boxes):
             
-            for pred_idx, pred in enumerate(inrange_pred_boxes):
+            for pred_idx, pred in enumerate(inband_pred_boxes):
                 try:
                     ego_pred_box:DetectionBox = convert_EvalBox_to_flat_veh_coords(sample_data_token=sample["data"]["LIDAR_TOP"], 
                                                                             box=pred, 
