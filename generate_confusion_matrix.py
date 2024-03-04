@@ -115,6 +115,9 @@ class GenerateConfusionMatrix:
             os.makedirs(self.output_dir)
         if not os.path.isdir(self.plot_dir):
             os.makedirs(self.plot_dir)
+            
+        ##### For debugging purposes #####
+        self.list_of_mismatches = []
     
     def __load_ego_veh(self, sample_token:str):
         sample = self.nusc.get('sample', sample_token)
@@ -220,7 +223,7 @@ class GenerateConfusionMatrix:
             self.disc_gt_boxes[key].add_boxes(sample_token=gt.sample_token, boxes=[gt])
             
         for pred in self.pred_boxes.all:
-            pred.ego_translation = (pred.ego_translation[0], pred.ego_translation[1], 0)                         #TODO check if this is working as expected
+            pred.ego_translation = (pred.ego_translation[0], pred.ego_translation[1], 0)                   #TODO check if this is working as expected
             dist = np.sqrt(np.dot(pred.ego_translation, pred.ego_translation))
             key = list(self.disc_pred_boxes.keys())[int(dist // self.distance_bin)]     
             self.disc_pred_boxes[key].add_boxes(sample_token=pred.sample_token, boxes=[pred])
@@ -468,6 +471,7 @@ class GenerateConfusionMatrix:
         matched_pred_boxes_as_DetBoxes = EvalBoxes()
         matched_pred_box_idx = []
         matched_pred_boxes = []
+        
         for gt_idx, gt_box in enumerate(cluster.boxes):
             for pred_idx, pred in enumerate(inband_pred_boxes):
                 #TODO: currently this returns a Box object. I create the Box object in this function. Can we get away with creating a DetectionBox obj?
@@ -481,7 +485,7 @@ class GenerateConfusionMatrix:
                 assert ego_pred_box.label in class_names, "Error: gt_box.detection_name not in list_of_classes"
                 
                 if cluster.lower_radian_lim <= ego_angle <= cluster.upper_radian_lim:
-                    if center_distance(pred, gt_box) < dist_thresh and yaw_diff(pred, gt_box) < yaw_thresh and scale_iou(inrange_pred_boxes[match_idx], gt_box) > iou_thresh:
+                    if center_distance(pred, gt_box) < dist_thresh and yaw_diff(pred, gt_box) < yaw_thresh and scale_iou(inband_pred_boxes[match_idx], gt_box) > iou_thresh:
                         matched_pred_box_idx.append(pred_idx)
             
             st()
@@ -591,6 +595,7 @@ class GenerateConfusionMatrix:
             st()
 
         if gt_labels != pred_labels and self.debug:
+            if len(gt_boxes) > 0: self.list_of_mismatches.append(gt_boxes[0].sample_token)
             self.render_predictions(gt_boxes, pred_boxes)
 
         # # Conf_mat mapping:

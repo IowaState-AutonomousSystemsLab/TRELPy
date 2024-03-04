@@ -78,7 +78,7 @@ confusion_matrix.set_confusion_matrix(cm_prop, label_type="prop")
 confusion_matrix.save_confusion_matrix(prop_cm_file, label_type="prop")
 
 # Printing old prop_cm:
-old_prop_cm_pkl_file = Path("/home/ranai/software/run_nuscenes_evaluations/saved_cms/lidar/mini/prop_cm.pkl")
+old_prop_cm_pkl_file = Path(f"{repo_dir}/saved_cms/lidar/mini/prop_cm.pkl")
 old_prop_cm_pkl_file = f"{repo_dir}/saved_cms/lidar/mini/prop_cm.pkl"
 with open(old_prop_cm_pkl_file, "rb") as f:
     old_prop_cm = pkl.load(f)
@@ -90,6 +90,8 @@ print(old_prop_cm_full)
 print("New Prop-Labeled CM:")
 print(cm_prop_full)
 print("===================================")
+print(generator.list_of_mismatches)
+st()
 
 
 cm = generator.get_distance_param_conf_mat()
@@ -98,7 +100,7 @@ confusion_matrix.set_confusion_matrix(cm, label_type="class")
 cm_file = f"{cm_dir}/new_cm.pkl"
 confusion_matrix.save_confusion_matrix(cm_file, label_type="class")
 # Printing old class_cm:
-old_cm_pkl_file = Path("/home/apurvabadithela/software/run_nuscenes_evaluations/saved_cms/lidar/mini/cm.pkl")
+old_cm_pkl_file = Path(f"{repo_dir}/saved_cms/lidar/mini/cm.pkl")
 with open(old_cm_pkl_file, "rb") as f:
     old_cm = pkl.load(f)
 f.close()
