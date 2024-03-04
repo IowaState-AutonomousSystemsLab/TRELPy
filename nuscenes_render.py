@@ -34,14 +34,8 @@ def convert_EvalBox_to_flat_veh_coords(sample_data_token:str, box:DetectionBox, 
     quaternion = Quaternion(scalar=np.cos(yaw / 2), vector=[0, 0, np.sin(yaw / 2)]).inverse
     box.center = np.dot(quaternion.rotation_matrix, box.translation)
     box.rotation = quaternion * box.rotation
-
-    return Box(token=box.sample_token, 
-               center=box.translation, 
-               size=box.size, 
-               orientation=box.rotation, 
-               name=box.name,
-               score=box.score)
-    
+    return box
+   
 def convert_ego_pose_to_flat_veh_coords(sample_data_token:str, box:Box, nusc: NuScenes) -> Box:
     sd_record = nusc.get('sample_data', sample_data_token)
     cs_record = nusc.get('calibrated_sensor', sd_record['calibrated_sensor_token'])

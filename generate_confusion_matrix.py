@@ -1,5 +1,6 @@
 import os
 import numpy as np
+import traceback
 from collections.abc import Iterable
 from typing import Tuple, Dict, Any, List
 from itertools import chain, combinations
@@ -341,14 +342,14 @@ class GenerateConfusionMatrix:
         for sample_token in gt_boxes.sample_tokens:
             sample_pred_list = pred_boxes[sample_token]
             sample_gt_list = gt_boxes[sample_token]
-            taken = set()  # Initially no gt bounding box is matched.
+            taken = set()  # Initially no pred bounding box is matched.
             
             ## check if there are phantom predictions. Following lines are never used.
             # class_pred_len = [len([1 for pred in sample_pred_list if pred.detection_name == class_name]) for class_name in conf_mat_mapping]
             # class_gt_len = [len([1 for gt in sample_gt_list if gt.detection_name == class_name]) for class_name in conf_mat_mapping]
             for gt in sample_gt_list:    
                 best_iou = -1       # Initialize best iou for a bbox with a value that cannot be achieved.
-                best_match = None   # Initialize best matching bbox with None. Tuple of (gt, pred, iou)
+                best_match = None   # Initialize best matching bbox with None. Tuple of (pred, gt, iou)
                 match_pred_ids = [] # Initialize list of matched predictions for this gt.
                 
                 for i, pred in enumerate(sample_pred_list):
@@ -364,6 +365,7 @@ class GenerateConfusionMatrix:
                 for k,v in self.class_dict.items():
                     if v == "empty":
                         empty_idx = k
+
                 if len(match_pred_ids) == 0:
                     distance_param_conf_mat[empty_idx][conf_mat_mapping[gt.detection_name]] += 1
                     continue
@@ -438,7 +440,7 @@ class GenerateConfusionMatrix:
                         pred_boxes_in_cluster = self.find_preds_for_cluster(cluster, dist_thresh=2.0)
                     except:
                         print("Find preds for cluster failed")
-                        st()
+                        traceback.print_exc()
                     evaluation = self.single_evaluation_prop_cm(cluster.boxes, pred_boxes_in_cluster) # in radians
                     self.clustered_conf_mats[radius_band] += evaluation
         if self.debug:
@@ -446,60 +448,9 @@ class GenerateConfusionMatrix:
             with open(mismatched_samples_pkl, "wb") as f:
                 pkl.dump(self.mismatched_samples, f)
             f.close() 
+        return self.clustered_conf_mats
     
-    def find_preds_for_cluster(self, cluster:Cluster,
-                               dist_thresh = None, 
-                               yaw_thresh: float = np.pi/2.0,
-                               iou_thresh:float = 0.60) -> EvalBoxes:
-        '''
-        Move this code to the cluster file.
-        Inputs:
-        TODO: Describe the inputs and outputs
-        cluster: Cluster object.
-        dist_thresh: float
-        yaw_thresh: float
-        iou_thresh: float
-        '''
-        
-        dist_thresh = cluster.max_dist_bw_obj if (dist_thresh is None) else dist_thresh
-        inband_pred_boxes = self.disc_pred_boxes[cluster.radius_band][cluster.sample_token]
-        sample = self.nusc.get('sample', cluster.sample_token)
-        matched_pred_boxes_as_DetBoxes = EvalBoxes()
-        matched_pred_box_idx = []
-        matched_pred_boxes = []
-        for gt_idx, gt_box in enumerate(cluster.boxes):
-            for pred_idx, pred in enumerate(inband_pred_boxes):
-                #TODO: currently this returns a Box object. I create the Box object in this function. Can we get away with creating a DetectionBox obj?
-                ego_pred_box = convert_EvalBox_to_flat_veh_coords(sample_data_token=sample["data"]["LIDAR_TOP"], 
-                                                                        box=pred, 
-                                                                        nusc=self.nusc)
-                ego_angle = np.arctan2(ego_pred_box.center[1], ego_pred_box.center[0])
-                ego_angle = ego_angle if ego_angle >= 0 else (2 * np.pi) + ego_angle
-                pred_idx = int(np.ceil(ego_angle / self.radius_band[0]))
-                
-                assert ego_pred_box.label in class_names, "Error: gt_box.detection_name not in list_of_classes"
-                
-                if cluster.lower_radian_lim <= ego_angle <= cluster.upper_radian_lim:
-                    if center_distance(pred, gt_box) < dist_thresh and yaw_diff(pred, gt_box) < yaw_thresh and scale_iou(inrange_pred_boxes[match_idx], gt_box) > iou_thresh:
-                        matched_pred_box_idx.append(pred_idx)
-            
-            st()
-            for match_idx in matched_pred_box_idx:
-                matched_box:Box = inband_pred_boxes[match_idx]
-                #TODO how to avoid this object creation in line
-                matched_detbox=[DetectionBox(sample_token=cluster.sample_token,
-                                    translation=matched_box.center,
-                                    size=matched_box.wlh,
-                                    rotation=matched_box.orientation,
-                                    detection_name=matched_box.name,
-                                    detection_score=matched_box.score)]
-                matched_pred_boxes_as_DetBoxes.add_boxes(sample_token=cluster.sample_token, boxes=matched_detbox)
-                matched_pred_boxes.append(matched_detbox)
-                # st()
-        return matched_pred_boxes            
-    
-    # def find_preds_for_cluster(self, 
-    #                            cluster:Cluster,
+    # def find_preds_for_cluster(self, cluster:Cluster,
     #                            dist_thresh = None, 
     #                            yaw_thresh: float = np.pi/2.0,
     #                            iou_thresh:float = 0.60) -> EvalBoxes:
@@ -514,44 +465,84 @@ class GenerateConfusionMatrix:
     #     '''
         
     #     dist_thresh = cluster.max_dist_bw_obj if (dist_thresh is None) else dist_thresh
-    #     inrange_pred_boxes = self.disc_pred_boxes[cluster.radius_band][cluster.sample_token]
+    #     inband_pred_boxes = self.disc_pred_boxes[cluster.radius_band][cluster.sample_token]
     #     sample = self.nusc.get('sample', cluster.sample_token)
+    #     matched_pred_boxes_as_DetBoxes = EvalBoxes()
     #     matched_pred_box_idx = []
-    #     matched_pred_boxes = EvalBoxes()
-    #     # st()
+    #     matched_pred_boxes = []
     #     for gt_idx, gt_box in enumerate(cluster.boxes):
+    #         for pred_idx, pred in enumerate(inband_pred_boxes):
+    #             #TODO: currently this returns a Box object. I create the Box object in this function. Can we get away with creating a DetectionBox obj?
+    #             ego_pred_box = convert_EvalBox_to_flat_veh_coords(sample_data_token=sample["data"]["LIDAR_TOP"], 
+    #                                                                     box=pred, 
+    #                                                                     nusc=self.nusc)
+    #             ego_angle = np.arctan2(ego_pred_box.center[1], ego_pred_box.center[0])
+    #             ego_angle = ego_angle if ego_angle >= 0 else (2 * np.pi) + ego_angle
+    #             pred_idx = int(np.ceil(ego_angle / self.radius_band[0]))
+                
+    #             assert ego_pred_box.label in class_names, "Error: gt_box.detection_name not in list_of_classes"
+                
+    #             if cluster.lower_radian_lim <= ego_angle <= cluster.upper_radian_lim:
+    #                 if center_distance(pred, gt_box) < dist_thresh and yaw_diff(pred, gt_box) < yaw_thresh and scale_iou(inrange_pred_boxes[match_idx], gt_box) > iou_thresh:
+    #                     matched_pred_box_idx.append(pred_idx)
             
-    #         for pred_idx, pred in enumerate(inrange_pred_boxes):
-    #             try:
-    #                 ego_pred_box:DetectionBox = convert_EvalBox_to_flat_veh_coords(sample_data_token=sample["data"]["LIDAR_TOP"], 
-    #                                                                         box=pred, 
-    #                                                                         nusc=self.nusc)
-    #                 ego_angle = np.arctan2(ego_pred_box.translation[1], ego_pred_box.translation[0])
-    #                 ego_angle = ego_angle if ego_angle >= 0 else (2 * np.pi) + ego_angle
-    #                 pred_idx = int(np.ceil(ego_angle / cluster.radius_band[0]))
-                    
-    #                 label = ego_pred_box.detection_name
-                    
-    #                 assert label in class_names, "Error: gt_box.detection_name not in list_of_classes"
-                    
-    #                 if cluster.lower_radian_lim <= ego_angle <= cluster.upper_radian_lim:
-    #                     if center_distance(pred, gt_box) < dist_thresh and yaw_diff(pred, gt_box) < yaw_thresh and scale_iou(pred, gt_box) > iou_thresh:
-    #                         matched_pred_box_idx.append(pred_idx)
-    #             except:
-    #                 print("441-455 Error in find_preds_for_cluster")
-    #                 traceback.print_exc()
-    #                 sys.exit()
-            
-    #         # st()
-    #         try:
-    #             # matched_pred_boxes.add_boxes([inrange_pred_boxes[match_idx] for match_idx in matched_pred_box_idx])
-    #             for match_idx in matched_pred_box_idx:
-    #                 matched_box:DetectionBox = inrange_pred_boxes[match_idx]
-    #                 matched_pred_boxes.add_boxes([matched_box])
-    #         except:
-    #             print("Error: 459-469 in find_preds_for_cluster")
+    #         st()
+    #         for match_idx in matched_pred_box_idx:
+    #             matched_box:Box = inband_pred_boxes[match_idx]
+    #             #TODO how to avoid this object creation in line
+    #             matched_detbox=[DetectionBox(sample_token=cluster.sample_token,
+    #                                 translation=matched_box.center,
+    #                                 size=matched_box.wlh,
+    #                                 rotation=matched_box.orientation,
+    #                                 detection_name=matched_box.name,
+    #                                 detection_score=matched_box.score)]
+    #             matched_pred_boxes_as_DetBoxes.add_boxes(sample_token=cluster.sample_token, boxes=matched_detbox)
+    #             matched_pred_boxes.append(matched_detbox)
     #             # st()
     #     return matched_pred_boxes            
+    
+    def find_preds_for_cluster(self, 
+                            cluster:Cluster,
+                            dist_thresh = None, 
+                            yaw_thresh: float = np.pi/2.0,
+                            iou_thresh:float = 0.60) -> EvalBoxes:
+        '''
+        Move this code to the cluster file.
+        Inputs:
+        TODO: Describe the inputs and outputs
+        cluster: Cluster object.
+        dist_thresh: float
+        yaw_thresh: float
+        iou_thresh: float
+        '''
+        dist_thresh = cluster.max_dist_bw_obj if (dist_thresh is None) else dist_thresh
+        inband_pred_boxes = self.disc_pred_boxes[cluster.radius_band][cluster.sample_token]
+        sample = self.nusc.get('sample', cluster.sample_token)
+        matched_pred_boxes = []
+        # st()
+        for gt_idx, gt_box in enumerate(cluster.boxes):    
+            for pred_idx, pred in enumerate(inband_pred_boxes):
+                try:
+                    ego_pred_box:DetectionBox = convert_EvalBox_to_flat_veh_coords(sample_data_token=sample["data"]["LIDAR_TOP"], 
+                                                                            box=pred, 
+                                                                            nusc=self.nusc)
+                    ego_angle = np.arctan2(ego_pred_box.translation[1], ego_pred_box.translation[0])
+                    ego_angle = ego_angle if ego_angle >= 0 else (2 * np.pi) + ego_angle
+                    pred_idx = int(np.ceil(ego_angle / cluster.radius_band[0]))
+                    
+                    label = ego_pred_box.detection_name
+                    
+                    assert label in class_names, "Error: gt_box.detection_name not in list_of_classes"
+                    
+                    if cluster.lower_radian_lim <= ego_angle <= cluster.upper_radian_lim:
+                        if center_distance(pred, gt_box) < dist_thresh and yaw_diff(pred, gt_box) < yaw_thresh and scale_iou(pred, gt_box) > iou_thresh:
+                            matched_pred_boxes.append(pred)
+                except:
+                    print("441-455 Error in find_preds_for_cluster")
+                    traceback.print_exc()
+
+                    sys.exit()
+        return matched_pred_boxes  
     
     def single_evaluation_prop_cm(self, gt_boxes:EvalBoxes, pred_boxes: EvalBoxes) -> np.ndarray:
         # single evaluation for proposition labeled confusion matrix
@@ -587,7 +578,7 @@ class GenerateConfusionMatrix:
             gt_labels = self.get_labels_for_boxes(gt_boxes)
             pred_labels = self.get_labels_for_boxes(pred_boxes)
         except:
-            st()
+            traceback.print_exc()
 
         if gt_labels != pred_labels and self.debug:
             self.render_predictions(gt_boxes, pred_boxes)

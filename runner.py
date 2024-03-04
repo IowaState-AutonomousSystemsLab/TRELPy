@@ -108,9 +108,13 @@ print(old_cm_full)
 print("New Class Labeled CM:")
 print(cm_full)
 print("===================================")
-st()
+# st()
 cm_prop_w_clusters = generator.get_clustered_conf_mat()
 print("Generated clustered conf mat")
+cm_prop_w_clusters_full = sum(cm_k for cm_k in cm_prop_w_clusters.values())
+print("===================================")
+print("Clustered CM:")
+print(cm_prop_w_clusters_full)
 
 # Saving clustered confusion matrix:
 # Todo: Integrate the cluster saving into confusion matrix
