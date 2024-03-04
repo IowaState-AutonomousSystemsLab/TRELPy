@@ -335,7 +335,6 @@ class GenerateConfusionMatrix:
                             yaw_thresh: float = np.pi/2.0): # in radians  -> np.ndarray:
 
         n_class = len(self.list_of_classes)
-        EMPTY = n_class-1
         distance_param_conf_mat = np.zeros((n_class, n_class))
         # -- For each sample
         # -- -- For each ground truth
@@ -347,33 +346,34 @@ class GenerateConfusionMatrix:
             sample_gt_list = gt_boxes[sample_token]
             taken = set()  # Initially no gt bounding box is matched.
             
-            # check if there are phantom predictions
-            class_pred_len = [len([1 for pred in sample_pred_list if pred.detection_name == class_name]) for class_name in conf_mat_mapping]
-            class_gt_len = [len([1 for gt in sample_gt_list if gt.detection_name == class_name]) for class_name in conf_mat_mapping]
-            
-            for gt in sample_gt_list:
-                    
-                    best_iou = -1       # Initialize best iou for a bbox with a value that cannot be achieved.
-                    best_match = None   # Initialize best matching bbox with None. Tuple of (gt, pred, iou)
-                    match_pred_ids = [] # Initialize list of matched predictions for this gt.
-                    
-                    for i, pred in enumerate(sample_pred_list):
-                            if center_distance(pred, gt) < dist_thresh and yaw_diff(pred, gt) < yaw_thresh and i not in taken:
-                                    match_pred_ids.append(i)
-                                    
-                    for match_idx in match_pred_ids:
-                            iou = scale_iou(sample_pred_list[match_idx], gt)
-                            if best_iou < iou:
-                                    best_iou = iou
-                                    best_match = (sample_pred_list[match_idx], gt, match_idx)
-                    
-                    if len(match_pred_ids) == 0:
-                            distance_param_conf_mat[EMPTY][conf_mat_mapping[gt.detection_name]] += 1
-                            continue
-                    else:
-                            taken.add(best_match[2])
-                            distance_param_conf_mat[conf_mat_mapping[best_match[0].detection_name]][conf_mat_mapping[best_match[1].detection_name]] += 1
-                            
+            ## check if there are phantom predictions. Following lines are never used.
+            # class_pred_len = [len([1 for pred in sample_pred_list if pred.detection_name == class_name]) for class_name in conf_mat_mapping]
+            # class_gt_len = [len([1 for gt in sample_gt_list if gt.detection_name == class_name]) for class_name in conf_mat_mapping]
+            for gt in sample_gt_list:    
+                best_iou = -1       # Initialize best iou for a bbox with a value that cannot be achieved.
+                best_match = None   # Initialize best matching bbox with None. Tuple of (gt, pred, iou)
+                match_pred_ids = [] # Initialize list of matched predictions for this gt.
+                
+                for i, pred in enumerate(sample_pred_list):
+                    if center_distance(pred, gt) < dist_thresh and yaw_diff(pred, gt) < yaw_thresh and i not in taken:
+                            match_pred_ids.append(i)
+                                
+                for match_idx in match_pred_ids:
+                    iou = scale_iou(sample_pred_list[match_idx], gt)
+                    if best_iou < iou:
+                            best_iou = iou
+                            best_match = (sample_pred_list[match_idx], gt, match_idx)
+
+                for k,v in self.class_dict.items():
+                    if v == "empty":
+                        empty_idx = k
+                if len(match_pred_ids) == 0:
+                    distance_param_conf_mat[empty_idx][conf_mat_mapping[gt.detection_name]] += 1
+                    continue
+                else:
+                    taken.add(best_match[2])
+                    distance_param_conf_mat[conf_mat_mapping[best_match[0].detection_name]][conf_mat_mapping[best_match[1].detection_name]] += 1
+                        
             # print(len(sample_pred_list))
             # if self.validation and (sample_token in list_of_validation_tokens):
             #         render_sample_data_with_predictions(self.nusc.get('sample', sample_token)['data']['LIDAR_TOP'], sample_pred_list, nusc=self.nusc)
@@ -418,7 +418,6 @@ class GenerateConfusionMatrix:
             with open(mismatched_samples_pkl, "wb") as f:
                 pkl.dump(self.mismatched_samples, f)
             f.close() 
-
         return self.prop_conf_mats
 
     def get_clustered_conf_mat(self):   

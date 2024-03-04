@@ -52,7 +52,6 @@ conf_mat_mapping = {
     "motorcycle": OBS,
     "traffic_cone": OBS
 }
-
 generator = GenerateConfusionMatrix(nusc=nusc,
     config=eval_config,
     result_path=f'{model_dir}/results_nusc.json',
@@ -65,14 +64,15 @@ generator = GenerateConfusionMatrix(nusc=nusc,
     max_dist=100,
     distance_bin=10
 )
-generator.set_debug(True)
+generator.set_debug(False)
 # generator.set_list_of_classes(list_of_classes)
 # generator.set_list_of_propositions()
 cm_prop = generator.get_prop_labeled_cm()
 cm_prop_full = sum(cm_prop_k for cm_prop_k in cm_prop.values())
+list_of_propositions, prop_dict = generator.get_list_of_propositions()
 
 # Saving prop cm:
-confusion_matrix = ConfusionMatrix(generator, list_of_classes, labels)
+confusion_matrix = ConfusionMatrix(generator, list_of_classes, list_of_propositions, labels, prop_dict)
 prop_cm_file = f"{cm_dir}/new_prop_cm.pkl"
 confusion_matrix.set_confusion_matrix(cm_prop, label_type="prop")
 confusion_matrix.save_confusion_matrix(prop_cm_file, label_type="prop")
@@ -93,7 +93,6 @@ print("===================================")
 print(generator.list_of_mismatches)
 st()
 
-
 cm = generator.get_distance_param_conf_mat()
 cm_full = sum(cm_k for cm_k in cm.values())
 confusion_matrix.set_confusion_matrix(cm, label_type="class")
@@ -113,7 +112,6 @@ print(cm_full)
 print("===================================")
 st()
 cm_prop_w_clusters = generator.get_clustered_conf_mat()
-propositions, prop_dict = generator.get_list_of_propositions()
 print("Generated clustered conf mat")
 
 # Saving clustered confusion matrix:
