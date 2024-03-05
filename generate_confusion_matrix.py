@@ -416,6 +416,30 @@ class GenerateConfusionMatrix:
                     self.clustered_conf_mats[radius_band] += evaluation
         
         return self.clustered_conf_mats
+    
+    def render_predictions(self, gt_boxes, pred_boxes):
+        if gt_boxes == []:
+            assert pred_boxes != []
+            sample_token = pred_boxes[0].sample_token
+        else:
+            sample_token = gt_boxes[0].sample_token
+
+        if sample_token not in self.mismatched_samples:
+            self.mismatched_samples.append(sample_token)
+
+        gt_info = []
+        pred_info = []
+
+        for box in gt_boxes:
+            evalbox_to_box = convert_from_EvalBox_to_Box(box)
+            [label] = self.get_labels_for_boxes([box])
+            gt_info.append((evalbox_to_box, f"gt: {label}"))
+
+        for box in pred_boxes:
+            evalbox_to_box = convert_from_EvalBox_to_Box(box)
+            [label] = self.get_labels_for_boxes([box])
+            pred_info.append((evalbox_to_box, f"pred: {label}"))
+        render_specific_gt_and_predictions(sample_token, gt_info, pred_info, self.nusc, self.plot_folder)
 
     
     def find_preds_for_cluster(self, 
