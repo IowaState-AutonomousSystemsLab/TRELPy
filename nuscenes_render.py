@@ -62,7 +62,7 @@ def generate_fig_fn(out_path, sample_token):
     fig_fn = '{}{:d}.png'.format(fig_fn, i)
     return fig_fn
 
-def render_specific_gt_and_predictions(sample_token: str, gt_info:list=[], pred_info:list=[], nusc=None, out_path:str=None):
+def render_specific_gt_and_predictions(sample_token: str, gt_info:list=[], pred_info:list=[], radius_band=-1, nusc=None, out_path:str=None):
     '''
     Inputs:
     sample_data_token: token
@@ -170,6 +170,10 @@ def render_specific_gt_and_predictions(sample_token: str, gt_info:list=[], pred_
         for (box, label) in pred_info:
             box = convert_ego_pose_to_flat_veh_coords(ref_sd_token, box, nusc)
             render(box, label, ax, view=np.eye(4), colors=('k', 'k', 'k'))
+            
+    if radius_band != -1 and type(radius_band) == tuple:
+        ax.add_patch(plt.circle((0, 0), radius_band[0], color='b', fill=False))
+        ax.add_patch(plt.circle((0, 0), radius_band[1], color='b', fill=False))
 
     ax.axis('off')
     ax.set_title('{} {labels_type}'.format(
