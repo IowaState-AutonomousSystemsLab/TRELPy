@@ -2,23 +2,24 @@ import os
 import sys
 import traceback
 import numpy as np
+from pdb import set_trace as st
 from classes import class_names
+from pyquaternion import Quaternion
 from collections.abc import Iterable
 from typing import Tuple, Dict, Any, List
 from itertools import chain, combinations
-from pyquaternion import Quaternion
 
 from nuscenes import NuScenes
+from nuscenes.utils.data_classes import Box
 from nuscenes.eval.common.data_classes import EvalBoxes, EvalBox
 from nuscenes.eval.common.utils import center_distance, scale_iou, yaw_diff
-from nuscenes.utils.data_classes import Box
-from nuscenes.utils.geometry_utils import view_points, box_in_image, BoxVisibility
 from nuscenes.eval.detection.data_classes import DetectionConfig, DetectionBox
+from nuscenes.utils.geometry_utils import view_points, box_in_image, BoxVisibility
 from nuscenes.eval.common.loaders import load_prediction, load_gt, add_center_dist, filter_eval_boxes
-from nuscenes_render import convert_EvalBox_to_flat_veh_coords
+from nuscenes_render import convert_EvalBox_to_flat_veh_coords, render_sample_data_with_predictions, render_specific_gt_and_predictions, generate_fig_fn, get_colormap
 from cluster_devel import RadiusBand, Cluster
-from pdb import set_trace as st
 from utils import convert_specificLabel_to_genericLabel, convert_from_Box_to_EvalBox, convert_from_EvalBox_to_Box, powerset
+
 class GenerateConfusionMatrix:
     """
         This class instantiates a class-labeled confusion matrix.
@@ -412,6 +413,8 @@ class GenerateConfusionMatrix:
                         traceback.print_exc()
                         print("Error: find_preds_for_cluster failed")
                         # st()
+                    if len(pred_boxes_in_cluster) != len(cluster.boxes):
+                        
                     evaluation = self.single_evaluation_prop_cm(cluster.boxes, pred_boxes_in_cluster) # in radians
                     self.clustered_conf_mats[radius_band] += evaluation
         
