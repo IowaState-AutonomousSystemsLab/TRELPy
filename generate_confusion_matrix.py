@@ -405,10 +405,11 @@ class GenerateConfusionMatrix:
             for sample_token in self.sample_tokens:
                 # Radius band object. 
                 radius_band_obj = self.gt_clusters[radius_band][sample_token]
-                for cluster in radius_band_obj.clusters:
+                for cluster_idx, cluster in enumerate(radius_band_obj.clusters):
                     try:
-                        pred_boxes_in_cluster = self.find_preds_for_cluster(cluster, dist_thresh=2.0)
+                        pred_boxes_in_cluster = self.find_preds_for_cluster(cluster, cluster_idx, dist_thresh=2.0)
                     except:
+                        traceback.print_exc()
                         print("Error: find_preds_for_cluster failed")
                         # st()
                     evaluation = self.single_evaluation_prop_cm(cluster.boxes, pred_boxes_in_cluster) # in radians
@@ -419,6 +420,7 @@ class GenerateConfusionMatrix:
     
     def find_preds_for_cluster(self, 
                                cluster:Cluster,
+                               cluster_idx:int=-1,
                                dist_thresh = None, 
                                yaw_thresh: float = np.pi/2.0,
                                iou_thresh:float = 0.60) -> EvalBoxes:
@@ -438,22 +440,27 @@ class GenerateConfusionMatrix:
         matched_pred_boxes = []
         # st()
         for gt_idx, gt_box in enumerate(cluster.boxes):
-            
+            if len(matched_pred_boxes) == len(inband_pred_boxes): 
+                break
             for pred_idx, pred in enumerate(inband_pred_boxes):
                 try:
+                    #ego centric prediction box
                     ego_pred_box:DetectionBox = convert_EvalBox_to_flat_veh_coords(sample_data_token=sample["data"]["LIDAR_TOP"], 
                                                                             box=pred, 
                                                                             nusc=self.nusc)
+                    # ego centric prediction box angle from the orientation of the ego
                     ego_angle = np.arctan2(ego_pred_box.translation[1], ego_pred_box.translation[0])
                     ego_angle = ego_angle if ego_angle >= 0 else (2 * np.pi) + ego_angle
-                    pred_idx = int(np.ceil(ego_angle / cluster.radius_band[0]))
+                    #TODO might not be needed. This line is calucating the cluster index for the prediction box. We have no way of comparing indices
+                    # calc_cluster_idx = int(np.ceil(ego_angle / cluster.radius_band[0]))
                     
                     label = ego_pred_box.detection_name
                     
                     assert label in class_names, "Error: gt_box.detection_name not in list_of_classes"
                     
                     if cluster.lower_radian_lim <= ego_angle <= cluster.upper_radian_lim:
-                        if center_distance(pred, gt_box) < dist_thresh and yaw_diff(pred, gt_box) < yaw_thresh and scale_iou(pred, gt_box) > iou_thresh:
+                        if center_distance(ego_pred_box, gt_box) < dist_thresh and yaw_diff(ego_pred_box, gt_box) < yaw_thresh and scale_iou(ego_pred_box, gt_box) > iou_thresh:
+                            #assert calc_cluster_idx == cluster_idx, "Error: Cluster index does not match / should they?"
                             matched_pred_boxes.append(pred)
                 except:
                     print("441-455 Error in find_preds_for_cluster")
@@ -506,11 +513,11 @@ class GenerateConfusionMatrix:
         pred_classes = set()
         gt_classes = set()
             
-        for pred in pred_boxes:
-            if type(pred) != DetectionBox:
-                traceback.print_exc()
-                sys.exit(1)
-            pred_classes.add(pred.detection_name)
+        # for pred in pred_boxes:
+        #     if type(pred) != DetectionBox:
+        #         traceback.print_exc()
+        #         sys.exit(1)
+        #     pred_classes.add(pred.detection_name)
 
         try:    
             gt_classes = {gt.detection_name for gt in gt_boxes}
@@ -519,6 +526,11 @@ class GenerateConfusionMatrix:
             traceback.print_exc()
             print("get_prop_cm_indices:521")
             # st()
+            
+        for x in pred_classes: 
+            if x not in class_names: print(f"pred_classes has not_normal things: {x}")
+        for x in gt_classes: 
+            if x not in class_names: print(f"gt_classes has not_normal things: {x}")
 
         # TODO: Use a conf_mat_mapping to make this more generic
         try:

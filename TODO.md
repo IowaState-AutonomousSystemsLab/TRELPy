@@ -1,3 +1,10 @@
+### Writing
+
+- [ ] Look at the webpage to see what all to include in this
+- [ ] What state should the repo be in?
+- [ ] Should we assume they have a GPU? Have checks in place for that
+- [ ] 
+
 ### High priority:
 - [ ] fix `nuscenes_render.py:34-36`. rotate is upset
 - [ ] fix detection class issue where Box.detection name is too specific and we need a generic name
