@@ -1,0 +1,58 @@
+FROM ubuntu:22.04
+
+LABEL maintainer="tichakorn@gmail.com"
+LABEL version="0.1"
+LABEL description="Docker image for tulip-control (http://tulip-control.org) with stormpy."
+
+ARG DEBIAN_FRONTEND=noninteractive \
+    DEBCONF_NONINTERACTIVE_SEEN=true
+
+ENV PYTHONUNBUFFERED=1 \
+    STORM_DIR="/root/storm" \
+    PATH="$PATH:$STORM_DIR/build/bin"
+
+RUN apt update &&\
+    apt install -qy software-properties-common && \
+    add-apt-repository ppa:deadsnakes/ppa && \
+    apt update && \
+    apt install -qy curl python3.8-dev python3.8-distutils && \
+    update-alternatives --install /usr/bin/python python /usr/bin/python3.8 1 && \
+    cd ~/ && \
+    curl https://bootstrap.pypa.io/get-pip.py -o ~/get-pip.py && \
+    python get-pip.py && \
+    apt install -qy git cmake build-essential libgmp-dev libeigen3-dev libboost-all-dev ginac-tools libginac-dev libcln-dev autoconf glpk-utils hwloc libglpk-dev libhwloc-dev libz3-dev libxerces-c-dev automake libz3-dev && \
+    apt install -qy graphviz && \
+    pip install networkx==2.0 && \
+    pip install pytest && \
+    pip install numpy && \
+    pip install scipy && \
+    pip install cvxopt && \
+    pip install gr1py && \
+    cd ~/ && \
+    git clone https://github.com/tulip-control/tulip-control.git && \
+    cd tulip-control && \
+    pip install -r requirements.txt && \
+    pip install . && \
+    cd ~/ && \
+    git clone https://github.com/moves-rwth/carl-storm.git && \
+    cd carl-storm && \
+    mkdir build && cd build && cmake ../ && \
+    make && \
+    cd ~/ && \
+    git clone https://github.com/moves-rwth/pycarl.git && \
+    cd pycarl && \
+    pip install . && \
+    cd ~/ && \
+    git clone -b stable https://github.com/moves-rwth/storm.git && \
+    cd storm && \
+    mkdir build && cd build && cmake ../ && \
+    make && \
+    cd ~/ && \
+    git clone https://github.com/moves-rwth/stormpy.git --branch 1.8.0 && \
+    cd stormpy && \
+    pip install . && \
+    apt clean && \
+    rm ~/get-pip.py && \
+    rm -rf /var/lib/apt/lists/*
+
+WORKDIR /root/tulip-control
