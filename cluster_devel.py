@@ -88,7 +88,11 @@ class RadiusBand:
         except:
             st()
         
-        
+    def __str__(self) -> str:
+        return f"RadiusBand object for sample token: {self.sample_token}, radius band: {self.radius_band}, and number of clusters: {self.num_clusters}"
+    
+    def __repr__(self) -> str:
+        return self.__str__()
     
     def __calculate_max_radius_bw_obj(self, radius: float):
         """ Using s=r * theta, calculate the maximum distance between objects
@@ -137,8 +141,13 @@ class Cluster:
     
     def get_num_items_in_cluster(self) -> int:
         return len(self.boxes)
-            
+    
+    def __str__(self) -> str:
+        return f"Cluster object for sample token: {self.sample_token}, part of radius band {self.radius_band} and number of boxes: {len(self.boxes)}"        
         
+    def __repr__(self) -> str:
+        return self.__str__()
+    
     def get_cluster_spread(self) -> np.ndarray:
         pass
         

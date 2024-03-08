@@ -57,7 +57,7 @@ generator = GenerateConfusionMatrix(nusc=nusc,
     result_path=f'{model_dir}/results_nusc.json',
     eval_set=eval_set_map[dataset_version],
     output_dir=os.getcwd(),
-    verbose=True,
+    verbose=False,
     conf_mat_mapping=conf_mat_mapping,
     list_of_classes=list_of_classes,
     distance_parametrized=True,
@@ -67,11 +67,23 @@ generator = GenerateConfusionMatrix(nusc=nusc,
 
 # generator.set_list_of_classes(list_of_classes)
 # generator.set_list_of_propositions()
+print("\n-------------------------After initializing generator-------------------------")
+[print("r:", val.translation) for val in generator.disc_pred_boxes[(1, 10)]["f4f86af4da3b49e79497deda5c5f223a"]]
 cm_prop = generator.get_prop_labeled_cm()
+print("\n-------------------------After getting prop-------------------------")
+[print("r:", val.translation) for val in generator.disc_pred_boxes[(1, 10)]["f4f86af4da3b49e79497deda5c5f223a"]]
 cm = generator.get_distance_param_conf_mat()
+print("\n-------------------------After getting dist_param-------------------------")
+[print("r:", val.translation) for val in generator.disc_pred_boxes[(1, 10)]["f4f86af4da3b49e79497deda5c5f223a"]]
 generator.generate_clusters()
+print("\n-------------------------After generating clusters-------------------------")
+[print("r:", val.translation) for val in generator.disc_pred_boxes[(1, 10)]["f4f86af4da3b49e79497deda5c5f223a"]]
 cm_prop_w_clusters = generator.get_clustered_conf_mat()
+print("\n-------------------------After getting clustered-------------------------")
+[print("r:", val.translation) for val in generator.disc_pred_boxes[(1, 10)]["f4f86af4da3b49e79497deda5c5f223a"]]
 propositions, prop_dict = generator.get_list_of_propositions()
+print("\n-------------------------After getting list_of props-------------------------")
+[print("r:", val.translation) for val in generator.disc_pred_boxes[(1, 10)]["f4f86af4da3b49e79497deda5c5f223a"]]
 print("Generated clustered conf mat")
 
 for i, prop in enumerate(list(cm_prop_w_clusters.keys())):

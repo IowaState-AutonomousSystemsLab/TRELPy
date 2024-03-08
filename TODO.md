@@ -6,6 +6,7 @@
 - [ ] 
 
 ### High priority:
+- [ ] Store the matches that we get when gettting the class labeled conf mat in a tuple or somn, and use that for clustering
 - [ ] fix `nuscenes_render.py:34-36`. rotate is upset
 - [ ] fix detection class issue where Box.detection name is too specific and we need a generic name
 - [ ] Is it adding things to clusters successfully
