@@ -2,8 +2,9 @@
 
 import os
 import sys
-from pathlib import Path
 import subprocess
+from pathlib import Path
+from nuscenes.eval.common.config import config_factory
 
 ######## PARMS #########
 ## ONLY Change model_name here to make it work with your version.
@@ -42,3 +43,20 @@ preds_dir = str(Path(f"{model_dir}/preds").absolute())
 repo_dir = f"{home_dir}/nuscenes_dataset/3D_Detection"
 cm_dir = str(Path(f"{repo_dir}/saved_cms/{modality}/{size}/{model_name}").absolute())
 create_dir_if_not_exist(cm_dir)
+
+###########################
+### Standard Parameters ###
+eval_set_map = {
+        'v1.0-mini': 'mini_val',
+        'v1.0-trainval': 'val',
+        'v1.0-test': 'test'
+    }
+
+dataset_version = 'v1.0-mini' if is_set_to_mini() else 'v1.0-trainval'
+
+try:
+    eval_version = 'detection_cvpr_2019'
+    eval_config = config_factory(eval_version)
+except:
+    eval_version = 'cvpr_2019'
+    eval_config = config_factory(eval_version)
