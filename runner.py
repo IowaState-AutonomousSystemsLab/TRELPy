@@ -9,7 +9,8 @@ import pickle as pkl
 from custom_env import dataset_root as dataroot
 
 from mmdet3d.evaluation.metrics import nuscenes_metric as nus_metric
-from custom_env import home_dir, cm_dir, repo_dir, output_dir, preds_dir, model_dir, is_set_to_mini
+from custom_env import home_dir, cm_dir, repo_dir, output_dir, preds_dir, model_dir
+from custom_env import is_set_to_mini, eval_set_map, dataset_version, eval_version, eval_config, eval_version
 
 
 from nuscenes import NuScenes

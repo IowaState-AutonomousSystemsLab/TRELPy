@@ -6,11 +6,8 @@ WORKDIR /root
 RUN apt-get update && \
       apt-get -y install sudo python3-pip python-is-python3 vim git
 
-## Creating the user
-# RUN useradd -ms /bin/bash markov -g root -G sudo
-# RUN echo 'markov:markov' | chpasswd 
-# USER markov
-# WORKDIR /home/markov
+RUN mkdir /root/software
+WORKDIR /root/software
 
 ARG DEBIAN_FRONTEND=noninteractive \
     DEBCONF_NONINTERACTIVE_SEEN=true
@@ -59,30 +56,24 @@ RUN sudo apt install libmpfr-dev libgmp3-dev libmpc-dev -y
 RUN wget http://ftp.gnu.org/gnu/gcc/gcc-13.2.0/gcc-13.2.0.tar.gz
 RUN tar -xf gcc-13.2.0.tar.gz
 RUN cd gcc-13.2.0
-# RUN ./configure -v --build=x86_64-linux-gnu --host=x86_64-linux-gnu --target=x86_64-linux-gnu --prefix=/usr/local/gcc-13.2.0 --enable-checking=release --enable-languages=c,c++ --disable-multilib --program-suffix=-13.2.0
-# RUN make -j4
-# RUN make install
-# RUN sudo update-alternatives --install /usr/bin/gcc gcc /usr/bin/gcc-13 13 --slave /usr/bin/g++ g++ /usr/bin/g++-13
-
-
-# RUN apt-get update
+RUN bash /root/gcc-13.2.0/configure -v --build=x86_64-linux-gnu --host=x86_64-linux-gnu --target=x86_64-linux-gnu --prefix=/usr/local/gcc-13.2.0 --enable-checking=release --enable-languages=c,c++ --disable-multilib --program-suffix=-13.2.0
+RUN make -j3
+RUN sudo make install
+RUN sudo update-alternatives --install /usr/bin/gcc gcc /usr/local/gcc-13.2.0 13
 
 # Cloning necessary repos i and installing things
 
-# RUN mkdir software
-# WORKDIR /root/software 
-# RUN git clone https://github.com/ths-rwth/carl.git
-# RUN cd carl && mkdir build && cd build && cmake .. && make
+RUN wget https://www.prismmodelchecker.org/dl/prism-4.8-linux64-x86.tar.gz
+RUN tar -xvf prism-4.8-linux64-x86.tar.gz
+WORKDIR /root/software/prism-4.8-linux64-x86
+RUN bash install.sh
+RUN echo "alias prism='bash /root/software/prism-4.8-linux64-x86/bin/prism'" >> ~/.bashrc
+RUN echo "alias xprism='bash /root/software/prism-4.8-linux64-x86/bin/xprism'" >> ~/.bashrc
 
-# RUN wget https://www.prismmodelchecker.org/dl/prism-4.8-linux64-x86.tar.gz
-# RUN tar -xvf prism-4.8-linux64-x86.tar.gz
-# WORKDIR /root/software/prism-4.8-linux64-x86
-# RUN bash install.sh
 
-# RUN echo "alias prism='bash /root/software/prism-4.8-linux64-x86/bin/prism'" >> ~/.bashrc
-# RUN echo "alias xprism='bash /root/software/prism-4.8-linux64-x86/bin/xprism'" >> ~/.bashrc
-# RUN git clone https://github.com/tulip-control/tulip-control.git
-# RUN cd tulip-control && pip3 install -r requirements.txt && pip3 install .
+WORKDIR /root/software
+RUN git clone https://github.com/tulip-control/tulip-control.git
+RUN cd tulip-control && pip3 install -r requirements.txt && pip3 install .
 
 # RUN apt install -qy software-properties-common && \
 #     add-apt-repository ppa:deadsnakes/ppa
