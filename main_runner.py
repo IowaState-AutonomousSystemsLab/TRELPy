@@ -1,4 +1,4 @@
-from generate_confusion_matrix import GenerateConfusionMatrix
+from main_generate_confusion_matrix import GenerateConfusionMatrix
 from confusion_matrix import ConfusionMatrix
 import os
 import numpy as np
@@ -69,12 +69,25 @@ generator = GenerateConfusionMatrix(nusc=nusc,
 cm_prop, prop_dict = generator.get_proposition_labelled_conf_mat()
 cm = generator.get_distance_param_conf_mat()
 # x = generator.get_clustered_conf_mat()
-print(cm_prop)
+cm_prop_full = sum(cm_k for cm_k in cm_prop.values())
+print(cm_prop_full)
+
+# ================ Debugging new and old prop cm to find difference ================== #
+import pickle as pkl
+from pathlib import Path
+plot_folder = "/home/apurvabadithela/software/run_nuscenes_evaluations/plots/prop_cm_debug_plots/2024-03-01_10-36-40"
+with open(Path(f"{plot_folder}/mismatched_sample_tokens.pkl"), "rb") as f:
+    mismatched_samples = pkl.load(f)
+f.close()
+
 st()
 
-confusion_matrix = ConfusionMatrix(generator, list_of_classes, labels)
-confusion_matrix.set_confusion_matrix(cm, label_type="class")
-confusion_matrix.save_confusion_matrix(cm_dir, label_type="class")
-confusion_matrix.set_prop_labels(prop_dict)
-confusion_matrix.set_confusion_matrix(cm_prop, label_type="prop")
-confusion_matrix.save_confusion_matrix(cm_dir, label_type="prop")
+# generator.render_predictions(mismatched_samples, plot_folder)
+# st()
+
+# confusion_matrix = ConfusionMatrix(generator, list_of_classes, labels)
+# confusion_matrix.set_confusion_matrix(cm, label_type="class")
+# confusion_matrix.save_confusion_matrix(cm_dir, label_type="class")
+# confusion_matrix.set_prop_labels(prop_dict)
+# confusion_matrix.set_confusion_matrix(cm_prop, label_type="prop")
+# confusion_matrix.save_confusion_matrix(cm_dir, label_type="prop")

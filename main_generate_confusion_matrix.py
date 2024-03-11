@@ -12,10 +12,14 @@ from nuscenes.eval.common.data_classes import EvalBoxes, EvalBox
 from nuscenes.eval.common.utils import center_distance, scale_iou, yaw_diff
 from nuscenes.eval.detection.data_classes import DetectionConfig, DetectionBox
 from nuscenes.eval.common.loaders import load_prediction, load_gt, add_center_dist, filter_eval_boxes
-from nuscenes_render import render_sample_data_with_predictions
+from main_nuscenes_render import render_sample_data_with_predictions, render_specific_gt_and_predictions
 
 from pdb import set_trace as st
 from collections import OrderedDict as od
+
+from nuscenes.utils.data_classes import Box
+from pyquaternion import Quaternion
+from pathlib import Path
 
 class GenerateConfusionMatrix:
     """
@@ -161,7 +165,7 @@ class GenerateConfusionMatrix:
         if self.verbose:
             print('Filtering ground truth annotations')
         self.gt_boxes = filter_eval_boxes(self.nusc, self.gt_boxes, self.cfg.class_range, verbose=self.verbose)
-    
+
     def __check_distance_param_settings(self) -> None:
         """
             Check that the distance parametrization settings are valid.
@@ -198,6 +202,9 @@ class GenerateConfusionMatrix:
             The values are the corresponding proposition labelled confusion matrices.
         """
         for key in list(self.disc_gt_boxes.keys()):
+            # debug_sample_token = "0bb62a68055249e381b039bf54b0ccf8"
+            # if sample_token == debug_sample_token:
+            #     print("Radius band: ", key)
             self.prop_conf_mats[key], prop_dict = self.compute_prop_cm(self.disc_gt_boxes[key], self.disc_pred_boxes[key], ["ped", "obs"], self.classes)
     
         return self.prop_conf_mats, prop_dict
@@ -227,29 +234,30 @@ class GenerateConfusionMatrix:
                 class_pred_len = [len([1 for pred in sample_pred_list if pred.detection_name == class_name]) for class_name in conf_mat_mapping]
                 class_gt_len = [len([1 for gt in sample_gt_list if gt.detection_name == class_name]) for class_name in conf_mat_mapping]
                 
+                
+
                 for gt in sample_gt_list:
-                        
-                        best_iou = -1       # Initialize best iou for a bbox with a value that cannot be achieved.
-                        best_match = None   # Initialize best matching bbox with None. Tuple of (gt, pred, iou)
-                        match_pred_ids = [] # Initialize list of matched predictions for this gt.
-                        
-                        for i, pred in enumerate(sample_pred_list):
-                                if center_distance(pred, gt) < dist_thresh and yaw_diff(pred, gt) < yaw_thresh and i not in taken:
-                                        match_pred_ids.append(i)
-                                        
-                        for match_idx in match_pred_ids:
-                                iou = scale_iou(sample_pred_list[match_idx], gt)
-                                if best_iou < iou:
-                                        best_iou = iou
-                                        best_match = (sample_pred_list[match_idx], gt, match_idx)
-                        
-                        if len(match_pred_ids) == 0:
-                                distance_param_conf_mat[EMPTY][conf_mat_mapping[gt.detection_name]] += 1
-                                continue
-                        else:
-                                taken.add(best_match[2])
-                                distance_param_conf_mat[conf_mat_mapping[best_match[0].detection_name]][conf_mat_mapping[best_match[1].detection_name]] += 1
-                                
+                    best_iou = -1       # Initialize best iou for a bbox with a value that cannot be achieved.
+                    best_match = None   # Initialize best matching bbox with None. Tuple of (gt, pred, iou)
+                    match_pred_ids = [] # Initialize list of matched predictions for this gt.
+                    
+                    for i, pred in enumerate(sample_pred_list):
+                            if center_distance(pred, gt) < dist_thresh and yaw_diff(pred, gt) < yaw_thresh and i not in taken:
+                                    match_pred_ids.append(i)
+                                    
+                    for match_idx in match_pred_ids:
+                            iou = scale_iou(sample_pred_list[match_idx], gt)
+                            if best_iou < iou:
+                                    best_iou = iou
+                                    best_match = (sample_pred_list[match_idx], gt, match_idx)
+
+                    if len(match_pred_ids) == 0:
+                            distance_param_conf_mat[EMPTY][conf_mat_mapping[gt.detection_name]] += 1
+                            continue
+                    else:
+                            taken.add(best_match[2])
+                            distance_param_conf_mat[conf_mat_mapping[best_match[0].detection_name]][conf_mat_mapping[best_match[1].detection_name]] += 1
+                            
                 c += 1
                 # print(len(sample_pred_list))
                 # if self.validation and (sample_token in list_of_validation_tokens):
@@ -317,47 +325,6 @@ class GenerateConfusionMatrix:
             
             for gt in sample_gt_list:
                 gt_vectors[gt] = self.__angle_between(gt.ego_translation, something)
-            
-    
-    def calculate_prop_labelled_conf_mat(self, 
-                                         gt_boxes:EvalBoxes, 
-                                         pred_boxes: list, 
-                                         list_of_propositions: list, 
-                                         class_names:list) -> np.ndarray:
-        
-        n = len(self.classes)
-        propn_labelled_conf_mat = np.zeros( ( (2**n), (2**n)) )
-
-        propn_indices = list(range(len(list_of_propositions)))
-        propn_powerset = list(self.powerset(propn_indices))
-        props = list(self.powerset(self.classes))
-        for sample_token in gt_boxes.sample_tokens:
-            sample_pred_list = pred_boxes[sample_token]
-            sample_gt_list = gt_boxes[sample_token]
-            taken = set()  # Initially no gt bounding box is matched.
-
-            gt_classes = {gt.detection_name for gt in sample_gt_list}
-            pred_classes = {pred.detection_name for pred in sample_gt_list}
-
-            #TODO convert into generic
-            gt_classes = {"ped" if x == "pedestrian" else "obs" for x in gt_classes}
-            pred_classes = {"ped" if x == "pedestrian" else "obs" for x in pred_classes}
-
-            gt_idx = 0
-            pred_idx = 0
-
-            for i, propn in enumerate(propn_powerset):
-                st()
-                classes = {} if len(propn) == 0 else {list_of_propositions[c] for c in propn}
-
-                if gt_classes == set(classes):
-                    gt_idx = i
-                if pred_classes == set(classes):
-                    pred_idx = i
-
-            propn_labelled_conf_mat[pred_idx][gt_idx] += 1
-            
-        return propn_labelled_conf_mat
 
     def get_propositions(self):
         n = len(self.classes)
@@ -385,7 +352,7 @@ class GenerateConfusionMatrix:
             taken = set()  # Initially no gt bounding box is matched.
 
             gt_classes = {gt.detection_name for gt in sample_gt_list}
-            pred_classes = {pred.detection_name for pred in sample_gt_list}
+            pred_classes = {pred.detection_name for pred in sample_pred_list}
 
             #TODO convert into generic
             gt_classes = set({"ped" if x == "pedestrian" else "obs" for x in gt_classes})
@@ -396,6 +363,7 @@ class GenerateConfusionMatrix:
             if len(pred_classes) == 0:
                 pred_classes = set({"empty"})
 
+            
             gt_idx = 0
             pred_idx = 0
 
@@ -408,4 +376,59 @@ class GenerateConfusionMatrix:
             prop_cm[pred_idx][gt_idx] += 1
             
         return prop_cm, prop_dict
+    
+    # ====================== Functions not in main that do not affect computations ======================= #
+    def get_labels_for_boxes(self, boxes):
+        classes = {box.detection_name for box in boxes}
+        classes = set({"ped" if x == "pedestrian" else "obs" for x in classes})
+        if len(classes) == 0:
+            classes = set({"empty"})
+        return classes
+
+    def render_predictions(self, mismatched_samples, plot_folder):
+        '''
+        Render predictions for debugging to compare with latest code
+        '''
+        for sample_token in mismatched_samples:
+            st()
+            gt_boxes = [box for box in self.gt_boxes.all if box.sample_token == sample_token]
+            pred_boxes = [box for box in self.pred_boxes.all if box.sample_token == sample_token]
         
+        gt_info = []
+        pred_info = []
+        Box_gt_boxes = []
+        Box_pred_boxes = []
+
+        for box in gt_boxes:
+            evalbox_to_box = convert_from_EvalBox_to_Box(box)
+            [label] = self.get_labels_for_boxes([box])
+            gt_info.append((evalbox_to_box, "gt: " + label))
+            Box_gt_boxes.append(evalbox_to_box)
+        
+        for box in pred_boxes:
+            evalbox_to_box = convert_from_EvalBox_to_Box(box)
+            [label] = self.get_labels_for_boxes([box])
+            pred_info.append((evalbox_to_box, "pred: " + label))
+            Box_pred_boxes.append(evalbox_to_box)
+
+        out_path = Path(f"{plot_folder}/sample_token_{sample_token}/main_mismatch.png")
+        # render_sample_data_with_predictions(sample_token, out_path=out_path, nusc=self.nusc, pred_boxes=Box_pred_boxes)
+        render_specific_gt_and_predictions(sample_token, gt_info, pred_info, nusc=self.nusc, out_path=out_path)
+
+def convert_from_EvalBox_to_Box(eval_box:EvalBox) -> Box:
+    """Converts an EvalBox object to a Box object
+    """
+    # print(f"Rotation of an EvalBox {(eval_box.rotation)}")
+    box = Box(
+        center=eval_box.translation,
+        size=eval_box.size,
+        orientation=Quaternion(eval_box.rotation),
+        token=eval_box.sample_token
+    )
+    
+    if type(eval_box) == DetectionBox:
+        box.name = eval_box.detection_name
+        box.score = eval_box.detection_score
+    return box
+
+# ====================== End of Functions not in main that do not affect computations ======================= #
