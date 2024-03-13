@@ -242,6 +242,7 @@ class GenerateConfusionMatrix:
                     match_pred_ids = [] # Initialize list of matched predictions for this gt.
                     
                     for i, pred in enumerate(sample_pred_list):
+                            st()
                             if center_distance(pred, gt) < dist_thresh and yaw_diff(pred, gt) < yaw_thresh and i not in taken:
                                     match_pred_ids.append(i)
                                     
