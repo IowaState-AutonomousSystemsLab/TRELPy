@@ -15,7 +15,7 @@ from nuscenes.utils.data_classes import Box
 from nuscenes.utils.geometry_utils import view_points, box_in_image, BoxVisibility
 from nuscenes.eval.detection.data_classes import DetectionConfig, DetectionBox
 from nuscenes.eval.common.loaders import load_prediction, load_gt, add_center_dist, filter_eval_boxes
-from nuscenes_render import convert_EvalBox_to_flat_veh_coords, render_sample_data_with_predictions, render_specific_gt_and_predictions
+from nuscenes_render import convert_EvalBox_to_flat_veh_coords, render_sample_data_with_predictions, render_specific_gt_and_predictions, convert_ego_pose_to_flat_veh_coords
 from cluster_devel import RadiusBand, Cluster
 from pdb import set_trace as st
 import pickle as pkl
@@ -169,9 +169,14 @@ class GenerateConfusionMatrix:
             self.matches[i]["GT"] = gt
             self.matches[i]["Pred"] = None
 
+            # sample = self.nusc.get('sample', gt.sample_token)
+            # sample_data_token = sample["data"]["LIDAR_TOP"]
+            # self.matches[i]["Ego_GT"] = convert_EvalBox_to_flat_veh_coords(sample_data_token, gt, self.nusc)
+            
+
     def get_gt_idx(self, gt):
         '''
-        Finds the gt match
+        Finds the gt match.
         '''
         for i in self.matches.keys():
             checks = [gt.sample_token == self.matches[i]["GT"].sample_token]
@@ -185,8 +190,11 @@ class GenerateConfusionMatrix:
             checks.append(self.matches[i]["GT"].detection_name == gt.detection_name)
             checks.append(self.matches[i]["GT"].detection_score == gt.detection_score)
             checks.append(self.matches[i]["GT"].attribute_name == gt.attribute_name)
-            if all(checks):
-                return i
+            try:
+                if all(checks):
+                    return i
+            except:
+                st()
         
         print("Error! No ground truth index found.")
         st()
@@ -197,7 +205,6 @@ class GenerateConfusionMatrix:
         '''
         for key in self.radius_bands:
             for sample_token in self.sample_tokens:
-                preds_ID_in_sample = self.pred_boxes_ID[sample_token]
                 preds_in_sample = self.disc_pred_boxes[key][sample_token]
                 gt_in_sample = self.disc_gt_boxes[key][sample_token]
                 taken = set() # Initially no pred bounding box is matched.
@@ -212,11 +219,11 @@ class GenerateConfusionMatrix:
                     for i, pred in enumerate(preds_in_sample):
                         if center_distance(pred, gt) < dist_thresh and yaw_diff(pred, gt) < yaw_thresh and i not in taken:
                             match_preds.append(pred)
-                            # match_preds_idx.append(i)
             
                     for match in match_preds:
                         iou = scale_iou(match, gt)
-                        if best_iou < iou:
+                        # If new iou is higher, replace.
+                        if iou > best_iou:
                             best_iou = iou
                             best_match = (match, gt)
                     
@@ -238,13 +245,13 @@ class GenerateConfusionMatrix:
             for box in boxes:
                 xy_translation = np.array(box.center[:2])
                 distance = np.linalg.norm(xy_translation)
-                dist_band_idx = np.floor((distance / self.distance_bin))
+                radius_band_idx = np.floor((distance / self.distance_bin))
                 
-                #TODO handle case when distance is greater than max_dist. Currently ignoring
+                # TODO handle case when distance is greater than max_dist. Currently ignoring
                 if distance > self.max_dist: continue
-                dist_band_idx = int(np.floor((distance / self.distance_bin)))
-                dist_band = list(self.ego_centric_gt_boxes.keys())[dist_band_idx]
-                self.ego_centric_gt_boxes[dist_band][sample_token].append(convert_from_Box_to_EvalBox(box))
+                radius_band_idx = int(np.floor((distance / self.distance_bin)))
+                radius_band = list(self.ego_centric_gt_boxes.keys())[radius_band_idx]
+                self.ego_centric_gt_boxes[radius_band][sample_token].append(convert_from_Box_to_EvalBox(box))
                 
     def initialize(self) -> None:
         """ initializes all class variables to their default values
@@ -315,7 +322,7 @@ class GenerateConfusionMatrix:
     
     def __check_distance_param_settings(self) -> None:
         """
-            Check that the distance parametrization settings are valid.
+        Check that the distance parametrization settings are valid.
         """
         if self.distance_parametrized:
             assert self.lower_thresh < self.upper_thresh, 'Error: lower_thresh must be lesser than upper_thresh'
@@ -435,7 +442,6 @@ class GenerateConfusionMatrix:
     
     def get_prop_cm(self):
         """Get a dictionary with the proposition labelled confusion matrices for each distance bin.
-        
         Args:
             None
             
