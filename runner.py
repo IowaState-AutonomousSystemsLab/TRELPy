@@ -67,60 +67,66 @@ generator = GenerateConfusionMatrix(nusc=nusc,
 generator.set_debug(False)
 # generator.set_list_of_classes(list_of_classes)
 # generator.set_list_of_propositions()
-cm_prop = generator.get_prop_cm()
-cm_prop_full = sum(cm_prop_k for cm_prop_k in cm_prop.values())
-list_of_propositions, prop_dict = generator.get_list_of_propositions()
 
-# Saving prop cm:
-confusion_matrix = ConfusionMatrix(generator, list_of_classes, list_of_propositions, labels, prop_dict)
-prop_cm_file = f"{cm_dir}/new_prop_cm.pkl"
-confusion_matrix.set_confusion_matrix(cm_prop, label_type="prop")
-confusion_matrix.save_confusion_matrix(prop_cm_file, label_type="prop")
+compute_prop_cm = False
+compute_class_cm = False
+compute_prop_segmented_cm = True
 
-# Printing old prop_cm:
-old_prop_cm_pkl_file = Path(f"{repo_dir}/saved_cms/lidar/mini/prop_cm.pkl")
-old_prop_cm_pkl_file = f"{repo_dir}/saved_cms/lidar/mini/prop_cm.pkl"
-with open(old_prop_cm_pkl_file, "rb") as f:
-    old_prop_cm = pkl.load(f)
-f.close()
-old_prop_cm_full = sum(cm_prop_k for cm_prop_k in old_prop_cm.values())
-print("===================================")
-print("Old Prop-Labeled CM:")
-print(old_prop_cm_full)
-print("New Prop-Labeled CM:")
-print(cm_prop_full)
-print("===================================")
-print(generator.list_of_mismatches)
-st()
+if compute_prop_cm:
+    cm_prop = generator.get_prop_cm()
+    cm_prop_full = sum(cm_prop_k for cm_prop_k in cm_prop.values())
+    list_of_propositions, prop_dict = generator.get_list_of_propositions()
 
-cm = generator.get_class_cm()
-cm_full = sum(cm_k for cm_k in cm.values())
-confusion_matrix.set_confusion_matrix(cm, label_type="class")
-cm_file = f"{cm_dir}/new_cm.pkl"
-confusion_matrix.save_confusion_matrix(cm_file, label_type="class")
-# Printing old class_cm:
-old_cm_pkl_file = Path(f"{repo_dir}/saved_cms/lidar/mini/cm.pkl")
-with open(old_cm_pkl_file, "rb") as f:
-    old_cm = pkl.load(f)
-f.close()
-old_cm_full = sum(cm_k for cm_k in old_cm.values())
-print("===================================")
-print("Old Class Labeled CM:")
-print(old_cm_full)
-print("New Class Labeled CM:")
-print(cm_full)
-print("===================================")
-st()
-cm_prop_w_clusters = generator.get_clustered_conf_mat()
-print("Generated clustered conf mat")
-cm_prop_w_clusters_full = sum(cm_k for cm_k in cm_prop_w_clusters.values())
-print("===================================")
-print("Clustered CM:")
-print(cm_prop_w_clusters_full)
+    # Saving prop cm:
+    confusion_matrix = ConfusionMatrix(generator, list_of_classes, list_of_propositions, labels, prop_dict)
+    prop_cm_file = f"{cm_dir}/new_matched_prop_cm.pkl"
+    confusion_matrix.set_confusion_matrix(cm_prop, label_type="prop")
+    confusion_matrix.save_confusion_matrix(prop_cm_file, label_type="prop")
 
-# Saving clustered confusion matrix:
-# Todo: Integrate the cluster saving into confusion matrix
-prop_cm_file_w_clusters = f"{cm_dir}/prop_cm_cluster.pkl"
-with open(prop_cm_file_w_clusters, "wb") as f:
-    pkl.dump(cm_prop_w_clusters, f)
-f.close()
+    # Printing old prop_cm:
+    old_prop_cm_pkl_file = Path(f"{repo_dir}/saved_cms/lidar/mini/prop_cm.pkl")
+    old_prop_cm_pkl_file = f"{repo_dir}/saved_cms/lidar/mini/prop_cm.pkl"
+    with open(old_prop_cm_pkl_file, "rb") as f:
+        old_prop_cm = pkl.load(f)
+    f.close()
+    old_prop_cm_full = sum(cm_prop_k for cm_prop_k in old_prop_cm.values())
+    print("===================================")
+    print("Old Prop-Labeled CM:")
+    print(old_prop_cm_full)
+    print("New Prop-Labeled CM:")
+    print(cm_prop_full)
+    print("===================================")
+
+if compute_class_cm:
+    cm = generator.get_class_cm()
+    cm_full = sum(cm_k for cm_k in cm.values())
+    confusion_matrix.set_confusion_matrix(cm, label_type="class")
+    cm_file = f"{cm_dir}/new_matched_cm.pkl"
+    confusion_matrix.save_confusion_matrix(cm_file, label_type="class")
+    # Printing old class_cm:
+    old_cm_pkl_file = Path(f"{repo_dir}/saved_cms/lidar/mini/cm.pkl")
+    with open(old_cm_pkl_file, "rb") as f:
+        old_cm = pkl.load(f)
+    f.close()
+    old_cm_full = sum(cm_k for cm_k in old_cm.values())
+    print("===================================")
+    print("Old Class Labeled CM:")
+    print(old_cm_full)
+    print("New Class Labeled CM:")
+    print(cm_full)
+    print("===================================")
+
+if compute_prop_segmented_cm:
+    cm_prop_w_clusters = generator.get_prop_segmented_cm()
+    print("Generated clustered conf mat")
+    cm_prop_w_clusters_full = sum(cm_k for cm_k in cm_prop_w_clusters.values())
+    print("===================================")
+    print("Clustered CM:")
+    print(cm_prop_w_clusters_full)
+    st()
+    # Saving clustered confusion matrix:
+    # Todo: Integrate the cluster saving into confusion matrix
+    prop_cm_file_w_clusters = f"{cm_dir}/new_matched_prop_cm_cluster.pkl"
+    with open(prop_cm_file_w_clusters, "wb") as f:
+        pkl.dump(cm_prop_w_clusters, f)
+    f.close()

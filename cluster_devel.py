@@ -40,7 +40,6 @@ class RadiusBand:
             print("Minimum radius should be greater than 0\n setting min_radius to 1", file=sys.stderr)
             self.radius_band = (1, radius_band[1])
         
-        self.sigma = 0.0001 #TODO Remove sigma and ensure all ranges are accounted for
         self.angular_diff = self.__calculate_max_radius_bw_obj(self.radius_band[0])
         self.num_clusters = int(np.ceil((2 * np.pi) / self.angular_diff))
         self.angular_diff = (2 * np.pi / self.num_clusters)
@@ -119,12 +118,6 @@ class Cluster:
         self.ego_vehicle = ego_veh
         self.lower_radian_lim = lower_radian_lim
         self.upper_radian_lim = upper_radian_lim
-        # self.farthest_box = None
-        # self.closest_box = None
-        # self.center_of_mass = -1
-        # self.ego_veh_yaw, _, _= Quaternion(ego_veh['rotation']).yaw_pitch_roll()   # Quaternion() returns a tuple not a class object?
-        
-    
         
     def add_box(self, box:EvalBox) -> None:       
         angle_from_ego = np.arctan2(box.translation[1], box.translation[0])
