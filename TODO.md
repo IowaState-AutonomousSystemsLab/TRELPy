@@ -23,9 +23,3 @@
 
 
 
-
-EvalBox
-    dist_cm
-    prop_cm
-
-gt(global_frame) -> ego_frame (Box) 

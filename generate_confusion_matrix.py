@@ -415,7 +415,11 @@ class GenerateConfusionMatrix:
         
         def print_list(list, print_string):
             for i in range(len(list)):
-                print(f"PR L{print_string} {i}: {list[i]}")     
+                print(f"PR L{print_string} {i}: {list[i]}")   
+                
+        gt1_as_EvalBox = convert_from_Box_to_EvalBox(list_gt_ego_boxes[0], ego_veh=ego_vehicle)
+        if len(list_gt_ego_boxes) > 1: gt2_as_EvalBox = convert_from_Box_to_EvalBox(list_gt_ego_boxes[1], ego_veh=ego_vehicle)
+        if len(list_gt_ego_boxes) > 2: gt3_as_EvalBox = convert_from_Box_to_EvalBox(list_gt_ego_boxes[2], ego_veh=ego_vehicle)  
         
         print(f"Starting for Sample token: {sample_token}")
         print(f"-- In Global Frame:")
@@ -437,19 +441,15 @@ class GenerateConfusionMatrix:
         if len(list_gt_ego_boxes) > 1: print(f"-- -- EgoGT 2 Yaw: {Quaternion(list_gt_ego_boxes[1].orientation).yaw_pitch_roll[0]}")
         if len(list_gt_ego_boxes) > 2: print(f"-- -- EgoGT 3 Yaw: {Quaternion(list_gt_ego_boxes[2].orientation).yaw_pitch_roll[0]}")
         
-        print(f"-- -- GT Distance..: {gt.ego_translation}")
-        print(f"-- -- Pred Distance: {pred.ego_translation}")
-        print(f"-- -- EgoGT 1 Dist.: {np.linalg.norm(np.array(ego_vehicle['translation']) - np.array(list_gt_ego_boxes[0].center))}")
-        if len(list_gt_ego_boxes) > 1: print(f"-- -- EgoGT 2 Dist.: {np.linalg.norm(np.array(ego_vehicle['translation']) - np.array(list_gt_ego_boxes[1].center))}")
-        if len(list_gt_ego_boxes) > 2: print(f"-- -- EgoGT 3 Dist.: {np.linalg.norm(np.array(ego_vehicle['translation']) - np.array(list_gt_ego_boxes[2].center))}")
+        print(f"-- -- GT Distance..: {np.linalg.norm(gt.ego_translation[:2])}")
+        print(f"-- -- Pred Distance: {np.linalg.norm(pred.ego_translation[:2])}")
+        print(f"-- -- EgoGT 1 Dist.: {np.linalg.norm(gt1_as_EvalBox.ego_translation[:2])}")
+        if len(list_gt_ego_boxes) > 1: print(f"-- -- EgoGT 2 Dist.: {np.linalg.norm(gt2_as_EvalBox.ego_translation[:2])}")
+        if len(list_gt_ego_boxes) > 2: print(f"-- -- EgoGT 3 Dist.: {np.linalg.norm(gt3_as_EvalBox.ego_translation[:2])}")
         print("--------------------------------------------\n")
         
-        gt1_as_EvalBox = convert_from_Box_to_EvalBox(list_gt_ego_boxes[0])
-        if len(list_gt_ego_boxes) > 1: gt2_as_EvalBox = convert_from_Box_to_EvalBox(list_gt_ego_boxes[1])
-        if len(list_gt_ego_boxes) > 2: gt3_as_EvalBox = convert_from_Box_to_EvalBox(list_gt_ego_boxes[2])
-        
-        gt = convert_EvalBox_to_flat_veh_coords(sample_data_token=sample["data"]["LIDAR_TOP"], box = gt, nusc=self.nusc)
-        pred = convert_EvalBox_to_flat_veh_coords(sample_data_token=sample["data"]["LIDAR_TOP"], box = pred, nusc=self.nusc)
+        gt = convert_EvalBox_to_flat_veh_coords(sample_data_token=sample["data"]["LIDAR_TOP"], to_be_conv_box = gt, nusc=self.nusc)
+        pred = convert_EvalBox_to_flat_veh_coords(sample_data_token=sample["data"]["LIDAR_TOP"], to_be_conv_box = pred, nusc=self.nusc)
         # gt1_as_EvalBox = convert_EvalBox_to_flat_veh_coords(sample_data_token=sample["data"]["LIDAR_TOP"], box = gt1_as_EvalBox, nusc=self.nusc)
         # if len(list_gt_ego_boxes) > 1: gt2_as_EvalBox = convert_EvalBox_to_flat_veh_coords(sample_data_token=sample["data"]["LIDAR_TOP"], box = gt2_as_EvalBox, nusc=self.nusc)
         # if len(list_gt_ego_boxes) > 2: gt3_as_EvalBox = convert_EvalBox_to_flat_veh_coords(sample_data_token=sample["data"]["LIDAR_TOP"], box = gt3_as_EvalBox, nusc=self.nusc)
@@ -474,11 +474,11 @@ class GenerateConfusionMatrix:
         if len(list_gt_ego_boxes) > 1: print(f"-- -- EgoGT 2 Yaw: {Quaternion(gt2_as_EvalBox.rotation).yaw_pitch_roll[0]}")
         if len(list_gt_ego_boxes) > 2: print(f"-- -- EgoGT 3 Yaw: {Quaternion(gt3_as_EvalBox.rotation).yaw_pitch_roll[0]}")
         
-        print(f"-- -- GT Distance..: {gt.ego_translation}")
-        print(f"-- -- Pred Distance: {pred.ego_translation}")
-        print(f"-- -- EgoGT 1 Dist.: {np.linalg.norm(np.array(ego_vehicle['translation']) - np.array(list_gt_ego_boxes[0].center))}")
-        if len(list_gt_ego_boxes) > 1: print(f"-- -- EgoGT 2 Dist.: {np.linalg.norm(np.array(ego_vehicle['translation']) - np.array(list_gt_ego_boxes[1].center))}")
-        if len(list_gt_ego_boxes) > 2: print(f"-- -- EgoGT 3 Dist.: {np.linalg.norm(np.array(ego_vehicle['translation']) - np.array(list_gt_ego_boxes[2].center))}")
+        print(f"-- -- GT Distance..: {np.linalg.norm(gt.ego_translation[:2])}")
+        print(f"-- -- Pred Distance: {np.linalg.norm(pred.ego_translation[:2])}")
+        print(f"-- -- EgoGT 1 Dist.: {center_distance(gt, gt1_as_EvalBox)}")
+        if len(list_gt_ego_boxes) > 1: print(f"-- -- EgoGT 2 Dist.: {center_distance(gt, gt2_as_EvalBox)}")
+        if len(list_gt_ego_boxes) > 2: print(f"-- -- EgoGT 3 Dist.: {center_distance(gt, gt3_as_EvalBox)}")
         print(f"-- Ending for Sample token: {sample_token}")
         print("--------------------------------------------\n\n")
         
@@ -601,11 +601,6 @@ class GenerateConfusionMatrix:
                     assert label in class_names, "Error: gt_box.detection_name not in list_of_classes"
                     
                     if cluster.lower_radian_lim <= ego_angle <= cluster.upper_radian_lim:
-                        if ego_pred_box.translation[0] > 1000 or ego_pred_box.translation[1] > 1000 or \
-                            gt_box.translation[0] > 1000 or gt_box.translation[1] > 1000:
-                                pass
-                                # traceback.print_exc()
-                                # st()
                         if center_distance(ego_pred_box, gt_box) < dist_thresh and yaw_diff(ego_pred_box, gt_box) < yaw_thresh and scale_iou(ego_pred_box, gt_box) > iou_thresh:
                             #assert calc_cluster_idx == cluster_idx, "Error: Cluster index does not match / should they?"
                             matched_pred_boxes.append(pred)
@@ -744,14 +739,14 @@ def convert_from_EvalBox_to_Box(eval_box:EvalBox) -> Box:
         box.score = eval_box.detection_score
     return box
     
-def convert_from_Box_to_EvalBox(box:Box) -> EvalBox:
+def convert_from_Box_to_EvalBox(box:Box, ego_veh:Dict = None) -> EvalBox:
     """Converts a Box object to an EvalBox object
     """
     
     # print(f"*******Rotation of an Box***| {box.orientation.elements.tolist()} |***********")
-    # print(f"-------> Velocity of an Box ---> {box.velocity} <---------")
+    # print(f"-------> Velocity of an Box ---> {box.velocity} <---------")  
     
-    return DetectionBox(
+    eval_box = DetectionBox(
         translation = box.center,
         size = box.wlh,
         rotation = box.orientation.elements.tolist(),
@@ -759,6 +754,11 @@ def convert_from_Box_to_EvalBox(box:Box) -> EvalBox:
         sample_token=box.token,
         detection_name=convert_specificLabel_to_genericLabel(box.name)
     )
+    
+    if ego_veh is not None:
+        eval_box.ego_translation = np.array(eval_box.translation)- np.array(ego_veh['translation'])
+      
+    return eval_box
     
 def convert_specificLabel_to_genericLabel(label:str) -> str:
     """Converts a specific label to a generic label
