@@ -70,7 +70,8 @@ generator.set_debug(False)
 
 compute_prop_cm = False
 compute_class_cm = False
-compute_prop_segmented_cm = True
+compute_prop_segmented_cm = False
+save_prop_dict = True
 
 if compute_prop_cm:
     cm_prop = generator.get_prop_cm()
@@ -79,7 +80,7 @@ if compute_prop_cm:
 
     # Saving prop cm:
     confusion_matrix = ConfusionMatrix(generator, list_of_classes, list_of_propositions, labels, prop_dict)
-    prop_cm_file = f"{cm_dir}/new_matched_prop_cm.pkl"
+    prop_cm_file = f"{cm_dir}/matched_prop_cm.pkl"
     confusion_matrix.set_confusion_matrix(cm_prop, label_type="prop")
     confusion_matrix.save_confusion_matrix(prop_cm_file, label_type="prop")
 
@@ -101,7 +102,7 @@ if compute_class_cm:
     cm = generator.get_class_cm()
     cm_full = sum(cm_k for cm_k in cm.values())
     confusion_matrix.set_confusion_matrix(cm, label_type="class")
-    cm_file = f"{cm_dir}/new_matched_cm.pkl"
+    cm_file = f"{cm_dir}/matched_cm.pkl"
     confusion_matrix.save_confusion_matrix(cm_file, label_type="class")
     # Printing old class_cm:
     old_cm_pkl_file = Path(f"{repo_dir}/saved_cms/lidar/mini/cm.pkl")
@@ -126,7 +127,14 @@ if compute_prop_segmented_cm:
     st()
     # Saving clustered confusion matrix:
     # Todo: Integrate the cluster saving into confusion matrix
-    prop_cm_file_w_clusters = f"{cm_dir}/new_matched_prop_cm_cluster.pkl"
+    prop_cm_file_w_clusters = f"{cm_dir}/matched_prop_cm_cluster.pkl"
     with open(prop_cm_file_w_clusters, "wb") as f:
         pkl.dump(cm_prop_w_clusters, f)
+    f.close()
+
+if save_prop_dict:
+    _, prop_dict = generator.get_list_of_propositions()
+    prop_dict_pkl_file = f"{cm_dir}/prop_dict.pkl"
+    with open(prop_dict_pkl_file, "wb") as f:
+        pkl.dump(prop_dict, f)
     f.close()

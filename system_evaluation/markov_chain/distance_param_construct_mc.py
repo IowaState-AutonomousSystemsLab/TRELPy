@@ -71,6 +71,7 @@ def confusion_matrix(conf_matrix):
     #conf_matrix = "conf_matrix.p"
     cm, param_cm = read_confusion_matrix(conf_matrix)
     C = construct_confusion_matrix_dict(cm)
+    pdb.set_trace()
     for k, cm in param_cm.items():
         param_C[k] = construct_confusion_matrix_dict(cm)
     return C, param_C
@@ -356,35 +357,23 @@ class synth_markov_chain:
         return distbin
         
     # Constructing the Markov chain 
-    # ped_st: pedestrian position: [56,0]
     def construct_markov_chain(self, ped_st): # Construct probabilities and transitions in the markov chain given the controller and confusion matrix
         for Si in list(self.states):
-            # print("Finding initial states in the Markov chain: ")
-            # print(Si)
             init_st = self.reverse_state_dict[Si]
             distbin = self.get_distbin(ped_st, init_st)
-            # The output state can be different depending on the observation as defined by the confusion matrix
             for obs in self.obs:
-                # print("The observation is as follows: ")
-                # print(obs)
                 env_st = self.get_env_state(obs)
                 next_st = self.compute_next_state(obs, env_st, init_st)
-                # print("The next state for this observation is as follows: ")
-                # print(next_st)
                 Sj = self.state_dict[tuple(next_st.values())]
-               #  prob_t = self.param_C[dist][obs, self.true_env_type] # Probability of transitions
-               # self.param_C[dist][np.isnan(self.param_C[dist])] = 0
                 if distbin not in self.param_C.keys():
                     pdb.set_trace()
                 prob_t = self.param_C[distbin][obs, self.true_env_type] # Probability of transitions
                 if np.isnan(prob_t):
                     prob_T = 0.0
-                # pdb.set_trace()
                 if (Si, Sj) in self.M.keys():
                     self.M[Si, Sj] = self.M[Si, Sj] + prob_t
                 else:
                     self.M[Si, Sj] = prob_t
-            # print(" ")
         return self.M
 
     # Adding formulae to list of temporal logic formulas:

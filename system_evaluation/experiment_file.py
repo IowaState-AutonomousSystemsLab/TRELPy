@@ -5,22 +5,25 @@ import os
 import sys
 from pathlib import Path
 import subprocess
-from pdb import set_trace as st
+import pdb
+
+#### Get Repo Root #####
+def getGitRoot():
+    return subprocess.Popen(['git', 'rev-parse', '--show-toplevel'], stdout=subprocess.PIPE).communicate()[0].rstrip().decode('utf-8')
 
 ######## PARMS #########
 model_name = "model_good"
 modality = "lidar"
 is_mini = True
 ########################
-def getGitRoot():
-    return subprocess.Popen(['git', 'rev-parse', '--show-toplevel'], stdout=subprocess.PIPE).communicate()[0].rstrip().decode('utf-8')
 
 if is_mini:
-    # dataset = "nuscenes-mini" # old cms
-    dataset = "mini"
+    dataset = "nuscenes-mini"
+    size = "mini"
     inf_res = "inference_results_mini"
 else:
     dataset = "nuscenes"
+    size = "full"
     inf_res = "inference_results"
 
 is_mini = True
@@ -41,7 +44,10 @@ output_dir = f"{home_dir}/nuscenes_dataset/{inf_res}"
 model_dir = str(Path(f"{output_dir}/{model_name}").absolute())
 preds_dir = str(Path(f"{model_dir}/preds").absolute())
 repo_dir = getGitRoot()
-cm_dir = str(Path(f"{repo_dir}/saved_cms/{modality}/{dataset}/{model_name}").absolute())
+cm_dir = str(Path(f"{repo_dir}/saved_cms/{modality}/{size}/{model_name}").absolute())
 create_dir_if_not_exist(cm_dir)
-cm_fn = f"{cm_dir}/new_matched_cm.pkl"
+cm_fn = f"{cm_dir}/matched_cm.pkl"
+prop_cm_fn = f"{cm_dir}/matched_prop_cm.pkl"
+prop_cm_cluster_fn = f"{cm_dir}/matched_prop_cm_cluster.pkl"
+prop_dict_file = f"{cm_dir}/prop_dict.pkl"
 control_dir = f"{repo_dir}/system_evaluation/controllers/"

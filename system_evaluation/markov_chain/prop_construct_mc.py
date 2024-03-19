@@ -6,16 +6,19 @@ Created on Mon Feb  8 09:12:22 2021
 """
 # The latest: construct_MP3.py (3/9 at 11:10 am)
 import numpy as np
+import sys
+sys.path.append("..")
 from tulip.transys import MarkovChain as MC
 from tulip.transys import MarkovDecisionProcess as MDP
 from itertools import compress, product
 from tulip.interfaces import stormpy as stormpy_int
 import os
+from collections import OrderedDict as od
 from tulip.transys.compositions import synchronous_parallel
 import pickle as pkl
 from pdb import set_trace as st
+prop_model_MC = "prop_model_MC.nm"
 
-model_MC = "model_MC.nm"
 # Function to return a list of all combinations of inputs:
 # Input: A dictionary names D
 # Each key of D corresponds to a set of values that key can take
@@ -48,93 +51,6 @@ def construct_backup_controller(Ncar, Vlow, Vhigh):
                     end_st.append((xcar_p, vcar+1))
             K_backup[st] = end_st
     return K_backup
-
-# Read confusion matrix from nuscnes file:
-def read_confusion_matrix(cm_fn):
-    conf_matrix = pkl.load( open(cm_fn, "rb" ))
-    for k,v in conf_matrix.items():
-        n = len(conf_matrix[k][0])
-        break
-    cm = np.zeros((n,n))
-    for k, v in conf_matrix.items():
-        cm += v # Total class based conf matrix w/o distance
-    return cm, conf_matrix
-
-
-# Script for confusion matrix of pedestrian
-# Make this cleaner; more versatile
-# C is a dicitionary: C(["ped", "nped"]) = N(observation|= "ped" | true_obj |= "nped") (cardinality of observations given as pedestrians while the true state is not a pedestrian)
-# Confusion matrix for second confusion matrix
-def confusion_matrix(conf_matrix):
-    C = dict()
-    param_C = dict()
-    cm, param_cm = read_confusion_matrix(conf_matrix)
-    C = construct_confusion_matrix_dict(cm)
-    for k, cm in param_cm.items():
-        param_C[k] = construct_confusion_matrix_dict(cm)
-    return C, param_C # Parametrized cm
-
-def construct_confusion_matrix_dict(cm):
-    C = dict()
-    total_ped = np.sum(cm[:,0])
-    total_obs = np.sum(cm[:,1])
-    total_emp = np.sum(cm[:,2])
-
-    if total_ped!=0.0:
-        C["ped", "ped"] = cm[0,0]/total_ped
-        C["obj", "ped"] = cm[1,0]/total_ped
-        C["empty", "ped"] = cm[2,0]/total_ped
-    else:
-        C["ped", "ped"] = 0.0
-        C["obj", "ped"] = 0.0
-        C["empty", "ped"] = 0.0
-
-    if total_obs!=0.0:
-        C["ped", "obj"] = cm[0,1]/total_obs
-        C["obj", "obj"] = cm[1,1]/total_obs
-        C["empty", "obj"] = cm[2,1]/total_obs
-    else:
-        C["ped", "obj"] = 0.0
-        C["obj", "obj"] = 0.0
-        C["empty", "obj"] = 0.0
-
-
-    if total_emp!=0.0:
-        C["ped", "empty"] = cm[0,2]/total_emp
-        C["obj", "empty"] = cm[1,2]/total_emp
-        C["empty", "empty"] = cm[2,2]/total_emp
-    else:
-        C["ped", "empty"] = 0.0
-        C["obj", "empty"] = 0.0
-        C["empty", "empty"] = 0.0
-
-
-    return C
-
-# Script for confusion matrix of pedestrian
-# Varying the precision/recall confusion matrix values
-def confusion_matrix_ped2(prec, recall):
-    C = dict()
-    tp = recall*100
-    fn = tp/prec - tp
-    tn = 200 - fn
-    C["ped", "ped"] = (recall*100)/100.0
-    C["ped", "obj"] = (fn/2.0)/100.0
-    C["ped", "empty"] = (fn/2.0)/100.0
-
-    C["obj", "ped"] = ((1-recall)*100.0/2)/100.0
-    C["obj", "obj"] = (tn/2*4.0/5)/100.0
-    C["obj", "empty"] = (tn/2*1/5)/100.0
-
-    C["empty", "ped"] = ((1-recall)*100/2)/100.0
-    C["empty", "obj"] = (tn/2*1.0/5)/100.0
-    C["empty", "empty"] = (tn/2*4.0/5.0)/100.0
-    tol = 1e-4
-    assert(abs(C["ped", "ped"] + C["obj", "ped"] + C["empty", "ped"] - 1.0) < tol)
-    assert(abs(C["ped", "obj"] + C["obj", "obj"] + C["empty", "obj"]- 1.0)< tol)
-    assert(abs(C["ped", "empty"] + C["obj", "empty"] + C["empty", "empty"]- 1.0) < tol)
-
-    return C
 
 
 # Function that converts to a Markov chain from states and actions:
@@ -205,8 +121,7 @@ class synth_markov_chain:
        transitions = set()
        for k in self.M.keys():
            p_approx = min(1, abs(self.M[k]))
-           if abs(1-self.M[k]) > 1e-2:
-               print(abs(1-self.M[k]))
+           
            t = (k[0], k[1], p_approx)
            transitions |= {t}
        assert init in self.states
@@ -228,7 +143,7 @@ class synth_markov_chain:
 # Writing/Printing Markov chains to file:
     def print_MC(self):
        model_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), "models")
-       path_MC = os.path.join(model_path, model_MC)
+       path_MC = os.path.join(model_path, prop_model_MC)
        env_MC = os.path.join(model_path, "env_MC.nm")
        path_MC_model = stormpy_int.build_stormpy_model(path_MC)
        env_MC_model = stormpy_int.build_stormpy_model(env_MC)
@@ -237,17 +152,15 @@ class synth_markov_chain:
 
    # Function to check if all outgoing transition probabilities for any state in the Markov chain sum to 1.
     def check_MC(self):
-       T = self.MC.transitions(data=True)
-       # Printing all states and outgoing transitions
-       for st in self.MC.states:
-           # print("State: ", st)
-           end_states = [t for t in T if t[0]==st]
-           # print("End states: ")
-           # print(end_states)
-           prob = [(t[2])['probability'] for t in end_states]
-           # print("probability of end states: ")
-           # print(prob)
-       #    assert abs(sum(prob)-1)<1e-4 # Checking that probabilities add up to 1 for every state
+        T = self.MC.transitions(data=True)
+        for st in self.MC.states:
+            end_states = [t for t in T if t[0]==st]
+            prob = [(t[2])['probability'] for t in end_states]
+            try:
+                assert abs(sum(prob)-1)<1e-4 # Checking that probabilities add up to 1 for every state
+            except:
+                print(f"AssertionError: Sum of outgoing probabilities from state {st} did not sum to 1: ", str(sum(prob)))
+                pdb.set_trace()
 
    # Sets the state of the true environment
     def set_true_env_state(self, st, true_env_type):
@@ -401,10 +314,8 @@ class synth_markov_chain:
     # Probabilistic satisfaction of a temporal logic with respect to a model:
     def prob_TL(self, phi):
         model_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), "models")
-        if not os.path.exists(model_path):
-            os.makedirs(model_path)
         prism_file_path = os.path.join(model_path, "pedestrian.nm")
-        path_MC = os.path.join(model_path, model_MC)
+        path_MC = os.path.join(model_path, prop_model_MC)
         env_MC = os.path.join(model_path, "env_MC.nm")
         # Print self markov chain:
         # print(self.MC)
