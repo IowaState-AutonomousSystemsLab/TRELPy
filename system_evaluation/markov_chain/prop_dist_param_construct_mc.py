@@ -271,8 +271,7 @@ class synth_markov_chain:
         distance_z = (abs(ped_cell-init_cell)//10)
         ld = distance_z*10
         ud = ld + 10
-        if ld > 0:
-            ld += 1
+        ld += 1
         distbin = (ld, ud)
         return distbin
 
@@ -290,7 +289,8 @@ class synth_markov_chain:
                     pdb.set_trace()
                 prob_t = self.param_C[distbin][obs, self.true_env_type] # Probability of transitions
                 # # ACTIVE DEBUG: for MAX_V = 4 and the following state, the confusion matrix does not have only pedestrians in the range ped, ped.
-                if Si == "S8":
+                if obs == self.true_env_type and prob_t == 0:
+                    print("there might be insufficient data; confusion matrix not an accurate to model avg. performance of perception.")
                     pdb.set_trace()
                 if np.isnan(prob_t):
                     prob_T = 0.0

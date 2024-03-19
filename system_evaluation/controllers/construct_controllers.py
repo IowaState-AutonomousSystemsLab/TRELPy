@@ -45,29 +45,29 @@ def not_pedestrianK(N, xcar, vcar, Vlow, Vhigh, xped):
     sys_vars['xcar'] = (1, N)
     sys_vars['vcar'] = (Vlow, Vhigh)
     env_vars = {}
-    env_vars['xobj'] = (0,1) # Difficult to have a set of just 1
+    env_vars['xobs'] = (0,1) # Difficult to have a set of just 1
 
     sys_init = {'xcar='+str(xcar), 'vcar='+str(vcar)}
-    env_init = {'xobj='+str(1)}
+    env_init = {'xobs='+str(1)}
 
      # Test lines:
     sys_init = {'xcar='+str(xcar), 'vcar='+str(vcar)}
-    env_init = {'xobj='+str(1)}
+    env_init = {'xobs='+str(1)}
 
     sys_prog = set() # For now, no need to have progress
     env_prog = set()
 
     sys_safe = set()
-    env_safe = {'xobj=1 -> X(xobj=1)'}
+    env_safe = {'xobs=1 -> X(xobs=1)'}
 
     # Object controllers: If you see an object that is not a pedestrian, then keep moving:
-    # spec_k = {'(xobj=1)->X(vcar=1)'}
+    # spec_k = {'(xobs=1)->X(vcar=1)'}
     # sys_safe |= spec_k
 
     for vi in range(Vhigh, 1, -1):
-        spec_k = {'(xobj=1 && vcar='+str(vi)+')->X(vcar='+str(vi-1)+')'}
+        spec_k = {'(xobs=1 && vcar='+str(vi)+')->X(vcar='+str(vi-1)+')'}
         sys_safe |= spec_k
-    spec_k = {'(xobj=1 && vcar=1) -> X(vcar=1)'}
+    spec_k = {'(xobs=1 && vcar=1) -> X(vcar=1)'}
     sys_safe |= spec_k
     # Add system dynamics to safety specs:
     for ii in range(1, N+1):
@@ -227,7 +227,7 @@ def construct_controllers(N, Vlow, Vhigh, xped, vcar, control_dir=None):
 
     K = dict()
     K["ped"] = Kped
-    K["obj"] = Knot_ped
+    K["obs"] = Knot_ped
     K["empty"] = Kempty
 
     return K

@@ -87,7 +87,7 @@ def compute_probabilities(Ncar, MAX_V):
             K = K_des.construct_controllers(Ncar, Vlow, Vhigh, xped, vcar,control_dir=control_dir)
             true_env = str(1) #Sidewalk 3
             true_env_type = "ped"
-            O = {"ped", "obj", "empty"}
+            O = {"ped", "obs", "empty"}
             state_info = dict()
             state_info["start"] = start_state
             M = call_MC(S, O, state_to_S, K, K_backup, C, true_env, true_env_type, state_info)
@@ -125,5 +125,5 @@ def save_results(INIT_V, P, P_param):
         json.dump(P_param, f)
 
 if __name__=="__main__":
-    MAX_V = 1
+    MAX_V = 6
     simulate(MAX_V)

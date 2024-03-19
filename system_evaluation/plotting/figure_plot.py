@@ -132,6 +132,9 @@ def plot_results(results_folder, MAX_V, res_type):
     if res_type == "prop":
         probability_plot(INIT_V, P, fig_name, title="Proposition-based")
         probability_plot(INIT_V, P_param, fig_name_param, title="Proposition-based, distance-parametrized")
+    elif res_type == "prop_seg":
+        probability_plot(INIT_V, P, fig_name, title="Proposition-based Segmented ")
+        probability_plot(INIT_V, P_param, fig_name_param, title="Proposition-based, segmeneted, distance-parametrized")
     else:
         probability_plot(INIT_V, P, fig_name, title="Class-based")
         probability_plot(INIT_V, P_param, fig_name_param, title="Class-based, distance-parametrized")
@@ -184,10 +187,10 @@ def plot_sensitivity_results_w_errorbars(MAX_V):
     sensitivity_probability_plot_w_errorbars(INIT_V, P, std_P, fig_name, title=title)
 
 if __name__=="__main__":
-    MAX_V = 3
+    MAX_V = 6
     # plot_results(MAX_V, "prop_based")
     results_folder = Path(f"{cm_dir}/probability_results")
-    result_type = "prop"
+    result_type = "class"
     plot_results(results_folder, MAX_V, result_type)
     #plot_sensitivity_results(MAX_V)
     # plot_sensitivity_results_w_errorbars(MAX_V)

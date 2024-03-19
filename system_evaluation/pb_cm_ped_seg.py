@@ -59,7 +59,7 @@ def init(MAX_V=6):
 
 def simulate(MAX_V=6):
     Ncar = init(MAX_V=MAX_V)
-    C, param_C = cmread.new_confusion_matrix(prop_cm_fn, prop_dict_file)
+    C, param_C = cmread.new_confusion_matrix(prop_cm_seg_fn, prop_dict_file)
     INIT_V, P, P_param = compute_probabilities(Ncar, MAX_V, C, param_C)
     save_results(INIT_V, P, P_param)
 
@@ -87,7 +87,6 @@ def compute_probabilities(Ncar, MAX_V, C, param_C):
             print(start_state)
             S, state_to_S, K_backup = cmp.system_states_example_ped(Ncar, Vlow, Vhigh)
             K = K_des.construct_controllers(Ncar, Vlow, Vhigh, xped, vcar,control_dir=control_dir)
-            
             true_env = str(1) #Sidewalk 3
             true_env_type = "ped"
             O = {"ped", "obs", "empty"}
@@ -109,7 +108,7 @@ def save_results(INIT_V, P, P_param):
     results_folder = f"{cm_dir}/probability_results"
     if not os.path.exists(results_folder):
         os.makedirs(results_folder)
-    result_type="prop"
+    result_type="prop_seg"
     fname_v = Path(f"{results_folder}/{result_type}_cm_ped_vmax_"+str(MAX_V)+"_initv.json")
     fname_p = Path(f"{results_folder}/{result_type}_cm_ped_vmax_"+str(MAX_V)+"_prob.json")
     fname_param_p = Path(f"{results_folder}/{result_type}_param_cm_ped_vmax_"+str(MAX_V)+"_prob.json")
@@ -123,5 +122,5 @@ def save_results(INIT_V, P, P_param):
         json.dump(P_param, f)
 
 if __name__=="__main__":
-    MAX_V = 3
+    MAX_V = 4
     simulate(MAX_V)

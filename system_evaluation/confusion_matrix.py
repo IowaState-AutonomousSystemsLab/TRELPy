@@ -20,7 +20,7 @@ def read_confusion_matrix(cm_fn, prop_dict_file=None):
 
 # Script for confusion matrix of pedestrian
 # Make this cleaner; more versatile
-# C is a dicitionary: C(["ped", "nped"]) = N(observation|= "ped" | true_obj |= "nped") (cardinality of observations given as pedestrians while the true state is not a pedestrian)
+# C is a dicitionary: C(["ped", "nped"]) = N(observation|= "ped" | true_obs |= "nped") (cardinality of observations given as pedestrians while the true state is not a pedestrian)
 # Confusion matrix for second confusion matrix
 def confusion_matrix(conf_matrix_file):
     C = dict()
@@ -40,46 +40,46 @@ def construct_confusion_matrix_dict(cm):
     total_emp = np.sum(cm[:,3])
     if total_ped!=0.0:
         C["ped", "ped"] = cm[0,0]/total_ped
-        C["obj", "ped"] = cm[1,0]/total_ped
-        C["ped,obj", "ped"] = cm[2,0]/total_ped
+        C["obs", "ped"] = cm[1,0]/total_ped
+        C["ped,obs", "ped"] = cm[2,0]/total_ped
         C["empty", "ped"] = cm[3,0]/total_ped
     else:
         C["ped", "ped"] = 0.0
-        C["obj", "ped"] = 0.0
-        C["ped,obj", "ped"] = 0.0
+        C["obs", "ped"] = 0.0
+        C["ped,obs", "ped"] = 0.0
         C["empty", "ped"] = 0.0
 
     if total_obs!=0.0:
-        C["ped", "obj"] = cm[0,1]/total_obs
-        C["obj", "obj"] = cm[1,1]/total_obs
-        C["ped,obj", "obj"] = cm[2,1]/total_obs
-        C["empty", "obj"] = cm[3,1]/total_obs
+        C["ped", "obs"] = cm[0,1]/total_obs
+        C["obs", "obs"] = cm[1,1]/total_obs
+        C["ped,obs", "obs"] = cm[2,1]/total_obs
+        C["empty", "obs"] = cm[3,1]/total_obs
     else:
-        C["ped", "obj"] = 0.0
-        C["obj", "obj"] = 0.0
-        C["ped,obj", "obj"] =0.0
-        C["empty", "obj"] = 0.0
+        C["ped", "obs"] = 0.0
+        C["obs", "obs"] = 0.0
+        C["ped,obs", "obs"] =0.0
+        C["empty", "obs"] = 0.0
 
     if total_ped_obs!=0.0:
-        C["ped", "ped,obj"] = cm[0,2]/total_ped_obs
-        C["obj", "ped,obj"] = cm[1,2]/total_ped_obs
-        C["ped,obj", "ped,obj"] = cm[2,2]/total_ped_obs
-        C["empty", "ped,obj"] = cm[3,2]/total_ped_obs
+        C["ped", "ped,obs"] = cm[0,2]/total_ped_obs
+        C["obs", "ped,obs"] = cm[1,2]/total_ped_obs
+        C["ped,obs", "ped,obs"] = cm[2,2]/total_ped_obs
+        C["empty", "ped,obs"] = cm[3,2]/total_ped_obs
     else:
-        C["ped", "ped,obj"] = 0.0
-        C["obj", "ped,obj"] = 0.0
-        C["ped,obj", "ped,obj"] = 0.0
-        C["empty", "ped,obj"] = 0.0
+        C["ped", "ped,obs"] = 0.0
+        C["obs", "ped,obs"] = 0.0
+        C["ped,obs", "ped,obs"] = 0.0
+        C["empty", "ped,obs"] = 0.0
 
     if total_emp!=0.0:
         C["ped", "empty"] = cm[0,3]/total_emp
-        C["obj", "empty"] = cm[1,3]/total_emp
-        C["ped,obj", "empty"] = cm[2,3]/total_emp
+        C["obs", "empty"] = cm[1,3]/total_emp
+        C["ped,obs", "empty"] = cm[2,3]/total_emp
         C["empty", "empty"] = cm[3,3]/total_emp
     else:
         C["ped", "empty"] = 0.0
-        C["obj", "empty"] = 0.0
-        C["ped,obj", "empty"] =0.0
+        C["obs", "empty"] = 0.0
+        C["ped,obs", "empty"] =0.0
         C["empty", "empty"] = 0.0
 
     return C
@@ -114,46 +114,46 @@ def new_construct_confusion_matrix_dict(cm, prop_dict):
     total_emp = np.sum(cm[:,jempty])
     if total_ped!=0.0:
         C["ped", "ped"] = cm[jped, jped]/total_ped
-        C["obj", "ped"] = cm[jobs, jped]/total_ped
-        C["ped,obj", "ped"] = cm[jpedobs, jped]/total_ped
+        C["obs", "ped"] = cm[jobs, jped]/total_ped
+        C["ped,obs", "ped"] = cm[jpedobs, jped]/total_ped
         C["empty", "ped"] = cm[jempty,jped]/total_ped
     else:
         C["ped", "ped"] = 0.0
-        C["obj", "ped"] = 0.0
-        C["ped,obj", "ped"] = 0.0
+        C["obs", "ped"] = 0.0
+        C["ped,obs", "ped"] = 0.0
         C["empty", "ped"] = 0.0
 
     if total_obs!=0.0:
-        C["ped", "obj"] = cm[jped,jobs]/total_obs
-        C["obj", "obj"] = cm[jobs,jobs]/total_obs
-        C["ped,obj", "obj"] = cm[jpedobs,jobs]/total_obs
-        C["empty", "obj"] = cm[jempty,jobs]/total_obs
+        C["ped", "obs"] = cm[jped,jobs]/total_obs
+        C["obs", "obs"] = cm[jobs,jobs]/total_obs
+        C["ped,obs", "obs"] = cm[jpedobs,jobs]/total_obs
+        C["empty", "obs"] = cm[jempty,jobs]/total_obs
     else:
-        C["ped", "obj"] = 0.0
-        C["obj", "obj"] = 0.0
-        C["ped,obj", "obj"] =0.0
-        C["empty", "obj"] = 0.0
+        C["ped", "obs"] = 0.0
+        C["obs", "obs"] = 0.0
+        C["ped,obs", "obs"] =0.0
+        C["empty", "obs"] = 0.0
 
     if total_ped_obs!=0.0:
-        C["ped", "ped,obj"] = cm[jped,jpedobs]/total_ped_obs
-        C["obj", "ped,obj"] = cm[jobs,jpedobs]/total_ped_obs
-        C["ped,obj", "ped,obj"] = cm[jpedobs,jpedobs]/total_ped_obs
-        C["empty", "ped,obj"] = cm[jempty,jpedobs]/total_ped_obs
+        C["ped", "ped,obs"] = cm[jped,jpedobs]/total_ped_obs
+        C["obs", "ped,obs"] = cm[jobs,jpedobs]/total_ped_obs
+        C["ped,obs", "ped,obs"] = cm[jpedobs,jpedobs]/total_ped_obs
+        C["empty", "ped,obs"] = cm[jempty,jpedobs]/total_ped_obs
     else:
-        C["ped", "ped,obj"] = 0.0
-        C["obj", "ped,obj"] = 0.0
-        C["ped,obj", "ped,obj"] = 0.0
-        C["empty", "ped,obj"] = 0.0
+        C["ped", "ped,obs"] = 0.0
+        C["obs", "ped,obs"] = 0.0
+        C["ped,obs", "ped,obs"] = 0.0
+        C["empty", "ped,obs"] = 0.0
 
     if total_emp!=0.0:
         C["ped", "empty"] = cm[jped,jempty]/total_emp
-        C["obj", "empty"] = cm[jobs,jempty]/total_emp
-        C["ped,obj", "empty"] = cm[jpedobs,jempty]/total_emp
+        C["obs", "empty"] = cm[jobs,jempty]/total_emp
+        C["ped,obs", "empty"] = cm[jpedobs,jempty]/total_emp
         C["empty", "empty"] = cm[jempty,jempty]/total_emp
     else:
         C["ped", "empty"] = 0.0
-        C["obj", "empty"] = 0.0
-        C["ped,obj", "empty"] =0.0
+        C["obs", "empty"] = 0.0
+        C["ped,obs", "empty"] =0.0
         C["empty", "empty"] = 0.0
 
     return C
@@ -166,19 +166,19 @@ def confusion_matrix_ped2(prec, recall):
     fn = tp/prec - tp
     tn = 200 - fn
     C["ped", "ped"] = (recall*100)/100.0
-    C["ped", "obj"] = (fn/2.0)/100.0
+    C["ped", "obs"] = (fn/2.0)/100.0
     C["ped", "empty"] = (fn/2.0)/100.0
 
-    C["obj", "ped"] = ((1-recall)*100.0/2)/100.0
-    C["obj", "obj"] = (tn/2*4.0/5)/100.0
-    C["obj", "empty"] = (tn/2*1/5)/100.0
+    C["obs", "ped"] = ((1-recall)*100.0/2)/100.0
+    C["obs", "obs"] = (tn/2*4.0/5)/100.0
+    C["obs", "empty"] = (tn/2*1/5)/100.0
 
     C["empty", "ped"] = ((1-recall)*100/2)/100.0
-    C["empty", "obj"] = (tn/2*1.0/5)/100.0
+    C["empty", "obs"] = (tn/2*1.0/5)/100.0
     C["empty", "empty"] = (tn/2*4.0/5.0)/100.0
     tol = 1e-4
-    assert(abs(C["ped", "ped"] + C["obj", "ped"] + C["empty", "ped"] - 1.0) < tol)
-    assert(abs(C["ped", "obj"] + C["obj", "obj"] + C["empty", "obj"]- 1.0)< tol)
-    assert(abs(C["ped", "empty"] + C["obj", "empty"] + C["empty", "empty"]- 1.0) < tol)
+    assert(abs(C["ped", "ped"] + C["obs", "ped"] + C["empty", "ped"] - 1.0) < tol)
+    assert(abs(C["ped", "obs"] + C["obs", "obs"] + C["empty", "obs"]- 1.0)< tol)
+    assert(abs(C["ped", "empty"] + C["obs", "empty"] + C["empty", "empty"]- 1.0) < tol)
 
     return C

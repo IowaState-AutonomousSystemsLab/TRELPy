@@ -68,9 +68,9 @@ generator.set_debug(False)
 # generator.set_list_of_classes(list_of_classes)
 # generator.set_list_of_propositions()
 
-compute_prop_cm = False
-compute_class_cm = False
-compute_prop_segmented_cm = False
+compute_prop_cm = True
+compute_class_cm = True
+compute_prop_segmented_cm = True
 save_prop_dict = True
 
 if compute_prop_cm:
