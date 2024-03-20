@@ -23,27 +23,12 @@ from nuscenes.eval.detection.config import config_factory
 from nuscenes.eval.detection.evaluate import NuScenesEval
 
 from classes import cls_attr_dist, class_names, mini_val_tokens
-from custom_env import home_dir, output_dir, preds_dir, model_dir, is_set_to_mini
+from custom_env import home_dir, output_dir, preds_dir, model_dir, is_set_to_mini, dataset_version, eval_config, eval_set_map
 from custom_env import dataset_root as dataroot
 
 import import_ipynb
 # import nuscenes_accumulate
-# import nuscenes_evaluate
-
-eval_set_map = {
-        'v1.0-mini': 'mini_val',
-        'v1.0-trainval': 'val',
-        'v1.0-test': 'test'
-    }
-
-dataset_version = 'v1.0-mini' if is_set_to_mini() else 'v1.0-trainval'
-try:
-    eval_version = 'detection_cvpr_2019'
-    eval_config = config_factory(eval_version)
-except:
-    eval_version = 'cvpr_2019'
-    eval_config = config_factory(eval_version)
-    
+# import nuscenes_evaluate    
 
 DETECTION_THRESHOLD = 0.35
 
@@ -217,7 +202,7 @@ def get_sample_token(fn: str) -> Dict:
     Returns:
         Dict: The sample token associated with the given filename.
     """
-    with open(f"{model_dir}/token_dict.json", 'w') as f:
+    with open(f"{model_dir}/token_dict.json", 'r') as f:
         token_dict = json.load(f)
     sample_token = token_dict[fn]['sample_token']
     f.close()
@@ -295,7 +280,7 @@ def get_metrics(output_path, res_path):
         nusc,
         config=eval_config,
         result_path=res_path,
-        eval_set=eval_set_map['v1.0-mini'],
+        eval_set=eval_set_map[dataset_version],
         output_dir=str(output_path),
         verbose=True,
     )
@@ -314,8 +299,8 @@ def filter_results(results):
 
 construct_token_dict()
 results = read_results()
-results = filter_results(results)
+# results = filter_results(results)
 nusc_results = transform_det_annos_to_nusc_annos(results, nusc)
 
-output_path, res_path = save_nusc_results(results, output_path="/home/ranai/nuscenes_dataset/3D_Detection")
+output_path, res_path = save_nusc_results(results, output_path=model_dir)
 metrics, metrics_summary, obj = get_metrics(output_path, res_path)

@@ -52,9 +52,6 @@ class RadiusBand:
         total_gt_boxes_in_band = 0
         for cluster in self.clusters:
             total_gt_boxes_in_band += len(cluster.boxes)
-        # print("Total number of objects in band: ", str(total_gt_boxes_in_band))
-        # if total_gt_boxes_in_band > 0:
-            # st()
 
     def generate_clusters(self):
         """generates clusters for the ground truth boxes
@@ -88,8 +85,6 @@ class RadiusBand:
         except:
             st()
         
-        
-    
     def __calculate_max_radius_bw_obj(self, radius: float):
         """ Using s=r * theta, calculate the maximum distance between objects
         
@@ -97,6 +92,12 @@ class RadiusBand:
         """
         #TODO: I'm using arc length formula for straight line distance. 
         return (self.max_dist_bw_obj / radius)
+
+    def __str__(self) -> str:
+        return f"RadiusBand object for sample token: {self.sample_token}, radius band: {self.radius_band}, and number of clusters: {self.num_clusters}"
+    
+    def __repr__(self) -> str:
+        return self.__str__()
 
 class Cluster:
     """
@@ -157,6 +158,12 @@ class Cluster:
         dist = np.linalg.norm(com - coord)
         
         return dist < self.dist_thresh
+    
+    def __str__(self) -> str:
+        return f"Cluster object for sample token: {self.sample_token}, part of radius band {self.radius_band} and number of boxes: {len(self.boxes)}"        
+        
+    def __repr__(self) -> str:
+        return self.__str__()
     
 
 def unit_vector(vector):
