@@ -1,3 +1,23 @@
 Not creating /home/ranai/nuscenes_dataset/3D_Detection/saved_cms/lidar/full/model_01-08-2024_13_00 because it already exists
 ======
 Loading NuScenes tables for version v1.0-trainval...
+23 category,
+8 attribute,
+4 visibility,
+64386 instance,
+12 sensor,
+10200 calibrated_sensor,
+2631083 ego_pose,
+68 log,
+850 scene,
+34149 sample,
+2631083 sample_data,
+1166187 sample_annotation,
+4 map,
+Done loading in 28.609 seconds.
+======
+Reverse indexing ...
+Done reverse indexing in 6.5 seconds.
+======
+Read results count:  1000
+Read results count:  2000
