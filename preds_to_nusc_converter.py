@@ -276,6 +276,7 @@ def save_nusc_results(det_annos, **kwargs):
     return output_path, res_path
 
 def get_metrics(output_path, res_path):
+    print(f'get_metrics called on {res_path} with {dataset_version} and {eval_set_map[dataset_version]}')
     nusc_eval = NuScenesEval(
         nusc,
         config=eval_config,
