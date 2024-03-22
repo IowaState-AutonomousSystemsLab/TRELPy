@@ -43,9 +43,11 @@ for i, pcd in enumerate(pcd_list):
         
     subprocess.run(cmd, cwd=f"{home_dir}/software/mmdetection3d/", shell=True)
     
-    if i%100 == 0:
+    if i%10000 == 0:
         print(f"---- ---- !-!-!-!- run_inference.py: Done with {i} files")
 
 with open(info_file, 'a') as f:
     f.write(f"Inferences complete.")
 f.close()
+
+print(f" !-!-!-!- run_inference.py COMPLETE")
