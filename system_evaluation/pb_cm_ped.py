@@ -16,6 +16,8 @@ except:
     from markov_chain.markov_chain_setup import call_MC, call_MC_param
 
 import matplotlib as plt
+from print_utils import print_cm, print_param_cm
+
 # from figure_plot import probability_plot
 import time
 import json
@@ -147,7 +149,15 @@ def init(MAX_V=6):
 
 def simulate(MAX_V=6):
     Ncar = init(MAX_V=MAX_V)
-    INIT_V, P, P_param = compute_probabilities(Ncar, MAX_V)
+    C, param_C = cmread.new_confusion_matrix(prop_cm_fn, prop_dict_file)
+    # C, param_C = cmp.confusion_matrix(cm_fn)
+    print(" =============== Full confusion matrix ===============")
+    print_cm(C)
+    print(" =============== Parametrized confusion matrix ===============")
+    print_param_cm(param_C)
+    print("===========================================================")
+    st()
+    INIT_V, P, P_param = compute_probabilities(Ncar, MAX_V, C, param_C)
     save_results(INIT_V, P, P_param)
 
 
@@ -194,6 +204,8 @@ def compute_probabilities(Ncar, MAX_V):
             # print('Probability of satisfaction for initial speed, {}, and max speed, {} is p = {}:'.format(vcar, vmax, p))
             P[vmax].append(result[start_state])
             P_param[vmax].append(result_param[start_state])
+            
+            print('Parametrized CM --- Probability of eventually reaching good state for initial speed, {}, and max speed, {} is p = {}:'.format(vcar, vmax, result[start_state]))
     return INIT_V, P, P_param
 
 def save_results(INIT_V, P, P_param):

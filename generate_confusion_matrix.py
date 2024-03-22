@@ -141,7 +141,9 @@ class GenerateConfusionMatrix:
         
         
         self.gt_boxes = load_gt(self.nusc, self.eval_set, DetectionBox, verbose=self.verbose)
-
+        print("Line 144: No. of results dir:", self.result_path)
+        print("Line 144: No. of Pred tokens:", len(self.pred_boxes.sample_tokens))
+        print("Line 144: No. of GT tokens:", len(self.gt_boxes.sample_tokens))
         assert set(self.pred_boxes.sample_tokens) == set(self.gt_boxes.sample_tokens), \
             "Samples in split doesn't match samples in predictions."
 

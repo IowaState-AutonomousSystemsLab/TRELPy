@@ -4,12 +4,16 @@ import json
 import os
 import pdb
 from pathlib import Path
+from experiment_file import *
+from utils import update_max
 
 def probability_plot(INIT_V, P, fig_name,title=None):
     fig, ax = plt.subplots()
     ax.tick_params(axis='both', which='major', labelsize=15)
+    max_p = update_max()
     for k,v in INIT_V.items():
         probabilities = P[k]
+        max_p = update_max(probabilities, max_p)
         init_speed = INIT_V[k]
         plt.plot(init_speed, probabilities, 'o--', label=f"V={k}")
     leg = plt.legend(loc="best")
@@ -18,7 +22,8 @@ def probability_plot(INIT_V, P, fig_name,title=None):
     plt.xticks(np.arange(1,10,1))
     if title:
         plt.title(title,fontsize=20)
-    ax.set_ylim(0,0.5)
+    y_upper_lim = min(1, max_p+0.1)
+    ax.set_ylim(0,max_p + 0.1)
     plt.savefig(fig_name, format='png', dpi=400, bbox_inches = "tight")
     # plt.show()
 
@@ -105,15 +110,15 @@ def probability_individual_plot(INIT_V, P, fig_name):
     plt.savefig(fig_name, format='png', dpi=1200)
     plt.show()
 
-def plot_results(results_folder, dataset_label, MAX_V, res_type):
-    fname_v = Path(f"{results_folder}/{dataset_label}_{res_type}_cm_ped_vmax_"+str(MAX_V)+"_initv.json")
-    fname_p = Path(f"{results_folder}/{dataset_label}_{res_type}_cm_ped_vmax_"+str(MAX_V)+"_prob.json")
-    fname_p_param = Path(f"{results_folder}/{dataset_label}_{res_type}_param_cm_ped_vmax_"+str(MAX_V)+"_prob.json")
+def plot_results(results_folder, MAX_V, res_type):
+    fname_v = Path(f"{results_folder}/{res_type}_cm_ped_vmax_"+str(MAX_V)+"_initv.json")
+    fname_p = Path(f"{results_folder}/{res_type}_cm_ped_vmax_"+str(MAX_V)+"_prob.json")
+    fname_p_param = Path(f"{results_folder}/{res_type}_param_cm_ped_vmax_"+str(MAX_V)+"_prob.json")
     figure_folder = Path(f"{results_folder}/figures")
     if not os.path.exists(figure_folder):
         os.makedirs(figure_folder)
-    fig_name = Path(f"{figure_folder}/{dataset_label}_{res_type}_cm_ped_vmax_"+str(MAX_V)+".png")
-    fig_name_param = Path(f"{figure_folder}/{dataset_label}_{res_type}_param_cm_ped_vmax_"+str(MAX_V)+".png")
+    fig_name = Path(f"{figure_folder}/{res_type}_cm_ped_vmax_"+str(MAX_V)+".png")
+    fig_name_param = Path(f"{figure_folder}/{res_type}_param_cm_ped_vmax_"+str(MAX_V)+".png")
     
     with open(fname_v) as fv:
         INIT_V = json.load(fv)
@@ -122,9 +127,12 @@ def plot_results(results_folder, dataset_label, MAX_V, res_type):
     with open(fname_p_param) as fp_param:
         P_param = json.load(fp_param)
 
-    if res_type == "prop_based":
+    if res_type == "prop":
         probability_plot(INIT_V, P, fig_name, title="Proposition-based")
         probability_plot(INIT_V, P_param, fig_name_param, title="Proposition-based, distance-parametrized")
+    elif res_type == "prop_seg":
+        probability_plot(INIT_V, P, fig_name, title="Proposition-based Segmented ")
+        probability_plot(INIT_V, P_param, fig_name_param, title="Proposition-based, segmeneted, distance-parametrized")
     else:
         probability_plot(INIT_V, P, fig_name, title="Class-based")
         probability_plot(INIT_V, P_param, fig_name_param, title="Class-based, distance-parametrized")
@@ -177,11 +185,11 @@ def plot_sensitivity_results_w_errorbars(MAX_V):
     sensitivity_probability_plot_w_errorbars(INIT_V, P, std_P, fig_name, title=title)
 
 if __name__=="__main__":
-    MAX_V = 6
+    MAX_V = 3
     # plot_results(MAX_V, "prop_based")
-    results_folder = Path(f"/home/apurvabadithela/software/run_nuscenes_evaluations/saved_cms/lidar/mini/probability_results")
-    dataset_label="mini"
-    plot_results(results_folder, dataset_label, MAX_V, "class")
+    results_folder = Path(f"{cm_dir}/probability_results")
+    result_type = "prop_seg"
+    plot_results(results_folder, MAX_V, result_type)
     #plot_sensitivity_results(MAX_V)
     # plot_sensitivity_results_w_errorbars(MAX_V)
 
