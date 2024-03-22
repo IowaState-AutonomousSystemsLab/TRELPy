@@ -20,7 +20,8 @@ from nuscenes.utils.data_classes import Box
 from nuscenes.utils.data_classes import RadarPointCloud
 from nuscenes.utils.geometry_utils import transform_matrix
 from nuscenes.eval.detection.config import config_factory
-from nuscenes.eval.detection.evaluate import NuScenesEval
+from nuscenes.eval.detection.evaluate import NuScenesEval, load_gt
+from nuscenes.eval.detection.data_classes import DetectionBox
 
 from classes import cls_attr_dist, class_names, mini_val_tokens
 from custom_env import home_dir, output_dir, preds_dir, model_dir, is_set_to_mini, dataset_version, eval_config, eval_set_map
@@ -292,15 +293,19 @@ def get_metrics(output_path, res_path):
     return metrics, metrics_summary, nusc_eval
 
 def filter_results(results):
+    """
+        it only val results
+    """
+    toks = load_gt(nusc, eval_set_map[dataset_version], DetectionBox, verbose=False).sample_tokens
     return [
         result
         for result in results
-        if result['metadata']['token'] in mini_val_tokens
+        if result['metadata']['token'] in toks
     ]
 
 construct_token_dict()
 results = read_results()
-# results = filter_results(results)
+results = filter_results(results)
 nusc_results = transform_det_annos_to_nusc_annos(results, nusc)
 
 output_path, res_path = save_nusc_results(results, output_path=model_dir)
