@@ -4,12 +4,12 @@ import os
 import sys
 from pathlib import Path
 import subprocess
-
+from pdb import set_trace as st
 ######## PARMS #########
 ## ONLY Change model_name here to make it work with your version.
-model_name = "model_01-05-2024_20_22"
+model_name = "model_good"
 modality = "lidar"
-is_mini = True
+is_mini = False
 ########################
 #### Get Repo Root #####
 def getGitRoot():
@@ -30,9 +30,10 @@ if is_mini:
     size = "mini"
     inf_res = "inference_results_mini"
 else:
-    dataset = "nuscenes-full"
+    dataset = "nuscenes"
     size= "full"
     inf_res = "inference_results"
+
 
 home_dir = str(Path.home())
 dataset_root = f"{home_dir}/software/mmdetection3d/data/{dataset}/"
@@ -42,3 +43,17 @@ preds_dir = str(Path(f"{model_dir}/preds").absolute())
 repo_dir = getGitRoot()
 cm_dir = str(Path(f"{repo_dir}/saved_cms/{modality}/{size}/{model_name}").absolute())
 create_dir_if_not_exist(cm_dir)
+
+# TODO: How do we set eval_set_map correctly? Should it be just the validation set? Yes! 
+# because we don't have access to the training.
+eval_set_map = {
+        'v1.0-mini': 'mini_val',
+        'v1.0-trainval': 'val',
+        'v1.0-test': 'test'
+    }
+
+dataset_version = 'v1.0-mini' if is_set_to_mini() else 'v1.0-trainval'
+try:
+    eval_version = 'detection_cvpr_2019'
+except:
+    eval_version = 'cvpr_2019'

@@ -70,8 +70,8 @@ generator.set_debug(False)
 
 compute_prop_cm = True
 compute_class_cm = True
-compute_prop_segmented_cm = True
-save_prop_dict = True
+compute_prop_segmented_cm = False
+save_prop_dict = False
 
 if compute_prop_cm:
     cm_prop = generator.get_prop_cm()

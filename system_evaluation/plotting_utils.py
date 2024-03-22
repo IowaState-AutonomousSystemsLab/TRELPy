@@ -1,4 +1,5 @@
 # Utility functions for plotting
+import tabulate
 
 def update_max(numlist=None, current_max=None):
     '''
@@ -14,3 +15,4 @@ def update_max(numlist=None, current_max=None):
     
     else:
         return max(current_max, max(numlist))
+

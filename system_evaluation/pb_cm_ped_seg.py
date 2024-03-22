@@ -24,6 +24,7 @@ import confusion_matrix as cmread
 sys.setrecursionlimit(10000)
 from formula import *
 from pdb import set_trace as st
+from print_utils import print_cm, print_param_cm
 
 def initialize(MAX_V, Ncar, maxv_init=None):
     '''
@@ -60,6 +61,14 @@ def init(MAX_V=6):
 def simulate(MAX_V=6):
     Ncar = init(MAX_V=MAX_V)
     C, param_C = cmread.new_confusion_matrix(prop_cm_seg_fn, prop_dict_file)
+    print(" =============== Full confusion matrix ===============")
+    print_cm(C)
+    print(" =============== Parametrized confusion matrix ===============")
+    print_param_cm(param_C)
+    print("===========================================================")
+    st()
+    INIT_V, P, P_param = compute_probabilities(Ncar, MAX_V, C, param_C)
+    save_results(INIT_V, P, P_param)
     INIT_V, P, P_param = compute_probabilities(Ncar, MAX_V, C, param_C)
     save_results(INIT_V, P, P_param)
 
@@ -101,6 +110,7 @@ def compute_probabilities(Ncar, MAX_V, C, param_C):
             param_M = call_MC_param(S, O, state_to_S, K, K_backup, param_C, true_env, true_env_type, xped, state_info)            
             result_param = param_M.prob_TL(formula)
             P_param[vmax].append(result_param[start_state])
+            
             print('Parametrized CM --- Probability of eventually reaching good state for initial speed, {}, and max speed, {} is p = {}:'.format(vcar, vmax, result[start_state]))
     return INIT_V, P, P_param
 
@@ -122,5 +132,5 @@ def save_results(INIT_V, P, P_param):
         json.dump(P_param, f)
 
 if __name__=="__main__":
-    MAX_V = 4
+    MAX_V = 3
     simulate(MAX_V)
