@@ -92,7 +92,7 @@ def compute_probabilities(Ncar, MAX_V):
 
             S, state_to_S, K_backup = cmp.system_states_example_ped(Ncar, Vlow, Vhigh)
             K = K_des.construct_controllers(Ncar, Vlow, Vhigh, xped, vcar,control_dir=control_dir)
-            true_env = str(1) #Sidewalk 3
+            true_env = str(1) # Sidewalk 3
             true_env_type = "ped"
             O = {"ped", "obs", "empty"}
             state_info = dict()
