@@ -23,27 +23,12 @@ from nuscenes.eval.detection.config import config_factory
 from nuscenes.eval.detection.evaluate import NuScenesEval
 
 from classes import cls_attr_dist, class_names, mini_val_tokens
-from custom_env import home_dir, output_dir, preds_dir, model_dir, is_set_to_mini
+from custom_env import home_dir, output_dir, preds_dir, model_dir, is_set_to_mini, dataset_version, eval_set_map, eval_config
 from custom_env import dataset_root as dataroot
 
 import import_ipynb
 # import nuscenes_accumulate
-# import nuscenes_evaluate
-
-eval_set_map = {
-        'v1.0-mini': 'mini_val',
-        'v1.0-trainval': 'val',
-        'v1.0-test': 'test'
-    }
-
-dataset_version = 'v1.0-mini' if is_set_to_mini() else 'v1.0-trainval'
-try:
-    eval_version = 'detection_cvpr_2019'
-    eval_config = config_factory(eval_version)
-except:
-    eval_version = 'cvpr_2019'
-    eval_config = config_factory(eval_version)
-    
+# import nuscenes_evaluate    
 
 DETECTION_THRESHOLD = 0.35
 
