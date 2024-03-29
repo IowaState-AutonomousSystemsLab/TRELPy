@@ -1,0 +1,38 @@
+- trelpy
+    - utils
+    - rendering
+        - sample 
+            - no preds 
+            - with preds
+            - distance_bands
+            - clustering
+    - inference
+    - detection_metrics
+    - system_evaluation
+- notebooks
+    - nuscenes_tutorial.ipynb
+    - nuscenes_evaluate.ipynb
+    - demo.ipynb
+- model
+    - MODELNAME
+        - model_info.text
+            - modality
+            - list of paths to inference models
+        - checkpoint, config, 
+- tests
+- results
+    - inference
+        - full modelname
+            - metrics_summary.json
+            - model_info.txt,
+    - confusion matrices
+    - figures
+- mmdetection3D (as a submodule)
+- config.py (custom_env renamed)
+- tutorial.ipynb
+- requirements.txt {apt, pip3}
+- LICENCE
+- citation.cff
+
+
+results/modelname/modality/dataset_name
