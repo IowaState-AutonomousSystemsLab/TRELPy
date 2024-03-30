@@ -1,9 +1,9 @@
 numpy
-stormpy
+matplotlib
 seaborn
 networkx==2.0
 pytest
-numpy
 scipy
 cvxopt
-gr1py                   
+gr1py
+pyquaternion                   

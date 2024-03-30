@@ -26,3 +26,13 @@ build-essential
 libmpfr-dev 
 libgmp3-dev 
 libmpc-dev
+libcln-dev
+ginac-tools
+libginac-dev
+build-essential 
+automake 
+libglpk-dev 
+libhwloc-dev 
+libz3-dev 
+libxerces-c-dev 
+libeigen3-dev
