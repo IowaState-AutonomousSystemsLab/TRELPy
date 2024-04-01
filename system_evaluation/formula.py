@@ -42,6 +42,8 @@ def set_crosswalk_cell(Ncar, xmax_stop):
     # todo: remove randomness so comparisons can be fair
     # xped = np.random.randint(xmax_stop+1, Ncar) # Pick a pedestrian cell from [xmax_stop+1, Ncar]
     xped = xmax_stop+1
+    assert xped <= Nped
+    # TODO: set xped = xmax_stop+1
     xcar_stop = xped - 1 # Cell state of the car by which v = 0
     assert(xcar_stop >= xmax_stop)
     return xped, xcar_stop

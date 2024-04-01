@@ -261,7 +261,8 @@ class synth_markov_chain:
 
     def set_confusion_matrix(self, C):
         self.C = C
-    # Depending on the observation, the controller K changes. K should be a dictionary that maps observation to a controller. ToDo: Assess difference between K and K_strategy
+        
+    # Depending on the observation, the controller K changes. K should be a dictionary that maps observation to a controller. TODO: Assess difference between K and K_strategy
     def set_controller(self, K, K_strategy, K_backup):
         self.K_strategy = K_strategy
         self.K = K
@@ -323,7 +324,7 @@ class synth_markov_chain:
                             assert self.K_int_state_map[Ki][inp][state] is not None
                     except Exception:
                         pass
-
+            
             # Reversing the internal state map:
             # Adding only those states that are not of type None
             for inp in input_comb:
@@ -341,14 +342,6 @@ class synth_markov_chain:
         if sinit_st not in self.K_int_state_map_inv[Ki][inp_st].keys():
             poss_st = self.backup[sinit_st]
             test_list = [p for p in poss_st if (p[0]==sinit_st[0] and p[1]==1)]  # If sinit_st is at zero velocity, car should not remain stuck at 0 velocity.
-            # test_list = [p for p in poss_st if p in self.K_int_state_map_inv[Ki].keys()]
-            # if test_list:
-            #     sinit_st = test_list[0] # First state in the dictionary; deterministic controller
-
-            #     init_st_adj=(self.K_int_state_map_inv[Ki])[sinit_st]
-            #     K_instant = Ki_strategy.TulipStrategy()
-            #     K_instant.state = init_st_adj
-            # else:
             flg = 1
             K_instant = None
             if test_list:
@@ -357,7 +350,6 @@ class synth_markov_chain:
                 init_st_adj = poss_st[0]
         else:
             init_st_adj=(self.K_int_state_map_inv[Ki][inp_st])[sinit_st] # Finding the mapping from internal states
-            # print(init_st_adj)
             K_instant = Ki_strategy.TulipStrategy()
             K_instant.state = init_st_adj
         return K_instant, init_st_adj, flg
@@ -387,7 +379,7 @@ class synth_markov_chain:
                 try:
                     prob_t = self.C[obs, self.true_env_type] # Probability of transitions
                 except:
-                    pdb.set_trace()
+                    st()
                 if (Si, Sj) in self.M.keys():
                     self.M[Si, Sj] = self.M[Si, Sj] + prob_t
                 else:

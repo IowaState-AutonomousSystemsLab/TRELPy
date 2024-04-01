@@ -21,7 +21,7 @@ def powerset(s: list):
         return chain.from_iterable(combinations(s, r) for r in range(len(s)+1)) 
 
 class ConfusionMatrix:
-    def __init__(self, cm_generator, obs, labels, label_type="class"):
+    def __init__(self, cm_generator, obs, prop_obs, labels, prop_labels, label_type="class"):
         '''
         Attributes:
         cm_generator: GenerateConfusionMatrix object that was used to compute the confusion matrix. 
@@ -32,9 +32,11 @@ class ConfusionMatrix:
         cm_file: Default is None. String containing the location of where the (distance-parametried) canonical confusion matrix was saved
         prop_cm_file: Default is None. String containing the location of where the (distance-parametried) proposition-labeled confusion matrix was saved
         '''
-        self.obs = obs
+        self.obs = obs.copy()
+        self.prop_obs = prop_obs.copy()
         self.cm_generator = cm_generator
-        self.labels = labels
+        self.labels = labels.copy()
+        self.prop_labels = prop_labels.copy()
         self.setup_attr()
         self.save_folder = None
         self.confusion_matrix = None # Canonical confusion matrix stored in file
@@ -45,12 +47,12 @@ class ConfusionMatrix:
         self.prop_labels = prop_dict
 
     def setup_attr(self):
-        self.prop_obs = list(powerset(self.obs))
-        self.obs.append("empty")
-        self.prop_obs.append("empty")
-        self.prop_labels = self.labels.copy()
-        self.labels.update({len(self.obs):"empty"})
-        self.prop_labels.update({len(self.prop_obs):"empty"})
+        if "empty" not in self.obs:
+            self.obs.append("empty")
+        
+        if set(["empty"]) not in self.prop_obs:
+            self.prop_obs.append(set(["empty"]))
+        
         self.n = len(self.labels)
         self.prop_n = len(self.prop_obs)
 
@@ -142,3 +144,14 @@ class ConfusionMatrix:
                 for kpred, label_pred in self.labels.items():
                     C[label_pred, label_true] = 0.0
         return C
+
+if __name__ == "__main__":
+    cm_file = f"{cm_dir}/low_thresh_cm.pkl"
+    with open(cm_file, "rb") as f:
+        low_thresh_cm = pkl.load(f)
+    f.close()
+    low_thresh_cm_full = sum(cm_k for cm_k in low_thresh_cm.values())
+    print("===================================")
+    print("Low Threshold CM:")
+    print(low_thresh_cm_full)
+    print("===================================")

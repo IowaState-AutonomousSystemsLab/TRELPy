@@ -1,0 +1,9 @@
+numpy
+matplotlib
+seaborn
+networkx==2.0
+pytest
+scipy
+cvxopt
+gr1py
+pyquaternion                   

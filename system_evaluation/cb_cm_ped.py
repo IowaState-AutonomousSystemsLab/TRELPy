@@ -3,13 +3,15 @@ import sys
 sys.path.append("..")
 import numpy as np
 import os
+import pdb
 from pathlib import Path
 from experiment_file import *
+from print_utils import print_cm, print_param_cm
 # from ..custom_env import cm_dir, is_set_to_mini
 try: 
     from system_evaluation.markov_chain import construct_mc as cmp
     from system_evaluation.controllers import construct_controllers as K_des
-    from system_evaluation.markov_chain.MC import construct_controllers as K_des
+    from system_evaluation.markov_chain.markov_chain_setup import call_MC, call_MC_param
 except:
     from markov_chain import construct_mc as cmp
     from controllers import construct_controllers as K_des
@@ -62,9 +64,14 @@ def simulate(MAX_V=6):
     INIT_V, P, P_param = compute_probabilities(Ncar, MAX_V)
     save_results(INIT_V, P, P_param)
 
-
 def compute_probabilities(Ncar, MAX_V):
     C, param_C = cmp.confusion_matrix(cm_fn)
+    print(" =============== Full confusion matrix ===============")
+    print_cm(C)
+    print(" =============== Parametrized confusion matrix ===============")
+    print_param_cm(param_C)
+    print("===========================================================")
+    st()
     VMAX = []
     INIT_V = dict()
     P = dict()
@@ -76,16 +83,18 @@ def compute_probabilities(Ncar, MAX_V):
         print("===========================================================")
         print("Max Velocity: ", vmax)
         # Initial conditions set for all velocities
-        Vlow, Vhigh, xped, formula = initialize(MAX_V, Ncar)
+        Vlow, Vhigh, xped, formula = initialize(vmax, Ncar)
         print("Specification: ")
         print(formula)
         for vcar in range(1, vmax+1):  # Initial speed at starting point
             state_f = lambda x,v: (Vhigh-Vlow+1)*(x-1) + v
             start_state = "S"+str(state_f(1,vcar))
             print(start_state)
+
             S, state_to_S, K_backup = cmp.system_states_example_ped(Ncar, Vlow, Vhigh)
             K = K_des.construct_controllers(Ncar, Vlow, Vhigh, xped, vcar,control_dir=control_dir)
-            true_env = str(1) #Sidewalk 3
+            st()
+            true_env = str(1) # Sidewalk 3
             true_env_type = "ped"
             O = {"ped", "obj", "empty"}
             state_info = dict()
@@ -96,7 +105,6 @@ def compute_probabilities(Ncar, MAX_V):
             # result = M.prob_TL(formula)
             result = M.prob_TL(formula)
             result_param = param_M.prob_TL(formula)
-            # pdb.set_trace()
             print('Probability of eventually reaching good state for initial speed, {}, and max speed, {} is p = {}:'.format(vcar, vmax, result[start_state]))
             # Store results:
             VMAX.append(vmax)
@@ -125,5 +133,5 @@ def save_results(INIT_V, P, P_param):
         json.dump(P_param, f)
 
 if __name__=="__main__":
-    MAX_V = 1
+    MAX_V = 6
     simulate(MAX_V)

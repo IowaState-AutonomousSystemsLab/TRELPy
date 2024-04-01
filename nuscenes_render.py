@@ -21,28 +21,27 @@ import numpy as np
 from pyquaternion import Quaternion
 import os
 from nuscenes.eval.common.data_classes import EvalBox
+from nuscenes.eval.detection.data_classes import DetectionBox
 from pdb import set_trace as st
-import matplotlib.patches as ptch
 
-def convert_EvalBox_to_flat_veh_coords(sample_data_token:str, to_be_conv_box:DetectionBox, nusc: NuScenes) -> Box:
-    
-    box = DetectionBox(sample_token = to_be_conv_box.sample_token,
-                        translation = to_be_conv_box.translation,
-                        size = to_be_conv_box.size,
-                        rotation= to_be_conv_box.rotation,
-                        detection_name= to_be_conv_box.detection_name)
+def evalbox_ego_frame(sample_data_token:str, box:DetectionBox, nusc: NuScenes, box_type="Pred") -> Box:
     
     sd_record = nusc.get('sample_data', sample_data_token)
     cs_record = nusc.get('calibrated_sensor', sd_record['calibrated_sensor_token'])
     sensor_record = nusc.get('sensor', cs_record['sensor_token'])
     pose_record = nusc.get('ego_pose', sd_record['ego_pose_token'])
-
     yaw = Quaternion(pose_record['rotation']).yaw_pitch_roll[0]
-    box.translation += (-np.array(pose_record['translation']))
+    
+    translation = np.array(box.translation) - np.array(pose_record['translation'])
     quaternion = Quaternion(scalar=np.cos(yaw / 2), vector=[0, 0, np.sin(yaw / 2)]).inverse
-    box.translation = np.dot(quaternion.rotation_matrix, box.translation)
-    box.rotation = quaternion * box.rotation
-    return box
+    rotation = quaternion * box.rotation
+    
+    if box_type == "GT":
+        box_new = DetectionBox(sample_token = box.sample_token, translation = tuple(translation), size=tuple(box.size), rotation = tuple(rotation), detection_name = box.detection_name)
+    else:
+        box_new = DetectionBox(sample_token = box.sample_token, translation = tuple(translation), size=tuple(box.size), rotation = tuple(rotation), detection_name = box.detection_name, detection_score=box.detection_score)
+    box_new.center = np.dot(quaternion.rotation_matrix, box_new.translation)
+    return box_new
    
 def convert_ego_pose_to_flat_veh_coords(sample_data_token:str, box:Box, nusc: NuScenes) -> Box:
     sd_record = nusc.get('sample_data', sample_data_token)
@@ -70,7 +69,7 @@ def generate_fig_fn(out_path, sample_token):
     fig_fn = '{}{:d}.png'.format(fig_fn, i)
     return fig_fn
 
-def render_specific_gt_and_predictions(sample_token: str, gt_info:list=[], pred_info:list=[], radius_band=-1, nusc=None, out_path:str=None):
+def render_specific_gt_and_predictions(sample_token: str, gt_info:list=[], pred_info:list=[], nusc=None, out_path:str=None, ref_frame="global"):
     '''
     Inputs:
     sample_data_token: token
@@ -171,17 +170,14 @@ def render_specific_gt_and_predictions(sample_token: str, gt_info:list=[], pred_
     # Show boxes.
     if with_anns:
         for (box, label) in gt_info:
-            box = convert_ego_pose_to_flat_veh_coords(ref_sd_token, box, nusc) if use_flat_vehicle_coordinates else box
+            if ref_frame =="global":
+                box = convert_ego_pose_to_flat_veh_coords(ref_sd_token, box, nusc)
             c = np.array(color_map[box.name]) / 255.0
             render(box, label, ax, view=np.eye(4), colors=(c, c, c))
             
         for (box, label) in pred_info:
-            box = convert_ego_pose_to_flat_veh_coords(ref_sd_token, box, nusc) if use_flat_vehicle_coordinates else box
+            box = convert_ego_pose_to_flat_veh_coords(ref_sd_token, box, nusc)
             render(box, label, ax, view=np.eye(4), colors=('k', 'k', 'k'))
-            
-    if radius_band != -1 and type(radius_band) == tuple:
-        ax.add_patch(ptch.Circle((0, 0), radius_band[0], color='b', fill=False))
-        ax.add_patch(ptch.Circle((0, 0), radius_band[1], color='b', fill=False))
 
     ax.axis('off')
     ax.set_title('{} {labels_type}'.format(
@@ -470,7 +466,7 @@ def render_sample_data_with_predictions( sample_data_token: str,
                     box.render(ax, view=np.eye(4), colors=(c, c, c))
                     
                 for box in pred_boxes:
-                    box = convert_ego_pose_to_flat_veh_coords(ref_sd_token, box, nusc) if use_flat_vehicle_coordinates else box
+                    box = convert_ego_pose_to_flat_veh_coords(ref_sd_token, box, nusc)
                     box.render(ax, view=np.eye(4), colors=('k', 'k', 'k'))
 
             # Limit visible range.

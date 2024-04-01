@@ -5,7 +5,8 @@ import numpy as np
 from typing import Tuple, Dict, Any, List
 from itertools import chain, combinations
 from pdb import set_trace as st
-
+import pickle as pkl
+from pathlib import Path
 from custom_env import dataset_root as dataroot
 
 from mmdet3d.evaluation.metrics import nuscenes_metric as nus_metric
@@ -52,6 +53,13 @@ conf_mat_mapping = {
     "traffic_cone": OBS
 }
 
+# conf_mat_mapping = {
+#     "pedestrian": PED,
+#     "bus": OBS,
+#     "car" : OBS,
+#     "truck": OBS,
+# }
+
 generator = GenerateConfusionMatrix(nusc=nusc,
     config=eval_config,
     result_path=f'{model_dir}/results_nusc.json',
@@ -64,23 +72,71 @@ generator = GenerateConfusionMatrix(nusc=nusc,
     max_dist=100,
     distance_bin=10
 )
+generator.set_debug(False)
+# generator.set_list_of_classes(list_of_classes)
+# generator.set_list_of_propositions()
 
-fin_prop = np.zeros((4,4), dtype=np.float64)
+compute_prop_cm = False
+compute_class_cm = True
+compute_prop_segmented_cm = False
+save_prop_dict = False
 
-# TODO: Ensure that the confusion matrix comes with class labels.
-cm_prop, prop_dict = generator.get_proposition_labelled_conf_mat()
-cm = generator.get_distance_param_conf_mat()
-# x = generator.get_clustered_conf_mat()
-# print(cm_prop)
-for dist_bin in cm_prop.keys(): fin_prop += cm_prop[dist_bin]
+if compute_prop_cm:
+    cm_prop = generator.get_prop_cm()
+    cm_prop_full = sum(cm_prop_k for cm_prop_k in cm_prop.values())
+    list_of_propositions, prop_dict = generator.get_list_of_propositions()
+    confusion_matrix = ConfusionMatrix(generator, list_of_classes, list_of_propositions, labels, prop_dict)
+    # Saving prop cm:
+    prop_cm_file = f"{cm_dir}/low_thresh_prop_cm.pkl"
+    confusion_matrix.set_confusion_matrix(cm_prop, label_type="prop")
+    confusion_matrix.save_confusion_matrix(prop_cm_file, label_type="prop")
 
-print (fin_prop) 
-# st()
+    # Printing old prop_cm:
+    old_prop_cm_pkl_file = Path(f"{repo_dir}/saved_cms/lidar/mini/prop_cm.pkl")
+    old_prop_cm_pkl_file = f"{repo_dir}/saved_cms/lidar/mini/prop_cm.pkl"
+    with open(old_prop_cm_pkl_file, "rb") as f:
+        old_prop_cm = pkl.load(f)
+    f.close()
+    old_prop_cm_full = sum(cm_prop_k for cm_prop_k in old_prop_cm.values())
+    print("===================================")
+    print("Old Prop-Labeled CM:")
+    print(old_prop_cm_full)
+    print("New Prop-Labeled CM:")
+    print(cm_prop_full)
+    print("===================================")
 
-# print(fin_prop)
-confusion_matrix = ConfusionMatrix(generator, list_of_classes, labels)
-confusion_matrix.set_confusion_matrix(cm, label_type="class")
-confusion_matrix.save_confusion_matrix(cm_dir, label_type="class")
-confusion_matrix.set_prop_labels(prop_dict)
-confusion_matrix.set_confusion_matrix(cm_prop, label_type="prop")
-confusion_matrix.save_confusion_matrix(cm_dir, label_type="prop")
+if compute_class_cm:
+    cm = generator.get_class_cm()
+    cm_full = sum(cm_k for cm_k in cm.values())
+    # confusion_matrix.set_confusion_matrix(cm, label_type="class")
+    cm_file = f"{cm_dir}/low_thresh_cm.pkl"
+    #confusion_matrix.save_confusion_matrix(cm_file, label_type="class")
+    # Printing old class_cm:
+    old_cm_pkl_file = Path(f"{repo_dir}/saved_cms/lidar/mini/cm.pkl")
+    with open(old_cm_pkl_file, "rb") as f:
+        old_cm = pkl.load(f)
+    f.close()
+    old_cm_full = sum(cm_k for cm_k in old_cm.values())
+    print("===================================")
+    print("Old Class Labeled CM:")
+    print(old_cm_full)
+    print("New Class Labeled CM:")
+    print(cm_full)
+    print("===================================")
+
+if compute_prop_segmented_cm:
+    cm_prop_w_clusters = generator.get_prop_segmented_cm()
+    print("Generated clustered conf mat")
+    cm_prop_w_clusters_full = sum(cm_k for cm_k in cm_prop_w_clusters.values())
+    print("===================================")
+    print("Clustered CM:")
+    print(cm_prop_w_clusters_full)
+    
+    # Saving clustered confusion matrix:
+    # Todo: Integrate the cluster saving into confusion matrix
+    prop_cm_file_w_clusters = f"{cm_dir}/low_thresh_prop_cm_cluster.pkl"
+    with open(prop_cm_file_w_clusters, "wb") as f:
+        pkl.dump(cm_prop_w_clusters, f)
+    f.close()
+
+print("Completed Run")
