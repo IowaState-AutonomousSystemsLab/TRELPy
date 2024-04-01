@@ -24,14 +24,12 @@ from nuscenes.eval.detection.evaluate import NuScenesEval, load_gt
 from nuscenes.eval.detection.data_classes import DetectionBox
 
 from classes import cls_attr_dist, class_names, mini_val_tokens
-from custom_env import home_dir, output_dir, preds_dir, model_dir, is_set_to_mini, dataset_version, eval_config, eval_set_map
+from custom_env import home_dir, output_dir, preds_dir, model_dir, is_set_to_mini, dataset_version, eval_config, eval_set_map, DET_THRESH
 from custom_env import dataset_root as dataroot
 
 import import_ipynb
 # import nuscenes_accumulate
 # import nuscenes_evaluate    
-
-DETECTION_THRESHOLD = 0.35
 
 backend_args = None
 nusc = NuScenes(version=dataset_version, dataroot = dataroot)
@@ -115,7 +113,7 @@ def transform_det_annos_to_nusc_annos(det_annos: List, nusc: NuScenes) -> Dict:
 
     Returns:
         dict: A dictionary containing the transformed NuScenes annotations with keys 'results' and 'meta'. 
-        The resulting annotations have a confidence level greater than 0.6
+        The resulting annotations have a confidence level greater than the DETECTION THRESHOLD (0.6)
 
     Raises:
         KeyError: If a required key is missing in the detection annotations.
@@ -161,9 +159,10 @@ def transform_det_annos_to_nusc_annos(det_annos: List, nusc: NuScenes) -> Dict:
                 'detection_score': box.score,
                 'attribute_name': attr
             }
-            if det['scores_3d'][k] >= 0.6:
-                annos.append(nusc_anno)
-
+            # if det['scores_3d'][k] >= DET_THRESH:
+            #     annos.append(nusc_anno)
+            annos.append(nusc_anno)
+            
         nusc_annos['results'].update({det["metadata"]["token"]: annos})
 
     return nusc_annos

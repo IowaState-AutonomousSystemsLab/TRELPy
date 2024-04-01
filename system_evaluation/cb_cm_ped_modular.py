@@ -10,13 +10,12 @@ from print_utils import print_cm, print_param_cm
 # from ..custom_env import cm_dir, is_set_to_mini
 try: 
     from system_evaluation.markov_chain import construct_mc as cmp
-    from system_evaluation.controllers import construct_controllers as K_des
     from system_evaluation.markov_chain.markov_chain_setup import call_MC, call_MC_param
 except:
     from markov_chain import construct_mc as cmp
-    from controllers import construct_controllers as K_des
     from markov_chain.markov_chain_setup import call_MC, call_MC_param
 
+import importlib
 import matplotlib as plt
 # from figure_plot import probability_plot
 import time
@@ -152,6 +151,22 @@ def simulate(MAX_V=6):
     INIT_V, P, P_param = compute_probabilities(Ncar, MAX_V)
     save_results(INIT_V, P, P_param)
 
+def get_controllers(vcar):
+    K = dict()
+    module_name = f"controllers.ped_controller_init_speed_{vcar}"
+    Kped = importlib.import_module(module_name, package=None)
+    st()
+    module_name = f"controllers.not_ped_controller_init_speed_{vcar}"
+    Kobs = importlib.import_module(module_name, package=None)
+
+    module_name = f"controllers.empty_controller_init_speed_{vcar}"
+    Kempty = importlib.import_module(module_name, package=None)
+
+    K["ped"] = Kped
+    K["obs"] = Kobs
+    K["empty"] = Kempty
+    return K
+
 def compute_probabilities(Ncar, MAX_V):
     C, param_C = cmp.confusion_matrix(cm_fn)
     print(" =============== Full confusion matrix ===============")
@@ -180,8 +195,7 @@ def compute_probabilities(Ncar, MAX_V):
             print(start_state)
 
             S, state_to_S, K_backup = cmp.system_states_example_ped(Ncar, Vlow, Vhigh)
-            K = K_des.construct_controllers(Ncar, Vlow, Vhigh, xped, vcar,control_dir=control_dir)
-            st()
+            K = get_controllers(vcar)
             true_env = str(1) # Sidewalk 3
             true_env_type = "ped"
             O = {"ped", "obj", "empty"}

@@ -126,3 +126,14 @@ class ConfusionMatrix:
                 for kpred, label_pred in self.labels.items():
                     C[label_pred, label_true] = 0.0
         return C
+
+if __name__ == "__main__":
+    cm_file = f"{cm_dir}/low_thresh_cm.pkl"
+    with open(cm_file, "rb") as f:
+        low_thresh_cm = pkl.load(f)
+    f.close()
+    low_thresh_cm_full = sum(cm_k for cm_k in low_thresh_cm.values())
+    print("===================================")
+    print("Low Threshold CM:")
+    print(low_thresh_cm_full)
+    print("===================================")

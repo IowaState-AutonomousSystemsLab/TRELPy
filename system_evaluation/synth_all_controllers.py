@@ -3,6 +3,7 @@ from experiment_file import *
 from controllers import construct_controllers as K_des
 from formula import *
 from problem_setup import *
+import json
 
 def synthesize(MAX_V):
     Ncar = get_Ncar(MAX_V=MAX_V)
@@ -13,14 +14,15 @@ def synthesize(MAX_V):
         Vlow, Vhigh, xped, formula = initialize(vmax, Ncar)
         print("Specification: ")
         print(formula)
+        K = dict() # Dictionary of all controllers across speeds
         for vcar in range(1, vmax+1):  # Initial speed at starting point
-            state_f = lambda x,v: (Vhigh-Vlow+1)*(x-1) + v
-            start_state = "S"+str(state_f(1,vcar))
-            print(start_state)
-
-            S, state_to_S, K_backup = cmp.system_states_example_ped(Ncar, Vlow, Vhigh)
+            K[vcar] = dict()
             control_dir_for_speed = control_dir + ""
-            K = K_des.construct_controllers(Ncar, Vlow, Vhigh, xped, vcar,control_dir=control_dir_for_speed)
+            K[vcar] = K_des.construct_controllers(Ncar, Vlow, Vhigh, xped, vcar,control_dir=control_dir_for_speed)
+        
+        # control_dict_file = control_dir + f"/controllers_for_max_speed_{Vhigh}.json"
+        # with open(control_dict_file, 'w') as f:
+        #     f.dump(K)
 
 if __name__=="__main__":
     MAX_V = 3

@@ -52,6 +52,14 @@ conf_mat_mapping = {
     "motorcycle": OBS,
     "traffic_cone": OBS
 }
+
+# conf_mat_mapping = {
+#     "pedestrian": PED,
+#     "bus": OBS,
+#     "car" : OBS,
+#     "truck": OBS,
+# }
+
 generator = GenerateConfusionMatrix(nusc=nusc,
     config=eval_config,
     result_path=f'{model_dir}/results_nusc.json',
@@ -68,7 +76,7 @@ generator.set_debug(False)
 # generator.set_list_of_classes(list_of_classes)
 # generator.set_list_of_propositions()
 
-compute_prop_cm = True
+compute_prop_cm = False
 compute_class_cm = True
 compute_prop_segmented_cm = False
 save_prop_dict = False
@@ -77,10 +85,9 @@ if compute_prop_cm:
     cm_prop = generator.get_prop_cm()
     cm_prop_full = sum(cm_prop_k for cm_prop_k in cm_prop.values())
     list_of_propositions, prop_dict = generator.get_list_of_propositions()
-
-    # Saving prop cm:
     confusion_matrix = ConfusionMatrix(generator, list_of_classes, list_of_propositions, labels, prop_dict)
-    prop_cm_file = f"{cm_dir}/new_matched_prop_cm.pkl"
+    # Saving prop cm:
+    prop_cm_file = f"{cm_dir}/low_thresh_prop_cm.pkl"
     confusion_matrix.set_confusion_matrix(cm_prop, label_type="prop")
     confusion_matrix.save_confusion_matrix(prop_cm_file, label_type="prop")
 
@@ -101,9 +108,9 @@ if compute_prop_cm:
 if compute_class_cm:
     cm = generator.get_class_cm()
     cm_full = sum(cm_k for cm_k in cm.values())
-    confusion_matrix.set_confusion_matrix(cm, label_type="class")
-    cm_file = f"{cm_dir}/new_matched_cm.pkl"
-    confusion_matrix.save_confusion_matrix(cm_file, label_type="class")
+    # confusion_matrix.set_confusion_matrix(cm, label_type="class")
+    cm_file = f"{cm_dir}/low_thresh_cm.pkl"
+    #confusion_matrix.save_confusion_matrix(cm_file, label_type="class")
     # Printing old class_cm:
     old_cm_pkl_file = Path(f"{repo_dir}/saved_cms/lidar/mini/cm.pkl")
     with open(old_cm_pkl_file, "rb") as f:
@@ -124,10 +131,12 @@ if compute_prop_segmented_cm:
     print("===================================")
     print("Clustered CM:")
     print(cm_prop_w_clusters_full)
-    st()
+    
     # Saving clustered confusion matrix:
     # Todo: Integrate the cluster saving into confusion matrix
-    prop_cm_file_w_clusters = f"{cm_dir}/new_matched_prop_cm_cluster.pkl"
+    prop_cm_file_w_clusters = f"{cm_dir}/low_thresh_prop_cm_cluster.pkl"
     with open(prop_cm_file_w_clusters, "wb") as f:
         pkl.dump(cm_prop_w_clusters, f)
     f.close()
+
+print("Completed Run")

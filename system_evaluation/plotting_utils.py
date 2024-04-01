@@ -1,5 +1,4 @@
 # Utility functions for plotting
-import tabulate
 
 def update_max(numlist=None, current_max=None):
     '''

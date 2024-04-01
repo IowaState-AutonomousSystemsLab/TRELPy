@@ -101,12 +101,24 @@ class GenerateConfusionMatrix:
             self.add_empty_label(self.list_of_classes, self.class_dict)
             self.add_empty_label(self.list_of_propositions, self.prop_dict)
 
+        if self.verbose:
+            print("Initializing the generator")
         self.initialize()
+
+        if self.verbose:
+            print("Loading ground truth and prediction boxes")
         self.__load_boxes()
+
+        if self.verbose:
+            print("Loading ground truth and prediction boxes")
         self.group_boxes_into_bands() # 
         self.initialize_clusters()
+        if self.verbose:
+            print("Matching boxes")
         self.match_boxes()
         
+        if self.verbose:
+            print("Match boxes completed.")
         # self.__check_distance_param_settings()
         
         # Check result file exists.
@@ -141,9 +153,10 @@ class GenerateConfusionMatrix:
         
         
         self.gt_boxes = load_gt(self.nusc, self.eval_set, DetectionBox, verbose=self.verbose)
-        print("Line 144: No. of results dir:", self.result_path)
-        print("Line 144: No. of Pred tokens:", len(self.pred_boxes.sample_tokens))
-        print("Line 144: No. of GT tokens:", len(self.gt_boxes.sample_tokens))
+        if self.verbose:
+            print("Results dir:", self.result_path)
+            print("Load boxes: No. of Pred tokens:", len(self.pred_boxes.sample_tokens))
+            print("Load boxes: No. of GT tokens:", len(self.gt_boxes.sample_tokens))
         assert set(self.pred_boxes.sample_tokens) == set(self.gt_boxes.sample_tokens), \
             "Samples in split doesn't match samples in predictions."
 
@@ -159,6 +172,9 @@ class GenerateConfusionMatrix:
             print('Filtering ground truth annotations')
         self.gt_boxes = filter_eval_boxes(self.nusc, self.gt_boxes, self.cfg.class_range, verbose=self.verbose)
         self.sample_tokens = self.gt_boxes.sample_tokens
+        
+        if self.verbose:
+            print("Completed filtering boxes")
 
         # Create prediction boxes with ID:
         self.pred_boxes_ID = EvalBoxes()
@@ -423,6 +439,9 @@ class GenerateConfusionMatrix:
         for box in boxes:
             if box:
                 classes.add(box.detection_name) 
+                if box.detection_name not in {"pedestrian", "car", "truck", "bus", "traffic_cone", "bicycle", "construction_vehicle", "barrier", "motorcycle","trailer"}:
+                    st()
+        classes = [c for c in classes if c in {"pedestrian", "car", "truck", "bus"}]
         classes = set({"ped" if x == "pedestrian" else "obs" for x in classes})
         if len(classes) == 0:
             classes = set({"empty"})
@@ -434,7 +453,7 @@ class GenerateConfusionMatrix:
             pred_label = self.get_labels_for_boxes([pred_box]).pop()
         except:
             traceback.print_exc()
-
+        st()
         gt_idx = None
         pred_idx = None
         

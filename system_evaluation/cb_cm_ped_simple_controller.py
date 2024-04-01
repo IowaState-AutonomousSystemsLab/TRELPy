@@ -1,4 +1,4 @@
-# Copy of cb_cm_single_ped.py for comparison.
+# Copy of cb_cm_single_ped.py with simple controller instead of tulip controller.
 import sys
 sys.path.append("..")
 import numpy as np
@@ -9,13 +9,11 @@ from experiment_file import *
 from print_utils import print_cm, print_param_cm
 # from ..custom_env import cm_dir, is_set_to_mini
 try: 
-    from system_evaluation.markov_chain import construct_mc as cmp
-    from system_evaluation.controllers import construct_controllers as K_des
-    from system_evaluation.markov_chain.markov_chain_setup import call_MC, call_MC_param
+    from system_evaluation.simple_markov_chain import construct_mc as cmp
+    from system_evaluation.simple_markov_chain.setup_mc import call_MC, call_MC_param
 except:
-    from markov_chain import construct_mc as cmp
-    from controllers import construct_controllers as K_des
-    from markov_chain.markov_chain_setup import call_MC, call_MC_param
+    from simple_markov_chain import construct_mc as cmp
+    from simple_markov_chain.setup_mc import call_MC, call_MC_param
 
 import matplotlib as plt
 # from figure_plot import probability_plot
@@ -178,30 +176,29 @@ def compute_probabilities(Ncar, MAX_V):
             state_f = lambda x,v: (Vhigh-Vlow+1)*(x-1) + v
             start_state = "S"+str(state_f(1,vcar))
             print(start_state)
-
-            S, state_to_S, K_backup = cmp.system_states_example_ped(Ncar, Vlow, Vhigh)
-            K = K_des.construct_controllers(Ncar, Vlow, Vhigh, xped, vcar,control_dir=control_dir)
             st()
+            S, state_to_S = cmp.system_states_example_ped(Ncar, Vlow, Vhigh)
+            
             true_env = str(1) # Sidewalk 3
             true_env_type = "ped"
             O = {"ped", "obj", "empty"}
             state_info = dict()
             state_info["start"] = start_state
         
-            M = call_MC(S, O, state_to_S, K, K_backup, C, true_env, true_env_type, state_info)
-            param_M = call_MC_param(S, O, state_to_S, K, K_backup, param_C, true_env, true_env_type, xped, state_info)
-
-            # result = M.prob_TL(formula)
+            M = call_MC(S, O, state_to_S, C, true_env, true_env_type, state_info, Ncar, xped, Vhigh)
+            
             result = M.prob_TL(formula)
+            P[vmax].append(result[start_state])
+
+            param_M = call_MC_param(S, O, state_to_S, param_C, true_env, true_env_type, state_info, Ncar, xped, Vhigh)
             result_param = param_M.prob_TL(formula)
+            P_param[vmax].append(result_param[start_state])
+            
             print('Probability of eventually reaching good state for initial speed, {}, and max speed, {} is p = {}:'.format(vcar, vmax, result[start_state]))
             # Store results:
             VMAX.append(vmax)
             INIT_V[vmax].append(vcar)
-            # p = result[start_state]
-            # print('Probability of satisfaction for initial speed, {}, and max speed, {} is p = {}:'.format(vcar, vmax, p))
-            P[vmax].append(result[start_state])
-            P_param[vmax].append(result_param[start_state])
+            
     return INIT_V, P, P_param
 
 def save_results(INIT_V, P, P_param):
@@ -222,5 +219,5 @@ def save_results(INIT_V, P, P_param):
         json.dump(P_param, f)
 
 if __name__=="__main__":
-    MAX_V = 6
+    MAX_V = 3
     simulate(MAX_V)

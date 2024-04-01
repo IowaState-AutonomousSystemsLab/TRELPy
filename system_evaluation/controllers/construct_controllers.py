@@ -24,7 +24,7 @@ def design_C(env_vars, sys_vars, env_init, sys_init, env_safe, sys_safe, env_pro
     # Constructing GR1spec from environment and systems specifications:
     specs = spec.GRSpec(env_vars, sys_vars, env_init, sys_init,
                         env_safe, sys_safe, env_prog, sys_prog)
-    specs.moore = True
+    specs.moore = False
     specs.qinit = '\E \A'
 
     # Synthesize
@@ -46,9 +46,6 @@ def not_pedestrianK(N, xcar, vcar, Vlow, Vhigh, xped):
     sys_vars['vcar'] = (Vlow, Vhigh)
     env_vars = {}
     env_vars['xobj'] = (0,1) # Difficult to have a set of just 1
-
-    sys_init = {'xcar='+str(xcar), 'vcar='+str(vcar)}
-    env_init = {'xobj='+str(1)}
 
      # Test lines:
     sys_init = {'xcar='+str(xcar), 'vcar='+str(vcar)}
@@ -153,7 +150,7 @@ def emptyK(N, xcar, vcar, Vlow, Vhigh, xped):
     sys_init = {'xcar='+str(xcar), 'vcar='+str(vcar)}
     env_init = {'xempty='+str(1)}
      # Test lines:
-    sys_init = {'xcar='+str(xcar), 'vcar='+str(vcar)}
+    sys_init = {'xcar='+str(xcar)}
     env_init = {'xempty='+str(1)}
 
     sys_prog = set() # For now, no need to have progress
@@ -208,21 +205,21 @@ def construct_controllers(N, Vlow, Vhigh, xped, vcar, control_dir=None):
     # pretty_print_specs(sys_safe, "sys safe")
     Kped = design_C(env_vars, sys_vars, env_init, sys_init, env_safe, sys_safe, env_prog, sys_prog)
     if control_dir:
-        ctrl_path = os.path.join(control_dir, "ped_controller.py")
+        ctrl_path = os.path.join(control_dir, f"ped_controller_init_speed_{vcar}_max_speed_{Vhigh}.py")
         write_python_case(ctrl_path, Kped)
 
     # When something other than a pedestrian is observed:
     env_vars, sys_vars, env_init, sys_init, env_safe, sys_safe, env_prog, sys_prog = not_pedestrianK(N, xcar, vcar, Vlow, Vhigh, xped)
     Knot_ped = design_C(env_vars, sys_vars, env_init, sys_init, env_safe, sys_safe, env_prog, sys_prog)
     if control_dir:
-        ctrl_path = os.path.join(control_dir, "not_ped_controller.py")
+        ctrl_path = os.path.join(control_dir, f"not_ped_controller_init_speed_{vcar}_max_speed_{Vhigh}.py")
         write_python_case(ctrl_path, Knot_ped)
 
     # When nothing is observed:
     env_vars, sys_vars, env_init, sys_init, env_safe, sys_safe, env_prog, sys_prog = emptyK(N, xcar, vcar, Vlow, Vhigh, xped)
     Kempty = design_C(env_vars, sys_vars, env_init, sys_init, env_safe, sys_safe, env_prog, sys_prog)
     if control_dir:
-        ctrl_path = os.path.join(control_dir, "empty_controller.py")
+        ctrl_path = os.path.join(control_dir, f"empty_controller_init_speed_{vcar}_max_speed_{Vhigh}.py")
         write_python_case(ctrl_path, Kempty)
 
     K = dict()

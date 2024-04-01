@@ -1,12 +1,12 @@
 import sys
 sys.path.append("../..")
-import controllers.ped_controller as Kped
-import controllers.not_ped_controller as Kobj
-import controllers.empty_controller as Kempty
+import controllers.ped_controller_init_speed_1 as Kped
+import controllers.not_ped_controller_init_speed_1 as Kobj
+import controllers.empty_controller_init_speed_1 as Kempty
 import markov_chain.construct_mc as cmp
 import markov_chain.distance_param_construct_mc as param_cmp
 import importlib
-import pdb
+from pdb import set_trace as st
 
 def call_MC(S, O, state_to_S, K, K_backup, C, true_env, true_env_type, state_info):
     importlib.reload(Kped)
@@ -15,12 +15,14 @@ def call_MC(S, O, state_to_S, K, K_backup, C, true_env, true_env_type, state_inf
 
     K_strat = dict()
     K_strat["ped"] = Kped
-    K_strat["obj"] = Kobj
+    K_strat["obs"] = Kobj
     K_strat["empty"] = Kempty
+
+    # K_strat = K
 
     obs_keys = dict()
     obs_keys["ped"] = ["xcar", "vcar"]
-    obs_keys["obj"] = ["xobj"]
+    obs_keys["obs"] = ["xobs"]
     obs_keys["empty"] = ["xempty"]
 
     M = cmp.synth_markov_chain(S, O, state_to_S)
@@ -41,18 +43,20 @@ def call_MC(S, O, state_to_S, K, K_backup, C, true_env, true_env_type, state_inf
     return M
 
 def call_MC_param(S, O, state_to_S, K, K_backup, param_C, true_env, true_env_type, xped, state_info):
-    importlib.reload(Kped)
-    importlib.reload(Kobj)
-    importlib.reload(Kempty)
+    # importlib.reload(Kped)
+    # importlib.reload(Kobj)
+    # importlib.reload(Kempty)
 
-    K_strat = dict()
-    K_strat["ped"] = Kped
-    K_strat["obj"] = Kobj
-    K_strat["empty"] = Kempty
+    # K_strat = dict()
+    # K_strat["ped"] = Kped
+    # K_strat["obs"] = Kobj
+    # K_strat["empty"] = Kempty
+
+    K_strat = K
 
     obs_keys = dict()
     obs_keys["ped"] = ["xcar", "vcar"]
-    obs_keys["obj"] = ["xobj"]
+    obs_keys["obs"] = ["xobs"]
     obs_keys["empty"] = ["xempty"]
 
     M = param_cmp.synth_markov_chain(S, O, state_to_S)

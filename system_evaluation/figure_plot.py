@@ -5,7 +5,7 @@ import os
 import pdb
 from pathlib import Path
 from experiment_file import *
-from utils import update_max
+from plotting_utils import update_max
 
 def probability_plot(INIT_V, P, fig_name,title=None):
     fig, ax = plt.subplots()
@@ -16,7 +16,8 @@ def probability_plot(INIT_V, P, fig_name,title=None):
         max_p = update_max(probabilities, max_p)
         init_speed = INIT_V[k]
         plt.plot(init_speed, probabilities, 'o--', label=f"V={k}")
-    leg = plt.legend(loc="best")
+    leg = plt.legend(loc="best", fontsize=20)
+    # plt.legend(fontsize=20)
     plt.xlabel("Initial speed",fontsize=15)
     plt.ylabel("Probability of satisfaction", fontsize=15)
     plt.xticks(np.arange(1,10,1))
@@ -53,7 +54,7 @@ def sensitivity_probability_plot_w_errorbars(INIT_V, P, std_P, fig_name,title=No
         probabilities = P[k]
         init_speed = INIT_V[k]
         error_bar = std_P[k]
-        # pdb.set_trace()
+
         plt.errorbar(init_speed, probabilities, yerr=error_bar,  fmt='-.o', capsize=6,label=f"TP={k}")
     leg = plt.legend(loc="best")
     plt.xlabel("Initial speed",fontsize=15)
@@ -137,13 +138,6 @@ def plot_results(results_folder, MAX_V, res_type):
         probability_plot(INIT_V, P, fig_name, title="Class-based")
         probability_plot(INIT_V, P_param, fig_name_param, title="Class-based, distance-parametrized")
 
-    # if res_type == "prop_based":
-    #     probability_plot(INIT_V, P, fig_name)
-    #     probability_plot(INIT_V, P_param, fig_name_param)
-    # else:
-    #     probability_plot(INIT_V, P, fig_name)
-    #     probability_plot(INIT_V, P_param, fig_name_param)
-
 def plot_sensitivity_results(MAX_V):
     fname_v = "results/sensitivity_cm_ped_vmax_"+str(MAX_V)+"_initv.json"
     fname_p = "results/sensitivity_cm_ped_vmax_"+str(MAX_V)+"_prob.json"
@@ -185,10 +179,10 @@ def plot_sensitivity_results_w_errorbars(MAX_V):
     sensitivity_probability_plot_w_errorbars(INIT_V, P, std_P, fig_name, title=title)
 
 if __name__=="__main__":
-    MAX_V = 3
+    MAX_V = 6
     # plot_results(MAX_V, "prop_based")
     results_folder = Path(f"{cm_dir}/probability_results")
-    result_type = "prop_seg"
+    result_type = "class"
     plot_results(results_folder, MAX_V, result_type)
     #plot_sensitivity_results(MAX_V)
     # plot_sensitivity_results_w_errorbars(MAX_V)
