@@ -1,0 +1,3 @@
+Modality: Lidar
+Config file: pointpillars_hv_fpn_sbn-all_8xb2-amp-2x_nus-3d.py
+Checkpoint file: hv_pointpillars_fpn_sbn-all_fp16_2x8_2x_nus-3d_20201021_120719-269f9dd6.pth
