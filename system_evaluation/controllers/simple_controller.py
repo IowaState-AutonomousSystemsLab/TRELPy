@@ -13,8 +13,7 @@ def control(xped, state, obs, Ncar):
     if obs == "ped":
         steps_to_stop = (vcar+1)*vcar/2
         steps_to_crosswalk = xcar_stop - xcar
-        if xcar == 6 and vcar == 1:
-            st()
+        
         if vcar >= 1 and steps_to_crosswalk >= 0:
             if steps_to_stop < steps_to_crosswalk:
                 # Continue at same speed
@@ -28,9 +27,7 @@ def control(xped, state, obs, Ncar):
             xcar_new = xcar
             vcar_new = vcar
             
-    
-            
-        new_state = (xcar_new, vcar_new)
+        new_state = (int(xcar_new), int(vcar_new))
 
     if obs != "ped":
         xcar_new = min(xcar + vcar, Ncar)

@@ -23,7 +23,7 @@ import sys
 sys.setrecursionlimit(10000)
 
 def get_state(x, v, Vhigh, Vlow=0):
-    state_num = (Vhigh-Vlow+1)*(x-1)+v
+    state_num = int((Vhigh-Vlow+1)*(x-1)+v)
     state_str = "S"+str(state_num)
     return state_num, state_str
 
@@ -60,8 +60,9 @@ def set_crosswalk_cell(Ncar, xmax_stop):
     '''
     
     Nped = Ncar - 1 # Penultimate cell
-    xped = np.random.randint(xmax_stop+1, Ncar) # Pick a pedestrian cell from [xmax_stop+1, Ncar]
     
+    # xped = np.random.randint(xmax_stop+1, Ncar) # Pick a pedestrian cell from [xmax_stop+1, Ncar]
+    xped = xmax_stop+1
     xcar_stop = xped - 1 # Cell state of the car by which v = 0
     assert(xcar_stop >= xmax_stop)
     return xped, xcar_stop
@@ -176,7 +177,6 @@ def compute_probabilities(Ncar, MAX_V):
             state_f = lambda x,v: (Vhigh-Vlow+1)*(x-1) + v
             start_state = "S"+str(state_f(1,vcar))
             print(start_state)
-            st()
             S, state_to_S = cmp.system_states_example_ped(Ncar, Vlow, Vhigh)
             
             true_env = str(1) # Sidewalk 3
@@ -186,7 +186,6 @@ def compute_probabilities(Ncar, MAX_V):
             state_info["start"] = start_state
         
             M = call_MC(S, O, state_to_S, C, true_env, true_env_type, state_info, Ncar, xped, Vhigh)
-            
             result = M.prob_TL(formula)
             P[vmax].append(result[start_state])
 
