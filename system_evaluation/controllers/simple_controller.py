@@ -34,6 +34,40 @@ def control(xped, state, obs, Ncar):
         new_state = (xcar_new, vcar)
     return new_state
 
+def control_simple(xped, state, obs, Ncar):
+    '''
+    xped: Location of pedestrian
+    xcar: Location of car
+    vcar: Speed of car
+    obs: (ped/obs/empty) type of obstacle
+    '''
+    xcar, vcar = state
+    xcar_stop = xped - 1 # Crosswalk location
+    if obs == "ped":
+        steps_to_stop = (vcar+1)*vcar/2
+        threshold_cell = xcar_stop - steps_to_stop
+        steps_to_crosswalk = xcar_stop - xcar
+        
+        if vcar >= 1 and steps_to_crosswalk >= 0:
+            if xcar + vcar <= threshold_cell:
+                # Continue at same speed
+                xcar_new = min(xcar + vcar, Ncar)
+                vcar_new = vcar
+            elif xcar + vcar > threshold_cell:
+                # Decelerate to stop
+                xcar_new = min(xcar + vcar, Ncar)
+                vcar_new = vcar - 1
+        else:   # Not moving
+            xcar_new = xcar
+            vcar_new = vcar
+            
+        new_state = (int(xcar_new), int(vcar_new))
+
+    if obs != "ped":
+        xcar_new = min(xcar + vcar, Ncar)
+        new_state = (xcar_new, vcar)
+    return new_state
+
 def control_dict(Ncar, Vhigh, env_obs, xped):
     K = dict()
     for obs in env_obs:
@@ -41,7 +75,7 @@ def control_dict(Ncar, Vhigh, env_obs, xped):
         for xcar in range(1, Ncar+1):
             for vcar in range(0, Vhigh+1):
                 state = (xcar, vcar)
-                K[obs][state] = control(xped, state, obs, Ncar)
+                K[obs][state] = control_simple(xped, state, obs, Ncar)
     return K
 
 

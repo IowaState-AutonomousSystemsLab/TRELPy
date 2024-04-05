@@ -62,7 +62,7 @@ def set_crosswalk_cell(Ncar, xmax_stop):
     Nped = Ncar - 1 # Penultimate cell
     
     # xped = np.random.randint(xmax_stop+1, Ncar) # Pick a pedestrian cell from [xmax_stop+1, Ncar]
-    xped = xmax_stop+1
+    xped = xmax_stop+9
     xcar_stop = xped - 1 # Cell state of the car by which v = 0
     assert(xcar_stop >= xmax_stop)
     return xped, xcar_stop
@@ -143,13 +143,70 @@ def get_confusion_matrix():
     return C, param_C
 
 def init(MAX_V=6):
-    Ncar = int(MAX_V*(MAX_V+1)/2 + 4)
+    Ncar = int(MAX_V*(MAX_V+1)/2 + 10)
     return Ncar
 
 def simulate(MAX_V=6):
     Ncar = init(MAX_V=MAX_V)
     INIT_V, P, P_param = compute_probabilities(Ncar, MAX_V)
     save_results(INIT_V, P, P_param)
+
+def compute_probabilities_simple(Ncar, MAX_V):
+    C, param_C = cmp.confusion_matrix(cm_fn)
+    print(" =============== Full confusion matrix ===============")
+    print_cm(C)
+    print(" =============== Parametrized confusion matrix ===============")
+    print_param_cm(param_C)
+    print("===========================================================")
+    st()
+    VMAX = []
+    INIT_V = dict()
+    P = dict()
+    P_param = dict()
+    Vlow, Vhigh, xped, formula = initialize(MAX_V, Ncar)
+
+    for vmax in range(1,MAX_V+1):
+        INIT_V[vmax] = []
+        P[vmax] = []
+        P_param[vmax] = []
+        print("===========================================================")
+        print("Max Velocity: ", vmax)
+        # Initial conditions set for all velocities
+        
+        state_f = lambda x,v: (Vhigh-Vlow+1)*(x-1) + v
+        print("Specification: ")
+        print(formula)
+        for vcar in range(1, vmax+1):  # Initial speed at starting point
+            
+            start_state = "S"+str(state_f(1,vcar))
+            print(start_state)
+            S, state_to_S = cmp.system_states_example_ped(Ncar, Vlow, Vhigh)
+            
+            true_env = str(1) # Sidewalk 3
+            true_env_type = "ped"
+            O = {"ped", "obj", "empty"}
+            state_info = dict()
+            state_info["start"] = start_state
+
+            if vmax == 3 and vcar == 2:
+                print(" Vmax  = 3 and vcar = 2")
+                st()
+
+            M = call_MC(S, O, state_to_S, C, true_env, true_env_type, state_info, Ncar, xped, Vhigh)
+            result = M.prob_TL(formula)
+            P[vmax].append(result[start_state])
+
+            param_M = call_MC_param(S, O, state_to_S, param_C, true_env, true_env_type, state_info, Ncar, xped, Vhigh)
+            result_param = param_M.prob_TL(formula)
+            P_param[vmax].append(result_param[start_state])
+            
+            
+            print('Probability of eventually reaching good state for initial speed, {}, and max speed, {} is p = {}:'.format(vcar, vmax, result[start_state]))
+            # Store results:
+            VMAX.append(vmax)
+            INIT_V[vmax].append(vcar)
+            
+    return INIT_V, P, P_param
 
 def compute_probabilities(Ncar, MAX_V):
     C, param_C = cmp.confusion_matrix(cm_fn)
@@ -163,6 +220,8 @@ def compute_probabilities(Ncar, MAX_V):
     INIT_V = dict()
     P = dict()
     P_param = dict()
+    Vlow, Vhigh, xped, formula = initialize(MAX_V, Ncar)
+    
     for vmax in range(1,MAX_V+1):
         INIT_V[vmax] = []
         P[vmax] = []
@@ -170,7 +229,7 @@ def compute_probabilities(Ncar, MAX_V):
         print("===========================================================")
         print("Max Velocity: ", vmax)
         # Initial conditions set for all velocities
-        Vlow, Vhigh, xped, formula = initialize(vmax, Ncar)
+        
         print("Specification: ")
         print(formula)
         for vcar in range(1, vmax+1):  # Initial speed at starting point
@@ -180,7 +239,7 @@ def compute_probabilities(Ncar, MAX_V):
             S, state_to_S = cmp.system_states_example_ped(Ncar, Vlow, Vhigh)
             
             true_env = str(1) # Sidewalk 3
-            true_env_type = "ped"
+            true_env_type = "obj"
             O = {"ped", "obj", "empty"}
             state_info = dict()
             state_info["start"] = start_state
@@ -218,5 +277,5 @@ def save_results(INIT_V, P, P_param):
         json.dump(P_param, f)
 
 if __name__=="__main__":
-    MAX_V = 3
-    simulate(MAX_V)
+    MAX_V = 6
+    simulate(MAX_V=MAX_V)

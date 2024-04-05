@@ -236,7 +236,7 @@ class synth_markov_chain:
     def construct_markov_chain(self): # Construct probabilities and transitions in the markov chain given the controller and confusion matrix
         for Si in list(self.states):
             # print("Finding initial states in the Markov chain: ")
-            # print(Si)
+            
             init_st = self.reverse_state_dict[Si]
             # The output state can be different depending on the observation as defined by the confusion matrix
             for obs in self.obs:
@@ -246,10 +246,12 @@ class synth_markov_chain:
                     prob_t = self.C[obs, self.true_env_type] # Probability of transitions
                 except:
                     st()
+                
                 if (Si, Sj) in self.M.keys():
                     self.M[Si, Sj] = self.M[Si, Sj] + prob_t
                 else:
                     self.M[Si, Sj] = prob_t
+                
             # print(" ")
         return self.M
     # Adding formulae to list of temporal logic formulas:
@@ -275,6 +277,7 @@ class synth_markov_chain:
         # Returns a tulip transys:
         # MC_ts = stormpy_int.to_tulip_transys(path_MC)
         result = stormpy_int.model_checking(self.MC, phi, prism_file_path) # Since there is no moving obstacle, try checking only the pedestrian obstacle
+        
         #for state in self.MC.states:
         #    print("  State {}, with labels {}, Pr = {}".format(state, self.MC.states[state]["ap"], result[str(state)]))
         return result
