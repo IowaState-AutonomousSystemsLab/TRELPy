@@ -39,7 +39,7 @@ def confusion_matrix(conf_matrix, prop_dict_file):
     C = dict()
     param_C = dict()
     cm, param_cm, prop_dict = read_confusion_matrix(conf_matrix, prop_dict_file)
-    st()
+    
     C = construct_confusion_matrix_dict(cm, prop_dict)
     for k, cm in param_cm.items():
         param_C[k] = construct_confusion_matrix_dict(cm, prop_dict)
