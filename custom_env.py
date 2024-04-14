@@ -8,11 +8,11 @@ from nuscenes.eval.common.config import config_factory
 
 ######## PARMS #########
 ## ONLY Change model_name here to make it work with your version.
-# DET_THRESH = 0.1 # Default is 0.35 if not indicated in model name
-# model_name = f"model_good_dtr_{DET_THRESH}" 
-model_name = "model_good"
+DET_THRESH = 0.0 # Default is 0.35 if not indicated in model name
+model_name = "model_04-08-2024_09_52"
+# model_name = "model_good"
 modality = "lidar"
-is_mini = True
+is_mini = False
 ########################
 #### Get Repo Root #####
 def getGitRoot():

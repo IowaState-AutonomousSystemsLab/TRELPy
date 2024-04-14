@@ -1,13 +1,12 @@
 import sys
 sys.path.append("../..")
 import simple_markov_chain.construct_mc as cmp
-import simple_markov_chain.construct_param_mc as param_cmp
-from controllers.simple_controller import control_dict
+from controllers.simple_controller import prop_control_dict, control_dict
 import importlib
 from pdb import set_trace as st
 
 def construction(S, O, state_to_S, C, true_env, true_env_type, Ncar, xped, Vhigh):
-    K_strat = control_dict(Ncar, Vhigh, O, xped)
+    K_strat = prop_control_dict(Ncar, Vhigh, O, xped)
     M = cmp.synth_markov_chain(S, O, state_to_S)
     M.set_confusion_matrix(C)
     M.set_true_env_state(true_env, true_env_type)
@@ -23,10 +22,10 @@ def set_init_state(M, state_info):
     start_state = state_info["start"]
     MC = M.to_MC(start_state) # For setting initial conditions and assigning bad/good labels
 
-def call_MC(S, O, state_to_S, C, true_env, true_env_type, state_info, Ncar, xped, Vhigh):
+def call_MC(S, O, state_to_S, C, class_dict, true_env, true_env_type, state_info, Ncar, xped, Vhigh):
     K_strat = control_dict(Ncar, Vhigh, O, xped)
     M = cmp.synth_markov_chain(S, O, state_to_S)
-    M.set_confusion_matrix(C)
+    M.set_confusion_matrix(C, class_dict)
     M.set_true_env_state(true_env, true_env_type)
     M.set_controller(K_strat)
 
@@ -37,16 +36,16 @@ def call_MC(S, O, state_to_S, C, true_env, true_env_type, state_info, Ncar, xped
     
     return M
 
-def call_MC_param(S, O, state_to_S, param_C, true_env, true_env_type, state_info, Ncar, xped, Vhigh):
+def call_MC_param(S, O, state_to_S, param_C, class_dict, true_env, true_env_type, state_info, Ncar, xped, Vhigh):
     K_strat = control_dict(Ncar, Vhigh, O, xped)
-    M = param_cmp.synth_markov_chain(S, O, state_to_S)
-    M.set_confusion_matrix(param_C)
+    M = cmp.synth_markov_chain(S, O, state_to_S)
+    M.set_param_confusion_matrix(param_C, class_dict)
     M.set_true_env_state(true_env, true_env_type)
     M.set_controller(K_strat)
 
     # Construct Markov chain:
     ped_st = [xped, 0]
-    M.construct_markov_chain(ped_st)
+    M.construct_param_markov_chain(ped_st)
     start_state = state_info["start"]
     MC = M.to_MC(start_state) # For setting initial conditions and assigning bad/good labels
     for k,v in M.M.items():

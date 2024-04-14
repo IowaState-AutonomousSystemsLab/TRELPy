@@ -159,9 +159,11 @@ def transform_det_annos_to_nusc_annos(det_annos: List, nusc: NuScenes) -> Dict:
                 'detection_score': box.score,
                 'attribute_name': attr
             }
-            # if det['scores_3d'][k] >= DET_THRESH:
-            #     annos.append(nusc_anno)
-            annos.append(nusc_anno)
+            try: 
+                if det['scores_3d'][k] >= DET_THRESH:
+                    annos.append(nusc_anno)
+            except:
+                annos.append(nusc_anno)
             
         nusc_annos['results'].update({det["metadata"]["token"]: annos})
 

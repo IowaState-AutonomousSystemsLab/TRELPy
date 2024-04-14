@@ -127,7 +127,7 @@ def plot_results(results_folder, MAX_V, res_type):
         P = json.load(fp)
     with open(fname_p_param) as fp_param:
         P_param = json.load(fp_param)
-
+    
     if res_type == "prop":
         probability_plot(INIT_V, P, fig_name, title="Proposition-based")
         probability_plot(INIT_V, P_param, fig_name_param, title="Proposition-based, distance-parametrized")
@@ -182,7 +182,7 @@ if __name__=="__main__":
     MAX_V = 6
     # plot_results(MAX_V, "prop_based")
     results_folder = Path(f"{cm_dir}/probability_results")
-    result_type = "class"
+    result_type = "prop"
     plot_results(results_folder, MAX_V, result_type)
     #plot_sensitivity_results(MAX_V)
     # plot_sensitivity_results_w_errorbars(MAX_V)

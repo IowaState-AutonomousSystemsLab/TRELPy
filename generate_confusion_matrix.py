@@ -453,7 +453,7 @@ class GenerateConfusionMatrix:
             pred_label = self.get_labels_for_boxes([pred_box]).pop()
         except:
             traceback.print_exc()
-        st()
+        
         gt_idx = None
         pred_idx = None
         

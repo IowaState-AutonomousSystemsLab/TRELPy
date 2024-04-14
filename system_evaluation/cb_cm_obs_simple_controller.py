@@ -69,7 +69,7 @@ def initialize(MAX_V, Ncar, maxv_init=None):
         xmax_stop = Vhigh*(Vhigh+1)/2 + 1 # earliest stopping point for car 
     
     xped, xcar_stop = set_crosswalk_cell(Ncar, xmax_stop)
-    formula = formula_ev_good(xcar_stop, Vhigh, Vlow)
+    formula = formula_not_stop(xcar_stop, Vhigh)
     return Vlow, Vhigh, xped, formula
 
 def simulate(MAX_V=6):
@@ -80,8 +80,8 @@ def simulate(MAX_V=6):
     print(" =============== Parametrized confusion matrix ===============")
     print_param_cm(param_C)
     print("===========================================================")
-    INIT_V, P, P_param = compute_probabilities(Ncar, MAX_V, C, param_C,true_env_type="ped")
-    save_results(INIT_V, P, P_param, "class", "ped")
+    INIT_V, P, P_param = compute_probabilities(Ncar, MAX_V, C, param_C,true_env_type="obs")
+    save_results(INIT_V, P, P_param, "class", "obs")
 
 def compute_probabilities(Ncar, MAX_V,C, param_C,true_env_type="ped"):
     INIT_V = []
@@ -100,6 +100,7 @@ def compute_probabilities(Ncar, MAX_V,C, param_C,true_env_type="ped"):
         S, state_to_S = cmp.system_states_example_ped(Ncar, Vlow, Vhigh)
         
         true_env = str(1) # Sidewalk 3
+        
         O = {"ped", "obs", "empty"}
         class_dict = {0: {'ped'}, 1: {'obs'}, 2: {'empty'}}
         state_info = dict()
@@ -120,5 +121,5 @@ def compute_probabilities(Ncar, MAX_V,C, param_C,true_env_type="ped"):
     return INIT_V, P, P_param
 
 if __name__=="__main__":
-    MAX_V = 3
+    MAX_V = 6
     simulate(MAX_V=MAX_V)

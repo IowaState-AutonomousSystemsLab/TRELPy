@@ -78,6 +78,21 @@ def control_dict(Ncar, Vhigh, env_obs, xped):
                 K[obs][state] = control_simple(xped, state, obs, Ncar)
     return K
 
+def prop_control_dict(Ncar, Vhigh, env_obs, xped):
+    K = dict()
+    for obs in env_obs:
+        K[obs] = dict()
+        for xcar in range(1, Ncar+1):
+            for vcar in range(0, Vhigh+1):
+                state = (xcar, vcar)
+                if "ped" in obs:
+                    control_for_obs="ped"                    
+                else:
+                    control_for_obs = obs    
+                
+                K[obs][state] = control_simple(xped, state, control_for_obs, Ncar)
+                
+    return K
 
 
 if __name__ == "__main__":

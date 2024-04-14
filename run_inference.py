@@ -26,8 +26,8 @@ if not os.path.exists(out_dir):
 info_file = os.path.join(out_dir, "model_info.txt")
 with open(info_file, 'w') as f:
     f.write(f"configs_path = {configs_path} \n checkpoint_path = {checkpoint_path} \n")
-f.close()
-f.close()
+    f.write(f"Detection threshold {DET_THRESH}")
+
     
 pcd_path = f"{home_dir}/software/mmdetection3d/data/{dataset_name}/samples/LIDAR_TOP/"
 
@@ -38,7 +38,7 @@ for i, pcd in enumerate(pcd_list):
     path = Path(f"{pcd_path}/{pcd}").absolute()
     # print(path)
     if path.exists():
-        if DET_THRESH == 0.35:
+        if DET_THRESH == 0.3:
             cmd = f'python3 demo/pcd_demo.py {str(path)} {configs_path} {checkpoint_path} --device cuda --out-dir {out_dir}'
         else:
             cmd = f'python3 demo/pcd_demo.py {str(path)} {configs_path} {checkpoint_path} --device cuda --out-dir {out_dir} --pred-score-thr {DET_THRESH}'
@@ -50,6 +50,7 @@ for i, pcd in enumerate(pcd_list):
 
 with open(info_file, 'a') as f:
     f.write(f"Inferences complete.")
+    f.write(f"Detection threshold {DET_THRESH}")
 f.close()
 
 print(f" !-!-!-!- run_inference.py COMPLETE")

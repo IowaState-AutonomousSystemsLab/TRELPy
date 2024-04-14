@@ -108,9 +108,9 @@ if compute_prop_cm:
 if compute_class_cm:
     cm = generator.get_class_cm()
     cm_full = sum(cm_k for cm_k in cm.values())
-    # confusion_matrix.set_confusion_matrix(cm, label_type="class")
+    confusion_matrix.set_confusion_matrix(cm, label_type="class")
     cm_file = f"{cm_dir}/low_thresh_cm.pkl"
-    #confusion_matrix.save_confusion_matrix(cm_file, label_type="class")
+    confusion_matrix.save_confusion_matrix(cm_file, label_type="class")
     # Printing old class_cm:
     old_cm_pkl_file = Path(f"{repo_dir}/saved_cms/lidar/mini/cm.pkl")
     with open(old_cm_pkl_file, "rb") as f:
