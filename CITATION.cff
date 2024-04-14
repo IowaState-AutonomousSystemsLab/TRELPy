@@ -1,0 +1,65 @@
+# This CITATION.cff file was generated with cffinit.
+# Visit https://bit.ly/cffinit to generate yours today!
+
+cff-version: 1.2.0
+title: TRELPy
+message: Please cite this tool using the following information
+type: software
+authors:
+  - given-names: Apurva
+    family-names: Badithela
+    email: apurva@caltech.edu
+    affiliation: >-
+      Controls and Dynamical Systems, California Institute
+      of Technology
+    orcid: 'https://orcid.org/0000-0002-9788-2702'
+  - given-names: Ranai
+    family-names: Srivastav
+    email: ranais@iastate.edu
+    affiliation: 'Department of Computer Science, Iowa State University'
+  - given-names: 'Tichakorn '
+    family-names: Wongpiromsarn
+    email: nok@iastate.edu
+    orcid: 'https://orcid.org/0000-0002-3977-122X'
+  - given-names: Richard
+    name-particle: M
+    family-names: Murray
+    orcid: 'https://orcid.org/0000-0002-5785-7481'
+    affiliation: >-
+      Controls and Dynamical Systems, California Institute
+      of Technology
+    email: murray@caltech.edu
+identifiers:
+  - type: doi
+    value: 10.1109/IROS55552.2023.10342465
+    description: >-
+      Evaluation Metrics of Object Detection for
+      Quantitative System-Level Analysis of Safety-Critical
+      Autonomous Systems
+repository-code: >-
+  https://github.com/IowaState-AutonomousSystemsLab/TRELPy/tree/main
+abstract: >-
+  In safety-critical autonomous systems, deriving
+  system-level guarantees requires evaluation of individual
+  subsystems in a manner consistent with the system-level
+  task. These safety guarantees require careful reasoning
+  about how to evaluate each subsystem, and the evaluations
+  have to be consistent with subsystem interactions and any
+  assumptions made therein. A common example is the
+  interaction between perception and planning. TRELPy is a
+  Python-based toolbox that can evaluate the performance of
+  perception models and leverage these evaluations in
+  computing system-level guarantees via probabilistic model
+  checking. The tool implements this framework for popular
+  detection metrics such as confusion matrices, and
+  implements new metrics such as proposition-labeled
+  confusion matrices. The propositional formulae for the
+  labels of the confusion matrix are chosen such that the
+  confusion matrices are relevant to the downstream planner
+  and system-level task. TRELPy can also group objects by
+  egocentric distance or by orientation relative to the ego
+  vehicle to further make the confusion matrix more task
+  relevant. These metrics are leveraged to compute the
+  combined performance of the perception and planner to get
+  probabilistic system-level guarantees.
+license: AGPL-3.0
