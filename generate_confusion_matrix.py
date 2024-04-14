@@ -218,10 +218,10 @@ class GenerateConfusionMatrix:
                 if all(checks):
                     return i
             except:
-                st()
+                raise RuntimeError("Error: get_gt_idx: failed to match gt boxes.")
+                # st()
         
         print("Error! No ground truth index found.")
-        st()
 
     def match_boxes(self, dist_thresh: float = 2.0, yaw_thresh: float = np.pi/2.0):
         '''
@@ -472,7 +472,7 @@ class GenerateConfusionMatrix:
         if (gt_idx is not None) and (pred_idx is not None):
             class_cm[pred_idx][gt_idx] += 1   
         if (gt_idx is None and pred_idx is not None) or (pred_idx is None and gt_idx is not None):
-            print("Error: One of the confusion matrix indices is returned as None. Check")
+            raise RuntimeError("Error: One of the confusion matrix indices is returned as None. Check")
         return class_cm
 
     ### ------- End of Code to compute class labeled confusion matrices ----------- ####
