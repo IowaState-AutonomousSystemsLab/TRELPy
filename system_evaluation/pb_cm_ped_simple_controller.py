@@ -9,11 +9,11 @@ from experiment_file import *
 from print_utils import print_cm, print_param_cm
 # from ..custom_env import cm_dir, is_set_to_mini
 try: 
-    from system_evaluation.simple_markov_chain import construct_mc as cmp
-    from system_evaluation.simple_markov_chain.setup_mc import call_MC, call_MC_param
+    from system_evaluation.simple_markov_chain import prop_construct_mc as cmp
+    from system_evaluation.simple_markov_chain.setup_prop_mc import call_MC, call_MC_param
 except:
-    from simple_markov_chain import construct_mc as cmp
-    from simple_markov_chain.setup_mc import call_MC, call_MC_param
+    from simple_markov_chain import prop_construct_mc as cmp
+    from simple_markov_chain.setup_prop_mc import call_MC, call_MC_param
 
 import matplotlib as plt
 # from figure_plot import probability_plot
@@ -72,22 +72,32 @@ def initialize(MAX_V, Ncar, maxv_init=None):
     formula = formula_ev_good(xcar_stop, Vhigh, Vlow)
     return Vlow, Vhigh, xped, formula
 
-def simulate(MAX_V=6):
+def simulate_prop(MAX_V=6):
     Ncar = init(MAX_V=MAX_V)
-    C, param_C = cmp.confusion_matrix(cm_fn)
-    print(" =============== Full confusion matrix ===============")
+    C, param_C, prop_dict = cmp.confusion_matrix(prop_cm_fn, prop_dict_file)
+    print(" =============== Proposition-based Full confusion matrix ===============")
     print_cm(C)
-    print(" =============== Parametrized confusion matrix ===============")
+    print(" =============== Parametrized Proposition-based confusion matrix ===============")
     print_param_cm(param_C)
     print("===========================================================")
-    INIT_V, P, P_param = compute_probabilities(Ncar, MAX_V, C, param_C,true_env_type="ped")
-    save_results(INIT_V, P, P_param, "class", "ped")
+    INIT_V, P, P_param = compute_probabilities(Ncar, MAX_V,C, param_C, prop_dict)
+    save_results(INIT_V, P, P_param, "prop", "ped")
 
-def compute_probabilities(Ncar, MAX_V,C, param_C,true_env_type="ped"):
+def simulate_prop_seg(MAX_V=6):
+    Ncar = init(MAX_V=MAX_V)
+    C, param_C, prop_dict = cmp.confusion_matrix(prop_cm_seg_fn, prop_dict_file)
+    print(" =============== Segmented Proposition-based Full confusion matrix ===============")
+    print_cm(C)
+    print(" =============== Segmented Parametrized Proposition-based confusion matrix ===============")
+    print_param_cm(param_C)
+    print("===========================================================")
+    INIT_V, P, P_param = compute_probabilities(Ncar, MAX_V,C, param_C, prop_dict)
+    save_results(INIT_V, P, P_param, "prop_seg", "ped")
+
+def compute_probabilities(Ncar, MAX_V,C, param_C, label_dict, true_env_type="ped"):
     INIT_V = []
     P = []
     P_param = []
-    
     Vlow, Vhigh, xped, formula = initialize(MAX_V, Ncar)
     print("===========================================================")
     # Initial conditions set for all velocities
@@ -100,25 +110,25 @@ def compute_probabilities(Ncar, MAX_V,C, param_C,true_env_type="ped"):
         S, state_to_S = cmp.system_states_example_ped(Ncar, Vlow, Vhigh)
         
         true_env = str(1) # Sidewalk 3
-        O = {"ped", "obs", "empty"}
-        class_dict = {0: {'ped'}, 1: {'obs'}, 2: {'empty'}}
+        O = ["ped", "obs", ("ped","obs"), "empty"]
         state_info = dict()
         state_info["start"] = start_state
-    
-        M = call_MC(S, O, state_to_S, C, class_dict, true_env, true_env_type, state_info, Ncar, xped, Vhigh)
+        
+        M = call_MC(S, O, state_to_S, C, label_dict, true_env, true_env_type, state_info, Ncar, xped, Vhigh)
         result = M.prob_TL(formula)
         P.append(result[start_state])
-
-        param_M = call_MC_param(S, O, state_to_S, param_C, class_dict, true_env, true_env_type, state_info, Ncar, xped, Vhigh)
+        
+        param_M = call_MC_param(S, O, state_to_S, param_C, label_dict, true_env, true_env_type, state_info, Ncar, xped, Vhigh)
         result_param = param_M.prob_TL(formula)
         P_param.append(result_param[start_state])
-        
+
         print('Probability of eventually reaching good state for initial speed, {}, and max speed, {} is p = {}:'.format(vcar, MAX_V, result[start_state]))
         # Store results:
         INIT_V.append(vcar)
-            
+    
     return INIT_V, P, P_param
 
 if __name__=="__main__":
-    MAX_V = 3
-    simulate(MAX_V=MAX_V)
+    MAX_V = 6
+    simulate_prop(MAX_V=MAX_V)
+    simulate_prop_seg(MAX_V=MAX_V)
