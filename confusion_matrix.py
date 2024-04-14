@@ -4,7 +4,7 @@ from pdb import set_trace as st
 from collections import OrderedDict as od
 from collections.abc import Iterable
 from itertools import chain, combinations
-from custom_env import *
+from config import *
 import os
 
 def powerset(s: list):
