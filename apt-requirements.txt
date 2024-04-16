@@ -1,0 +1,4 @@
+apt-transport-https
+wget 
+default-jdk
+default-jre

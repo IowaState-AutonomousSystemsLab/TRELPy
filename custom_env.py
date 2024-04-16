@@ -8,9 +8,9 @@ from nuscenes.eval.common.config import config_factory
 
 ######## PARMS #########
 ## ONLY Change model_name here to make it work with your version.
-model_name = "model2_good"
+model_name = "model_01-08-2024_13_00"
 modality = "lidar"
-is_mini = True
+is_mini = False
 ########################
 #### Get Repo Root #####
 def getGitRoot():

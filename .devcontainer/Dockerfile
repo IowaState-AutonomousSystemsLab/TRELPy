@@ -13,6 +13,8 @@ ARG DEBIAN_FRONTEND=noninteractive \
     DEBCONF_NONINTERACTIVE_SEEN=true
 
 ### Setting up all the necessary respositories 
+RUN apt-get install -y --reinstall ca-certificates
+
 RUN sudo apt-get update && apt-get install -qy software-properties-common && \
     sudo add-apt-repository ppa:deadsnakes/ppa
 
@@ -51,17 +53,15 @@ RUN sudo apt-get install -qy wget \
 
 RUN sudo add-apt-repository ppa:ubuntu-toolchain-r/test
 
+RUN sudo apt update
 RUN sudo apt install build-essential
+RUN apt install build-essential manpages-dev software-properties-common -qy && add-apt-repository ppa:ubuntu-toolchain-r/test -y
+RUN sudo apt install gcc-13 g++-13 -y
 RUN sudo apt install libmpfr-dev libgmp3-dev libmpc-dev -y
-RUN wget http://ftp.gnu.org/gnu/gcc/gcc-13.2.0/gcc-13.2.0.tar.gz
-RUN tar -xf gcc-13.2.0.tar.gz
-RUN cd gcc-13.2.0
-RUN bash /root/gcc-13.2.0/configure -v --build=x86_64-linux-gnu --host=x86_64-linux-gnu --target=x86_64-linux-gnu --prefix=/usr/local/gcc-13.2.0 --enable-checking=release --enable-languages=c,c++ --disable-multilib --program-suffix=-13.2.0
-RUN make -j3
-RUN sudo make install
-RUN sudo update-alternatives --install /usr/bin/gcc gcc /usr/local/gcc-13.2.0 13
+RUN sudo unlink /usr/bin/gcc && ln -s /usr/bin/gcc-13 /usr/bin/gcc
+RUN sudo unlink /usr/bin/g++ && ln -s /usr/bin/g++-13 /usr/bin/g++
 
-# Cloning necessary repos i and installing things
+# # Cloning necessary repos i and installing things
 
 RUN wget https://www.prismmodelchecker.org/dl/prism-4.8-linux64-x86.tar.gz
 RUN tar -xvf prism-4.8-linux64-x86.tar.gz
@@ -71,43 +71,37 @@ RUN echo "alias prism='bash /root/software/prism-4.8-linux64-x86/bin/prism'" >> 
 RUN echo "alias xprism='bash /root/software/prism-4.8-linux64-x86/bin/xprism'" >> ~/.bashrc
 
 
+## Installing CARL
 WORKDIR /root/software
-RUN git clone https://github.com/tulip-control/tulip-control.git
-RUN cd tulip-control && pip3 install -r requirements.txt && pip3 install .
+RUN git clone https://github.com/moves-rwth/carl-storm
+WORKDIR /root/software/carl-storm
+RUN export STORM_DIR=/root/software/carl-storm && mkdir build
+WORKDIR /root/software/carl-storm/build
+RUN cmake .. && make lib_carl -j8
 
-# RUN apt install -qy software-properties-common && \
-#     add-apt-repository ppa:deadsnakes/ppa
+
+RUN pip3 install numpy \
+				seaborn \
+				networkx==2.0 \
+				pytest \
+				numpy \
+				scipy \
+				cvxopt \
+				gr1py
+
+WORKDIR /root/software
+RUN git clone https://github.com/moves-rwth/stormpy.git --branch 1.8.0
+WORKDIR /root/software/stormpy
+# RUN python3 setup.py develop
+
+
+## Installing TULIP
+
+# WORKDIR /root/software
+# RUN git clone https://github.com/tulip-control/tulip-control.git
+# RUN cd /root/software/tulip-control && pip3 install -r requirements.txt
+# WORKDIR /root/software/tulip-control
+# RUN pip3 install .
 
 # RUN apt-get update
 
-# RUN pip3 install numpy \
-# 				stormpy \
-# 				seaborn \
-# 				networkx==2.0 \
-# 				pytest \
-# 				numpy \
-# 				scipy \
-# 				cvxopt \
-# 				gr1py
-
-# RUN mkdir software
-# WORKDIR /root/software
-# RUN wget https://www.prismmodelchecker.org/dl/prism-4.8-linux64-x86.tar.gz
-# RUN tar -xvf prism-4.8-linux64-x86.tar.gz
-# WORKDIR /root/software/prism-4.8-linux64-x86
-# RUN bash install.sh
-
-# RUN echo "alias prism='bash /root/software/prism-4.8-linux64-x86/bin/prism'" >> ~/.bashrc
-# RUN echo "alias xprism='bash /root/software/prism-4.8-linux64-x86/bin/xprism'" >> ~/.bashrc
-# # Cloning necessary repos i and installing things
-# RUN git clone https://github.com/tulip-control/tulip-control.git
-# RUN cd tulip-control && pip3 install -r requirements.txt && pip3 install .
-
-# Cloning necessary repos i and installing things
-#RUN git clone https://github.com/tulip-control/tulip-control.git
-
-
-#ENV PATH=$PATH:/home/markov/.local/bin
-
-## User installations
-#RUN pip3 install -r tulip-control/requirements.txt
