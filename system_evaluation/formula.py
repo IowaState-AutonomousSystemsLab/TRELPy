@@ -2,11 +2,11 @@ import numpy as np
 import pdb 
 
 def get_state(x, v, Vhigh, Vlow=0):
-    state_num = (Vhigh-Vlow+1)*(x-1)+v
+    state_num = int((Vhigh-Vlow+1)*(x-1)+v)
     state_str = "S"+str(state_num)
     return state_num, state_str
 
-def get_formula_states(xcar_stop, Vhigh, Vlow=0):
+def get_formula_states_ev_stop(xcar_stop, Vhigh, Vlow=0):
         bst = set()
         _, good_state_str = get_state(xcar_stop, 0, Vhigh)
         gst = {good_state_str}
@@ -39,14 +39,12 @@ def set_crosswalk_cell(Ncar, xmax_stop):
     '''
     
     Nped = Ncar - 1 # Penultimate cell
-    # todo: remove randomness so comparisons can be fair
+    
     # xped = np.random.randint(xmax_stop+1, Ncar) # Pick a pedestrian cell from [xmax_stop+1, Ncar]
     xped = xmax_stop+1
-    assert xped <= Nped
-    # TODO: set xped = xmax_stop+1
     xcar_stop = xped - 1 # Cell state of the car by which v = 0
     assert(xcar_stop >= xmax_stop)
-    return xped, xcar_stop
+    return int(xped), int(xcar_stop)
 
 def formula_deprec(xcar_stop, Vhigh, Vlow=0):
     '''
@@ -56,7 +54,7 @@ def formula_deprec(xcar_stop, Vhigh, Vlow=0):
     bad_states = set()
     good_state = set()
     
-    good, bad, gst, bst = get_formula_states(xcar_stop, Vhigh, Vlow=0)
+    good, bad, gst, bst = get_formula_states_ev_stop(xcar_stop, Vhigh, Vlow=0)
     good_state |= gst
     bad_states |= bst
     formula = "P=?[!("+str(bad)+") U "+str(good)+"]"
@@ -69,13 +67,13 @@ def formula_visit_bad_states(Ncar, xcar_stop, Vhigh, Vlow=0):
     bad_states = set()
     good_state = set()
     
-    good, bad, gst, bst = get_formula_states(xcar_stop, Vhigh, Vlow=0)
+    good, bad, gst, bst = get_formula_states_ev_stop(xcar_stop, Vhigh, Vlow=0)
 
     phi1 = "!("+good+")"
     phi2 = "("+good+") | !("+bad
 
     for xcar_ii in range(xcar_stop+1, Ncar+1):
-        good, bad, gst, bst = get_formula_states(xcar_ii) # We only want the bad states; ignore the good states output here
+        good, bad, gst, bst = get_formula_states_ev_stop(xcar_ii) # We only want the bad states; ignore the good states output here
         bad_states |= bst
         phi2 = phi2 + "|" + bad
     phi2 = phi2 + ")"
@@ -88,8 +86,34 @@ def formula_ev_good(xcar_stop, Vhigh, Vlow=0):
     '''
     good_state = set()
     
-    good, bad, gst, bst = get_formula_states(xcar_stop, Vhigh, Vlow=0)
+    good, bad, gst, bst = get_formula_states_ev_stop(xcar_stop, Vhigh, Vlow=0)
     good_state |= gst
-    for st in list(good_state):
-        formula = 'P=?[F(\"'+st+'\")]'
+    good_st = '|'.join(list(good_state))
+    formula = 'P=?[F(\"'+good_st+'\")]'
+    return formula
+
+def formula_not_stop(xcar_stop, Vhigh):
+    '''
+    Not stop until xcar_stop
+    '''
+    crosswalk = ""
+    for vi in range(1,Vhigh+1):
+        _, state_str = get_state(xcar_stop, vi, Vhigh)
+        if crosswalk == "":
+            crosswalk = crosswalk + "\"" + state_str+"\""
+        else:
+            crosswalk = crosswalk + "|\""+state_str+"\""
+    
+    stop = ""
+    for xi in range(1,xcar_stop+1):
+        _, state_str = get_state(xi, 0, Vhigh)
+        if stop == "":
+            stop = stop + "\"" + state_str+"\""
+        else:
+            stop = stop + "|\""+state_str+"\""
+    
+    # probability of reaching crosswalk at nonzero speed
+    # this will be the same as doing the right action because if the car stops beforehand, it stops permanently and
+    # would never reach this state.
+    formula = 'P=?[F('+crosswalk+')]' 
     return formula

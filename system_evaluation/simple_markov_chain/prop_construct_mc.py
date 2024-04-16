@@ -14,70 +14,68 @@ import os
 from tulip.transys.compositions import synchronous_parallel
 import pickle as pkl
 from pdb import set_trace as st
+import random 
 
-model_MC = "model_MC.nm"
+prop_model_MC = "prop_model_MC.nm"
 
 # Read confusion matrix from nuscnes file:
-def read_confusion_matrix(cm_fn):
+def read_confusion_matrix(cm_fn, prop_dict_file):
     conf_matrix = pkl.load( open(cm_fn, "rb" ))
+    prop_dict = pkl.load( open(prop_dict_file, "rb" ))
     for k,v in conf_matrix.items():
         n = len(conf_matrix[k][0])
         break
     cm = np.zeros((n,n))
     for k, v in conf_matrix.items():
         cm += v # Total class based conf matrix w/o distance
-    return cm, conf_matrix
+    return cm, conf_matrix, prop_dict
+
 
 # Script for confusion matrix of pedestrian
 # Make this cleaner; more versatile
 # C is a dicitionary: C(["ped", "nped"]) = N(observation|= "ped" | true_obs |= "nped") (cardinality of observations given as pedestrians while the true state is not a pedestrian)
 # Confusion matrix for second confusion matrix
-def confusion_matrix(conf_matrix):
+def confusion_matrix(conf_matrix, prop_dict_file):
     C = dict()
     param_C = dict()
-    cm, param_cm = read_confusion_matrix(conf_matrix)
-    st()
-    C = construct_confusion_matrix_dict(cm)
+    cm, param_cm, prop_dict = read_confusion_matrix(conf_matrix, prop_dict_file)
+    
+    C = construct_confusion_matrix_dict(cm, prop_dict)
     for k, cm in param_cm.items():
-        param_C[k] = construct_confusion_matrix_dict(cm)
-    return C, param_C # Parametrized cm
+        param_C[k] = construct_confusion_matrix_dict(cm, prop_dict)
+    return C, param_C, prop_dict # Parametrized cm
 
-def construct_confusion_matrix_dict(cm):
-    C = dict()
-
-    total_ped = np.sum(cm[:,0])
-    total_obs = np.sum(cm[:,1])
-    total_emp = np.sum(cm[:,2])
-
-    if total_ped!=0.0:
-        C["ped", "ped"] = cm[0,0]/total_ped
-        C["obs", "ped"] = cm[1,0]/total_ped
-        C["empty", "ped"] = cm[2,0]/total_ped
-    else:
-        C["ped", "ped"] = 0.0
-        C["obs", "ped"] = 0.0
-        C["empty", "ped"] = 0.0
-
-    if total_obs!=0.0:
-        C["ped", "obs"] = cm[0,1]/total_obs
-        C["obs", "obs"] = cm[1,1]/total_obs
-        C["empty", "obs"] = cm[2,1]/total_obs
-    else:
-        C["ped", "obs"] = 0.0
-        C["obs", "obs"] = 0.0
-        C["empty", "obs"] = 0.0
-
-
-    if total_emp!=0.0:
-        C["ped", "empty"] = cm[0,2]/total_emp
-        C["obs", "empty"] = cm[1,2]/total_emp
-        C["empty", "empty"] = cm[2,2]/total_emp
-    else:
-        C["ped", "empty"] = 0.0
-        C["obs", "empty"] = 0.0
-        C["empty", "empty"] = 0.0
+def construct_confusion_matrix_dict(cm, prop_dict):
+    C = dict()    
+    total_gt = dict()
+    for k, v in prop_dict.items():
+        total_gt = np.sum(cm[:,k])
+        for j in prop_dict.keys():
+            if total_gt !=0.0:
+                C[j,k] = cm[j,k]/total_gt
+            else:
+                C[j,k] = 0.0
     return C
 
+# Sensitivity:
+def construct_CM(tp_ped, true_env_type, prop_dict):
+    C = dict()
+    for k, v in prop_dict.items():
+        v == set({true_env_type})
+    C["ped", "ped"] = tp_ped
+    coeff = random.random()
+    C["obj", "ped"] = coeff*(1-tp_ped)
+    C["empty", "ped"] = (1-coeff)*(1 - tp_ped)
+
+    C["ped", "obj"] = 0.1*(1-tp_obj)
+    C["obj", "obj"] = tp_obj
+    C["empty", "obj"] = 0.9*(1-tp_obj)
+
+    C["ped", "empty"] = 0.5*(1-tp_emp)
+    C["obj", "empty"] = 0.5*(1-tp_emp)
+    C["empty", "empty"] = tp_emp
+    return C
+    
 # Script for confusion matrix of pedestrian
 # Varying the precision/recall confusion matrix values
 def confusion_matrix_ped2(prec, recall):
@@ -100,9 +98,7 @@ def confusion_matrix_ped2(prec, recall):
     assert(abs(C["ped", "ped"] + C["obs", "ped"] + C["empty", "ped"] - 1.0) < tol)
     assert(abs(C["ped", "obs"] + C["obs", "obs"] + C["empty", "obs"]- 1.0)< tol)
     assert(abs(C["ped", "empty"] + C["obs", "empty"] + C["empty", "empty"]- 1.0) < tol)
-
     return C
-
 
 # Function that converts to a Markov chain from states and actions:
 def _construct_mdpmc(states, transitions, init, actions=None):
@@ -159,7 +155,9 @@ class synth_markov_chain:
         self.K_strategy = None # Dictionary containing the scripts to the controller after it has been written to file
         self.formula = []
         self.MC = None # A Tulip Markov chain obsect that is consistent with TuLiP transition system markov chain
+        self.param_MC = None # TuLiP Markov chain object 
         self.true_env_MC = None # A Markov chain representing the true evolution of the environment
+        self.backup = dict() # This is a backup controller.
 
  # Convert this Markov chain obsect into a tulip transition system:
     def to_MC(self, init):
@@ -167,8 +165,6 @@ class synth_markov_chain:
         transitions = set()
         for k in self.M.keys():
             p_approx = min(1, abs(self.M[k]))
-            # if abs(1-self.M[k]) > 1e-2:
-            #     print(abs(1-self.M[k]))
             t = (k[0], k[1], p_approx)
             transitions |= {t}
         assert init in self.states
@@ -181,20 +177,20 @@ class synth_markov_chain:
 
 # Writing/Printing Markov chains to file:
     def print_MC(self):
-       model_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), "models")
-       path_MC = os.path.join(model_path, model_MC)
-       env_MC = os.path.join(model_path, "env_MC.nm")
-       path_MC_model = stormpy_int.build_stormpy_model(path_MC)
-       env_MC_model = stormpy_int.build_stormpy_model(env_MC)
-       stormpy_int.print_stormpy_model(path_MC_model)
-       stormpy_int.print_stormpy_model(env_MC_model)
+        model_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), "models")
+        path_MC = os.path.join(model_path, prop_model_MC)
+        env_MC = os.path.join(model_path, "env_MC.nm")
+        path_MC_model = stormpy_int.build_stormpy_model(path_MC)
+        env_MC_model = stormpy_int.build_stormpy_model(env_MC)
+        stormpy_int.print_stormpy_model(path_MC_model)
+        stormpy_int.print_stormpy_model(env_MC_model)
 
    # Function to check if all outgoing transition probabilities for any state in the Markov chain sum to 1.
     def check_MC(self):
-       T = self.MC.transitions(data=True)
-       for st in self.MC.states:
-           end_states = [t for t in T if t[0]==st]
-           prob = [(t[2])['probability'] for t in end_states]
+        T = self.MC.transitions(data=True)
+        for st in self.MC.states:
+            end_states = [t for t in T if t[0]==st]
+            prob = [(t[2])['probability'] for t in end_states]
        #    assert abs(sum(prob)-1)<1e-4 # Checking that probabilities add up to 1 for every state
 
    # Sets the state of the true environment
@@ -207,14 +203,14 @@ class synth_markov_chain:
         self.true_env_type = true_env_type
         self.true_env_MC = _construct_mdpmc(states, transitions, init)
 
-    def set_confusion_matrix(self, C, class_dict):
+    def set_confusion_matrix(self, C, prop_dict):
         self.C = C
-        self.class_dict = class_dict
-    
-    def set_param_confusion_matrix(self, param_C, class_dict):
-        self.param_C = param_C
-        self.class_dict = class_dict
+        self.label_dict = prop_dict
 
+    def set_param_confusion_matrix(self, param_C, prop_dict):
+        self.param_C = param_C
+        self.label_dict = prop_dict
+        
     def set_controller(self, K):
         self.K_strategy = K
 
@@ -258,12 +254,12 @@ class synth_markov_chain:
                     pdb.set_trace()
 
                 try:
-                    for k, v in self.class_dict.items():
+                    for k, v in self.label_dict.items():
                         if v == set({obs}):
                             pred_j = k
                         if v == set({self.true_env_type}):
                             true_j = k
-                    prob_t = self.param_C[distbin][obs, self.true_env_type] # Probability of transitions
+                    prob_t = self.param_C[distbin][pred_j, true_j] # Probability of transitions
                     if np.isnan(prob_t):
                         prob_T = 0.0
                 except:
@@ -278,24 +274,25 @@ class synth_markov_chain:
     # Constructing the Markov chain
     def construct_markov_chain(self): # Construct probabilities and transitions in the markov chain given the controller and confusion matrix
         for Si in list(self.states):
-            # print("Finding initial states in the Markov chain: ")
-            
             init_st = self.reverse_state_dict[Si]
-            # The output state can be different depending on the observation as defined by the confusion matrix
             for obs in self.obs:
                 next_st = self.compute_next_state(obs, init_st)
                 Sj = self.state_dict[tuple(next_st.values())]
                 try:
-                    prob_t = self.C[obs, self.true_env_type] # Probability of transitions
+                    for k, v in self.label_dict.items():
+                        if v == set({obs}):
+                            pred_j = k
+                        if v == set({self.true_env_type}):
+                            true_j = k
+                    prob_t = self.C[pred_j, true_j] # Probability of transitions
                 except:
                     st()
-                
                 if (Si, Sj) in self.M.keys():
                     self.M[Si, Sj] = self.M[Si, Sj] + prob_t
                 else:
                     self.M[Si, Sj] = prob_t
         return self.M
-
+    
     # Adding formulae to list of temporal logic formulas:
     def add_TL(self, phi):
         self.formula.append(phi)
@@ -303,10 +300,8 @@ class synth_markov_chain:
     # Probabilistic satisfaction of a temporal logic with respect to a model:
     def prob_TL(self, phi):
         model_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), "models")
-        if not os.path.exists(model_path):
-            os.makedirs(model_path)
         prism_file_path = os.path.join(model_path, "pedestrian.nm")
-        path_MC = os.path.join(model_path, model_MC)
+        path_MC = os.path.join(model_path, prop_model_MC)
         env_MC = os.path.join(model_path, "env_MC.nm")
         # Print self markov chain:
         # print(self.MC)
@@ -319,7 +314,6 @@ class synth_markov_chain:
         # Returns a tulip transys:
         # MC_ts = stormpy_int.to_tulip_transys(path_MC)
         result = stormpy_int.model_checking(self.MC, phi, prism_file_path) # Since there is no moving obstacle, try checking only the pedestrian obstacle
-        
         #for state in self.MC.states:
         #    print("  State {}, with labels {}, Pr = {}".format(state, self.MC.states[state]["ap"], result[str(state)]))
         return result

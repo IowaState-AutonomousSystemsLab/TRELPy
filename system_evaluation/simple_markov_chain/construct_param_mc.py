@@ -31,7 +31,7 @@ def read_confusion_matrix(cm_fn):
 
 # Script for confusion matrix of pedestrian
 # Make this cleaner; more versatile
-# C is a dicitionary: C(["ped", "nped"]) = N(observation|= "ped" | true_obj |= "nped") (cardinality of observations given as pedestrians while the true state is not a pedestrian)
+# C is a dicitionary: C(["ped", "nped"]) = N(observation|= "ped" | true_obs |= "nped") (cardinality of observations given as pedestrians while the true state is not a pedestrian)
 # Confusion matrix for second confusion matrix
 def confusion_matrix(conf_matrix):
     C = dict()
@@ -49,15 +49,15 @@ def construct_confusion_matrix_dict(cm):
     total_obs = np.sum(cm[:,1])
     total_emp = np.sum(cm[:,2])
     C["ped", "ped"] = cm[0,0]/total_ped
-    C["ped", "obj"] = cm[0,1]/total_obs
+    C["ped", "obs"] = cm[0,1]/total_obs
     C["ped", "empty"] = cm[0,2]/total_emp
 
-    C["obj", "ped"] = cm[1,0]/total_ped
-    C["obj", "obj"] = cm[1,1]/total_obs
-    C["obj", "empty"] = cm[1,2]/total_emp
+    C["obs", "ped"] = cm[1,0]/total_ped
+    C["obs", "obs"] = cm[1,1]/total_obs
+    C["obs", "empty"] = cm[1,2]/total_emp
 
     C["empty", "ped"] = cm[2,0]/total_ped
-    C["empty", "obj"] = cm[2,1]/total_obs
+    C["empty", "obs"] = cm[2,1]/total_obs
     C["empty", "empty"] = cm[2,2]/total_emp
     return C
 
@@ -69,20 +69,20 @@ def confusion_matrix_ped2(prec, recall):
     fn = tp/prec - tp
     tn = 200 - fn
     C["ped", "ped"] = (recall*100)/100.0
-    C["ped", "obj"] = (fn/2.0)/100.0
+    C["ped", "obs"] = (fn/2.0)/100.0
     C["ped", "empty"] = (fn/2.0)/100.0
     
-    C["obj", "ped"] = ((1-recall)*100.0/2)/100.0
-    C["obj", "obj"] = (tn/2*4.0/5)/100.0
-    C["obj", "empty"] = (tn/2*1/5)/100.0
+    C["obs", "ped"] = ((1-recall)*100.0/2)/100.0
+    C["obs", "obs"] = (tn/2*4.0/5)/100.0
+    C["obs", "empty"] = (tn/2*1/5)/100.0
 
     C["empty", "ped"] = ((1-recall)*100/2)/100.0
-    C["empty", "obj"] = (tn/2*1.0/5)/100.0
+    C["empty", "obs"] = (tn/2*1.0/5)/100.0
     C["empty", "empty"] = (tn/2*4.0/5.0)/100.0
     tol = 1e-4
-    assert(abs(C["ped", "ped"] + C["obj", "ped"] + C["empty", "ped"] - 1.0) < tol)
-    assert(abs(C["ped", "obj"] + C["obj", "obj"] + C["empty", "obj"]- 1.0)< tol)
-    assert(abs(C["ped", "empty"] + C["obj", "empty"] + C["empty", "empty"]- 1.0) < tol)
+    assert(abs(C["ped", "ped"] + C["obs", "ped"] + C["empty", "ped"] - 1.0) < tol)
+    assert(abs(C["ped", "obs"] + C["obs", "obs"] + C["empty", "obs"]- 1.0)< tol)
+    assert(abs(C["ped", "empty"] + C["obs", "empty"] + C["empty", "empty"]- 1.0) < tol)
 
     return C
 
@@ -136,16 +136,16 @@ class synth_markov_chain:
         self.reverse_state_dict = {v: k for k, v in state_to_S.items()}
         self.obs = O
         self.true_env = None # This state is defined in terms of the observation
-        self.true_env_type = None # Type of the env object; is in one of obs
+        self.true_env_type = None # Type of the env obsect; is in one of obs
         self.param_C = dict()
         self.C = dict() # Confusion matrix dictionary giving: C[obs, true] =  P(obs |- phi | true |- phi)
         self.M = dict() # Two-by-two dictionary. a(i,j) = Prob of transitioning from state i to state j
         self.K_strategy = None # Dictionary containing the scripts to the controller after it has been written to file
         self.formula = []
-        self.MC = None # A Tulip Markov chain object that is consistent with TuLiP transition system markov chain
+        self.MC = None # A Tulip Markov chain obsect that is consistent with TuLiP transition system markov chain
         self.true_env_MC = None # A Markov chain representing the true evolution of the environment
 
- # Convert this Markov chain object into a tulip transition system:
+ # Convert this Markov chain obsect into a tulip transition system:
     def to_MC(self, init):
         states = set(self.states) # Set of product states of the car
         transitions = set()
@@ -201,6 +201,10 @@ class synth_markov_chain:
      
     def set_confusion_matrix(self, C):
         self.param_C = C
+    
+    def set_param_confusion_matrix(self, C, prop_dict):
+        self.C = C
+        self.label_dict = prop_dict
 
     def set_controller(self, K):
         self.K_strategy = K
