@@ -9,9 +9,13 @@ This toolbox contains utilities to load a pre-trained model, run inference, gene
 
 
 ## Setup
-The setup to run the complete pipeline is more complex (dataset -> inference -> TRELPy -> Probabilistic Model Checking) than the one for running `tutorial.ipynb`.
+The setup to run the complete pipeline is more complex (dataset -> inference -> TRELPy -> Probabilistic Model Checking) than the one for running `tutorial.ipynb` (download inference results -> TRELPy).
 
 We are in the process of developing a Docker container for these dependencies. Check back here to see updates.
+
+### System Requirements for TRELPy
+- OS: Ubuntu (Has been tested to work on Ubuntu 20.04)
+- Computer with GPU to run inference
 
 ### Setup for `tutorial.ipynb`
 The dependencies required to run the ipynb can be installed through the following commands.  
@@ -35,21 +39,6 @@ The dependencies required to run the ipynb can be installed through the followin
 ### Setup for the full pipeline
 1. Ensure `tutorial.ipynb` setup is completed
 2. Install the required dependencies from the following table
-
-### 1.1.1 System Requirements for TRELPy
-- OS: Ubuntu (Has been tested to work on Ubuntu 20.04)
-- Computer with GPU to run inference
-
-
-### 1.1.2. Uncomment and run the following scripts to install all the pip and apt dependencies
-```bash
-pip3 install -r pip-requirements.txt &&
-sudo apt-get -y update &&
-sed 's/#.*//' apt-requirements.txt | xargs sudo apt-get -y install
-```
-
-
-### 1.1.3. Ensure all the following programs are installed.
 
 |Name and link of program|What kind of installation| Versions tested on | Purpose |
 |-|-|-|-|
