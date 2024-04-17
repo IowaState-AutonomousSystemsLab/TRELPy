@@ -81,7 +81,12 @@ compute_class_cm = True
 compute_prop_segmented_cm = False
 save_prop_dict = False
 
+list_of_propositions, prop_dict = generator.get_list_of_propositions()
+confusion_matrix = ConfusionMatrix(generator, list_of_classes, list_of_propositions, labels, prop_dict)
+
 if compute_prop_cm:
+    print("===================================")
+    print("Constructing Proposition labeled CM:")
     cm_prop = generator.get_prop_cm()
     cm_prop_full = sum(cm_prop_k for cm_prop_k in cm_prop.values())
     list_of_propositions, prop_dict = generator.get_list_of_propositions()
@@ -106,6 +111,8 @@ if compute_prop_cm:
     print("===================================")
 
 if compute_class_cm:
+    print("===================================")
+    print("Constructing Class Labeled CM:")
     cm = generator.get_class_cm()
     cm_full = sum(cm_k for cm_k in cm.values())
     confusion_matrix.set_confusion_matrix(cm, label_type="class")

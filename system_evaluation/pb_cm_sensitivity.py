@@ -109,6 +109,11 @@ def compute_probabilities(Ncar, MAX_V, label_dict, true_env_type="ped"):
             state_info = dict()
             state_info["start"] = start_state
             
+            tp_dict = dict()
+            tp_dict.update({true_env_type:tp})
+            for obs in O:
+                if obs != true_env_type:
+                    tp_dict.update({obs: 0.9})
             for n in range(runs):
                 C = cmp.construct_CM(tp, 0.9, 0.9)
                 M = call_MC(S, O, state_to_S, C, label_dict, true_env, true_env_type, state_info, Ncar, xped, Vhigh)
