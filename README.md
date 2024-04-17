@@ -63,6 +63,14 @@ The dependencies required to run the ipynb can be installed through the followin
 
 </details>
 
+<details>
+<summary><b><font size="+1">Docker container</font></b></summary>
+
+There is a `Dockerfile` in the `.devcontainer` directory that simplifies the model-checking installation. This file is a Work in Progress.
+
+The `Dockerfile` will be incrementally updated to include inference capabilities as well.
+</details>
+
 ## Cite this
 In the rightmost column on the main GitHub Repository, you have the option to export the citation to this tool in `BibTex` format. For other formats, see [this great GitHub repository](https://github.com/citation-file-format/cffconvert)
 
