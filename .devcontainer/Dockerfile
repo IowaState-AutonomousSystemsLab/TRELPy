@@ -1,43 +1,127 @@
-FROM movesrwth/storm:stable
+FROM nvidia/cuda:11.4.3-devel-ubuntu20.04
 
-## Setting up dependencies
-# ENV PATH="$PATH:/root/stormpy:/root/carl_storm:/root/storm:/root/pycarl:/root/tulip-control:/root/.local"
+WORKDIR /root
+
+ARG DEBIAN_FRONTEND=noninteractive \
+    DEBCONF_NONINTERACTIVE_SEEN=true
+
+### Setting up all the necessary respositories 
+RUN apt-get install -y --reinstall ca-certificates
+
+# Setting up dependencies
+ENV PATH="$PATH:/root/stormpy:/root/carl_storm:/root/storm:/root/pycarl:/root/tulip-control:/root/.local"
 RUN apt-get update && \
-	apt-get -y install sudo python3-pip python-is-python3 vim git
+      apt-get -y install sudo vim git wget curl
 
-RUN mv /usr/lib/python3.11/EXTERNALLY-MANAGED /usr/lib/python3.11/EXTERNALLY-MANAGED.old
+RUN sudo apt-get update && apt-get install -qy software-properties-common && \
+    sudo add-apt-repository ppa:deadsnakes/ppa
 
 
-# Cloning necessary repos i and installing things
-#RUN git clone https://github.com/tulip-control/tulip-control.git
+RUN sudo apt-get update && \
+    sudo apt install -qy curl python3.10-dev python3.10-distutils python3.10-dev python3.10-venv
 
-RUN pip3 install numpy
-RUN pip3 install stormpy
-RUN pip3 install tulip
-RUN pip3 install seaborn
+RUN update-alternatives --install /usr/bin/python3 python3 /usr/bin/python3.10 1 && \
+    cd ~/ && \
+    curl https://bootstrap.pypa.io/get-pip.py -o ~/get-pip.py && \
+    python3 get-pip.py
 
-RUN apt-get install -y apt-transport-https
-RUN apt-get -y update
-RUN apt-get install -y default-jre
-RUN apt-get update
-RUN apt-get install -y wget default-jdk
 
-RUN mkdir software
-WORKDIR /root/software
-RUN wget https://www.prismmodelchecker.org/dl/prism-4.8-linux64-x86.tar.gz
-RUN tar -xvf prism-4.8-linux64-x86.tar.gz
-WORKDIR /root/software/prism-4.8-linux64-x86
-RUN bash install.sh
 
-RUN echo "alias prism='bash /root/software/prism-4.8-linux64-x86/bin/prism'" >> ~/.bashrc
-RUN echo "alias xprism='bash /root/software/prism-4.8-linux64-x86/bin/xprism'" >> ~/.bashrc
+# RUN mkdir /root/software
+# WORKDIR /root/software
 
-## Creating the user
-#RUN useradd -ms /bin/bash markov -g root -G sudo
-#RUN echo 'markov:markov' | chpasswd 
-#USER markov
-#RUN cd /home/markov
-#ENV PATH=$PATH:/home/markov/.local/bin
 
-## User installations
-#RUN pip3 install -r tulip-control/requirements.txt
+# ## Ensuring python version is right
+# RUN ls -la /usr/bin/python3
+# RUN sudo rm /usr/bin/python3
+# RUN sudo ln -s python3.10 /usr/bin/python3
+# RUN python3 --version
+
+# ## Getting the right pip version
+# RUN curl -sS https://bootstrap.pypa.io/get-pip.py | python3.10
+
+
+# RUN sudo apt-get -qy update
+# RUN sudo apt-get install -qy apt-transport-https
+# RUN sudo apt-get install -qy default-jre
+# RUN sudo apt-get install -qy wget \
+# 					default-jdk \
+# 					git \
+# 					cmake \
+# 					build-essential \
+# 					libgmp-dev \
+# 					libeigen3-dev \
+# 					libboost-all-dev \
+# 					ginac-tools \
+# 					libginac-dev \
+# 					libcln-dev \
+# 					autoconf \
+# 					glpk-utils \
+# 					hwloc \
+# 					libglpk-dev \
+# 					libhwloc-dev \
+# 					libz3-dev \
+# 					libxerces-c-dev \
+# 					automake \
+# 					libz3-dev \ 
+# 					graphviz \
+#                     software-properties-common
+
+# ## Forcing new python version might break things. Fixing
+# RUN sudo apt-get install --reinstall python3-apt -qy
+
+
+# RUN sudo add-apt-repository ppa:ubuntu-toolchain-r/test
+
+# RUN sudo apt update
+# RUN sudo apt install build-essential
+# RUN apt install build-essential manpages-dev software-properties-common -qy && add-apt-repository ppa:ubuntu-toolchain-r/test -y
+# RUN sudo apt install gcc-13 g++-13 -y
+# RUN sudo apt install libmpfr-dev libgmp3-dev libmpc-dev -y
+# RUN sudo unlink /usr/bin/gcc && ln -s /usr/bin/gcc-13 /usr/bin/gcc
+# RUN sudo unlink /usr/bin/g++ && ln -s /usr/bin/g++-13 /usr/bin/g++
+
+# # Cloning necessary repos i and installing things
+
+# RUN wget https://www.prismmodelchecker.org/dl/prism-4.8-linux64-x86.tar.gz
+# RUN tar -xvf prism-4.8-linux64-x86.tar.gz
+# WORKDIR /root/software/prism-4.8-linux64-x86
+# RUN bash install.sh
+# RUN echo "alias prism='bash /root/software/prism-4.8-linux64-x86/bin/prism'" >> ~/.bashrc
+# RUN echo "alias xprism='bash /root/software/prism-4.8-linux64-x86/bin/xprism'" >> ~/.bashrc
+
+
+# ## Installing CARL
+# WORKDIR /root/software
+# RUN git clone https://github.com/moves-rwth/carl-storm
+# WORKDIR /root/software/carl-storm
+# RUN export STORM_DIR=/root/software/carl-storm && mkdir build
+# WORKDIR /root/software/carl-storm/build
+# RUN cmake .. && make lib_carl -j8
+
+
+# RUN pip3 install numpy \
+# 				seaborn \
+# 				networkx==2.0 \
+# 				pytest \
+# 				numpy \
+# 				scipy \
+# 				cvxopt \
+# 				gr1py
+
+# WORKDIR /root/software
+# RUN git clone https://github.com/moves-rwth/stormpy.git --branch 1.8.0
+# WORKDIR /root/software/stormpy
+# # RUN python3 setup.py develop
+
+
+# # Installing TULIP
+
+# WORKDIR /root/software
+# RUN git clone https://github.com/tulip-control/tulip-control.git
+# RUN cd /root/software/tulip-control && pip3 install -r requirements.txt
+# WORKDIR /root/software/tulip-control
+# RUN pip3 install .
+
+# # RUN apt-get update 
+
