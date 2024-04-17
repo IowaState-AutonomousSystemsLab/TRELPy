@@ -1,13 +1,11 @@
 import matplotlib.pyplot as plt
 import numpy as np
 import json
-import sys
-sys.path.append("..")
 import os
 import pdb
 from pathlib import Path
 from experiment_file import *
-from system_evaluation.utils.plotting_utils import update_max
+from plotting_utils import update_max
 
 def probability_plot(INIT_V, P, fig_name,title=None):
     fig, ax = plt.subplots()

@@ -1,7 +1,11 @@
 import sys
 sys.path.append("../..")
-import simple_markov_chain.prop_construct_mc as cmp
-from controllers.simple_controller import prop_control_dict
+try:
+    import simple_markov_chain.prop_construct_mc as cmp
+    from controllers.simple_controller import prop_control_dict
+except:
+    import system_evaluation.simple_markov_chain.prop_construct_mc as cmp
+    from system_evaluation.controllers.simple_controller import prop_control_dict, control_dict
 import importlib
 from pdb import set_trace as st
 
