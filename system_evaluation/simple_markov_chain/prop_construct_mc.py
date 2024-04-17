@@ -58,7 +58,7 @@ def construct_confusion_matrix_dict(cm, prop_dict):
     return C
 
 # Sensitivity:
-def construct_CM(tp_ped, true_env_type, prop_dict):
+def construct_CM(tp_dict, true_env_type, prop_dict):
     C = dict()
     for k, v in prop_dict.items():
         v == set({true_env_type})

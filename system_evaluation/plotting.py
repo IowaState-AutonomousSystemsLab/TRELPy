@@ -8,9 +8,11 @@ from experiment_file import *
 from plotting_utils import update_max
 
 def plot_probability(INIT_V, P, max_p, name, ax):
+    
     max_p = update_max(P, max_p)
     ax.plot(INIT_V, P, 'o--', label=name)
     st()
+    
     
 def load_result(results_folder, res_type, true_env_type, MAX_V):
     try:
