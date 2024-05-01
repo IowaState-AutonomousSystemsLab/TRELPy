@@ -62,3 +62,9 @@ try:
 except:
     eval_version = 'cvpr_2019'
     eval_config = config_factory(eval_version)
+
+cm_fn = f"{cm_dir}/low_thresh_cm.pkl"
+prop_cm_fn = f"{cm_dir}/low_thresh_prop_cm.pkl"
+prop_cm_seg_fn = f"{cm_dir}/low_thresh_prop_cm_cluster.pkl"
+prop_dict_file = f"{cm_dir}/prop_dict.pkl"
+control_dir = f"{repo_dir}/system_evaluation/controllers/"

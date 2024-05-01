@@ -22,6 +22,7 @@ import json
 import sys
 from formula import *
 sys.setrecursionlimit(10000)
+from plotting import *
 
 def get_confusion_matrix():
     C, param_C = cmp.confusion_matrix(cm_fn)
@@ -31,21 +32,26 @@ def init(MAX_V=6):
     Ncar = int(MAX_V*(MAX_V+1)/2 + 4)
     return Ncar
 
-def save_results(INIT_V, P, P_param, result_type, true_env):
+def save_results(INIT_V, P, std_P, tp_range, result_type, true_env):
     results_folder = f"{cm_dir}/probability_results"
     if not os.path.exists(results_folder):
         os.makedirs(results_folder)
-    fname_v = Path(f"{results_folder}/{result_type}_cm_{true_env}_vmax_"+str(MAX_V)+"_initv.json")
-    fname_p = Path(f"{results_folder}/{result_type}_cm_{true_env}_vmax_"+str(MAX_V)+"_prob.json")
-    fname_param_p = Path(f"{results_folder}/{result_type}_param_cm_{true_env}_vmax_"+str(MAX_V)+"_prob.json")
+    runs = 20
+    fname_v = f"{results_folder}/{result_type}_cm_ped_vmax_"+str(MAX_V)+"_initv.json"
+    fname_p = f"{results_folder}/{result_type}_cm_ped_vmax_"+str(MAX_V)+"_mean_prob_runs_"+str(runs)+".json"
+    fname_p = f"{results_folder}/{result_type}_cm_ped_vmax_"+str(MAX_V)+"_mean_prob_runs_"+str(runs)+".json"
+    fname_stdp = f"{results_folder}/{result_type}_cm_ped_vmax_"+str(MAX_V)+"_std_prob"+str(runs)+".json"
+    fname_tp = f"{results_folder}/{result_type}_tp.json"
 
     #pdb.set_trace()
     with open(fname_v, 'w') as f:
         json.dump(INIT_V, f)
     with open(fname_p, 'w') as f:
         json.dump(P, f)
-    with open(fname_param_p, 'w') as f:
-        json.dump(P_param, f)
+    with open(fname_stdp, 'w') as f:
+        json.dump(std_P, f)
+    with open(fname_tp, 'w') as f:
+        json.dump(tp_range, f)
         
 def initialize(MAX_V, Ncar, maxv_init=None):
     '''
@@ -75,9 +81,10 @@ def initialize(MAX_V, Ncar, maxv_init=None):
 def simulate_prop_sensitivity(MAX_V=6):
     Ncar = init(MAX_V=MAX_V)
     prop_dict = {0: {'empty'}, 1: {'ped'}, 2:{'obs'}, 3:{'ped','obs'}}
-    INIT_V, P, P_param = compute_probabilities(Ncar, MAX_V, prop_dict)
-    save_results(INIT_V, P, P_param, "prop_sensitivity", "ped")
-
+    INIT_V, P, std_P, tp_range = compute_probabilities(Ncar, MAX_V, prop_dict)
+    save_results(INIT_V, P, std_P, tp_range, "prop_sensitivity", "ped")
+    results_folder = f"{cm_dir}/probability_results"
+    plot_sensitivity_results_w_errorbars(results_folder, "prop_sensitivity", MAX_V)
 
 def compute_probabilities(Ncar, MAX_V, label_dict, true_env_type="ped"):
     Vlow, Vhigh, xped, formula = initialize(MAX_V, Ncar)
@@ -101,7 +108,6 @@ def compute_probabilities(Ncar, MAX_V, label_dict, true_env_type="ped"):
         for vcar in range(1, MAX_V+1):  # Initial speed at starting point
             state_f = lambda x,v: (Vhigh-Vlow+1)*(x-1) + v
             start_state = "S"+str(state_f(1,vcar))
-            print(start_state)
             S, state_to_S = cmp.system_states_example_ped(Ncar, Vlow, Vhigh)
             
             true_env = str(1) # Sidewalk 3
@@ -110,28 +116,36 @@ def compute_probabilities(Ncar, MAX_V, label_dict, true_env_type="ped"):
             state_info["start"] = start_state
             
             tp_dict = dict()
-            tp_dict.update({true_env_type:tp})
-            for obs in O:
-                if obs != true_env_type:
-                    tp_dict.update({obs: 0.9})
+            cm_vals = dict()
+            for k,v in label_dict.items():
+                if v == set({true_env_type}):
+                    tp_dict.update({k:tp})
+                else:
+                    "Split evenly amongst other misdetections"
+                    other_tp = 0.9
+                    tp_dict.update({k:other_tp})
+                    cm_vals[k] = dict()
+                    for j in range(len(label_dict)):
+                        if (j!=k):
+                            cm_vals[k][j] = (1-other_tp)/(len(label_dict)-1)
+            
             for n in range(runs):
-                C = cmp.construct_CM(tp, 0.9, 0.9)
+                C = cmp.construct_CM(tp_dict, true_env_type, label_dict, cm_vals)
                 M = call_MC(S, O, state_to_S, C, label_dict, true_env, true_env_type, state_info, Ncar, xped, Vhigh)
                 result = M.prob_TL(formula)
                 print('Probability of eventually reaching good state for initial speed, {}, and max speed, {} is p = {}:'.format(vcar, MAX_V, result[start_state]))
-                P_runs[tp][vcar-1,n] = result2[start_state]
+                P_runs[tp][vcar-1,n] = result[start_state]
             
             mean = np.mean(P_runs[tp][vcar-1,:])
             stdev = np.std(P_runs[tp][vcar-1,:])
             P[tp].append(mean)
             std_P[tp].append(stdev)
 
-            st()
-            print('Probability of eventually reaching good state for initial speed, {}, and max speed, {} is p = {}:'.format(vcar, MAX_V, result[start_state]))
+            #print('Probability of eventually reaching good state for initial speed, {}, and max speed, {} is p = {}:'.format(vcar, MAX_V, result[start_state]))
             # Store results:
             INIT_V[tp].append(vcar)
-        return INIT_V, P, P_param
+    return INIT_V, P, std_P, tp_range
 
 if __name__=="__main__":
-    MAX_V = 4
+    MAX_V = 6
     simulate_prop_sensitivity(MAX_V=MAX_V)

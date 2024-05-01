@@ -80,7 +80,7 @@ def construct_confusion_matrix_dict(cm):
 
 # Script for confusion matrix of pedestrian
 # Varying the precision/recall confusion matrix values
-def confusion_matrix_ped2(prec, recall):
+def construct_CM_from_pr(prec, recall):
     C = dict()
     tp = recall*100
     fn = tp/prec - tp

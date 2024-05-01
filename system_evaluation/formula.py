@@ -92,28 +92,27 @@ def formula_ev_good(xcar_stop, Vhigh, Vlow=0):
     formula = 'P=?[F(\"'+good_st+'\")]'
     return formula
 
-def formula_not_stop(xcar_stop, Vhigh):
+def formula_not_stop(xcar_stop, Vhigh, N):
     '''
     Not stop until xcar_stop
     '''
-    crosswalk = ""
+    speed_cells = ""
     for vi in range(1,Vhigh+1):
         _, state_str = get_state(xcar_stop, vi, Vhigh)
-        if crosswalk == "":
-            crosswalk = crosswalk + "\"" + state_str+"\""
+        if speed_cells == "":
+            speed_cells = speed_cells + "\"" + state_str+"\""
         else:
-            crosswalk = crosswalk + "|\""+state_str+"\""
+            speed_cells = speed_cells + "|\""+state_str+"\""
     
-    stop = ""
-    for xi in range(1,xcar_stop+1):
-        _, state_str = get_state(xi, 0, Vhigh)
-        if stop == "":
-            stop = stop + "\"" + state_str+"\""
-        else:
-            stop = stop + "|\""+state_str+"\""
+    for xi in range(xcar_stop+1, N+1):
+        for vi in range(1,Vhigh+1):
+            _, state_str = get_state(xi, vi, Vhigh)
+            speed_cells = speed_cells + "|\""+state_str+"\""
     
     # probability of reaching crosswalk at nonzero speed
     # this will be the same as doing the right action because if the car stops beforehand, it stops permanently and
     # would never reach this state.
-    formula = 'P=?[F('+crosswalk+')]' 
+    # But, we cannot just evaluate it at this state. The car must continue
+    # driving; due to its speed; it might not even register this state. 
+    formula = 'P=?[F('+speed_cells+')]' 
     return formula

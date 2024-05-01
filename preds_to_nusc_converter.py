@@ -197,6 +197,7 @@ def construct_token_dict():
 def get_sample_token(fn: str) -> Dict:
     """
     Gets the sample token associated with a given filename.
+    This is why token_dic.json is important/used.
 
     Args:
         fn (str): The filename for which to retrieve the sample token.

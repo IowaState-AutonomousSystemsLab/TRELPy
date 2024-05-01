@@ -6,6 +6,7 @@ import os
 import pdb
 from pathlib import Path
 from experiment_file import *
+from collections import OrderedDict as od
 from print_utils import print_cm, print_param_cm
 # from ..custom_env import cm_dir, is_set_to_mini
 try: 
@@ -31,21 +32,20 @@ def init(MAX_V=6):
     Ncar = int(MAX_V*(MAX_V+1)/2 + 4)
     return Ncar
 
-def save_results(INIT_V, P, P_param, result_type, true_env):
+def save_results(INIT_V, P, precision_recall, result_type, true_env):
     results_folder = f"{cm_dir}/probability_results"
     if not os.path.exists(results_folder):
         os.makedirs(results_folder)
-    fname_v = Path(f"{results_folder}/{result_type}_cm_{true_env}_vmax_"+str(MAX_V)+"_initv.json")
-    fname_p = Path(f"{results_folder}/{result_type}_cm_{true_env}_vmax_"+str(MAX_V)+"_prob.json")
-    fname_param_p = Path(f"{results_folder}/{result_type}_param_cm_{true_env}_vmax_"+str(MAX_V)+"_prob.json")
+    fname_v = f"{results_folder}/{result_type}_cm_{true_env}_vmax_"+str(MAX_V)+"_initv.json"
+    fname_p = f"{results_folder}/{result_type}_cm_{true_env}_vmax_"+str(MAX_V)+"_prob.json"
+    fname_pr = f"{results_folder}/{result_type}_cm_{true_env}_vmax_"+str(MAX_V)+"_pr_pairs.json"
 
-    #pdb.set_trace()
     with open(fname_v, 'w') as f:
         json.dump(INIT_V, f)
     with open(fname_p, 'w') as f:
         json.dump(P, f)
-    with open(fname_param_p, 'w') as f:
-        json.dump(P_param, f)
+    with open(fname_pr, 'w') as f:
+        json.dump(precision_recall, f)
         
 def initialize(MAX_V, Ncar, maxv_init=None):
     '''
@@ -74,51 +74,46 @@ def initialize(MAX_V, Ncar, maxv_init=None):
 
 def simulate(MAX_V=6):
     Ncar = init(MAX_V=MAX_V)
-    C, param_C = cmp.confusion_matrix(cm_fn)
-    print(" =============== Full confusion matrix ===============")
-    print_cm(C)
-    print(" =============== Parametrized confusion matrix ===============")
-    print_param_cm(param_C)
-    print("===========================================================")
-    INIT_V, P, P_param = compute_probabilities(Ncar, MAX_V, C, param_C,true_env_type="obs")
-    save_results(INIT_V, P, P_param, "class", "obs")
+    INIT_V, P, prec_recall = compute_probabilities(Ncar, MAX_V,true_env_type="obs")
+    save_results(INIT_V, P, prec_recall, "prec_recall", "obs")
 
-def compute_probabilities(Ncar, MAX_V,C, param_C,true_env_type="ped"):
-    INIT_V = []
-    P = []
-    P_param = []
-    
+def compute_probabilities(Ncar, MAX_V, true_env_type="ped"):
     Vlow, Vhigh, xped, formula = initialize(MAX_V, Ncar)
+    prec_recall = [(0.4, 0.9), (0.7, 0.8), (0.82, 0.6), (0.9, 0.4), (0.95, 0.2)]
+    INIT_V = dict()
+    P = dict()
     print("===========================================================")
-    # Initial conditions set for all velocities
     print("Specification: ")
     print(formula)
-    for vcar in range(1, MAX_V+1):  # Initial speed at starting point
-        state_f = lambda x,v: (Vhigh-Vlow+1)*(x-1) + v
-        start_state = "S"+str(state_f(1,vcar))
-        print(start_state)
-        S, state_to_S = cmp.system_states_example_ped(Ncar, Vlow, Vhigh)
-        
-        true_env = str(1) # Sidewalk 3
-        
-        O = {"ped", "obs", "empty"}
-        class_dict = {0: {'ped'}, 1: {'obs'}, 2: {'empty'}}
-        state_info = dict()
-        state_info["start"] = start_state
-    
-        M = call_MC(S, O, state_to_S, C, class_dict, true_env, true_env_type, state_info, Ncar, xped, Vhigh)
-        result = M.prob_TL(formula)
-        P.append(result[start_state])
+    st()
+    for k in range(len(prec_recall)):
+        INIT_V[k] = []
+        P[k] = []
+        prec, recall = prec_recall[k]
 
-        param_M = call_MC_param(S, O, state_to_S, param_C, class_dict, true_env, true_env_type, state_info, Ncar, xped, Vhigh)
-        result_param = param_M.prob_TL(formula)
-        P_param.append(result_param[start_state])
-        
-        print('Probability of eventually reaching good state for initial speed, {}, and max speed, {} is p = {}:'.format(vcar, MAX_V, result[start_state]))
-        # Store results:
-        INIT_V.append(vcar)
+        for vcar in range(1, MAX_V+1):  # Initial speed at starting point
+            state_f = lambda x,v: (Vhigh-Vlow+1)*(x-1) + v
+            start_state = "S"+str(state_f(1,vcar))
+            print(start_state)
+            S, state_to_S = cmp.system_states_example_ped(Ncar, Vlow, Vhigh)
             
-    return INIT_V, P, P_param
+            true_env = str(1) # Sidewalk 3
+            O = {"ped", "obs", "empty"}
+            class_dict = {0: {'ped'}, 1: {'obs'}, 2: {'empty'}}
+            state_info = dict()
+            state_info["start"] = start_state
+
+            C = cmp.construct_CM_from_pr(prec, recall)
+            
+            M = call_MC(S, O, state_to_S, C, class_dict, true_env, true_env_type, state_info, Ncar, xped, Vhigh)
+            result = M.prob_TL(formula)
+            P[k].append(result[start_state])
+
+            print('Probability of eventually reaching good state for initial speed, {}, and max speed, {} is p = {}:'.format(vcar, MAX_V, result[start_state]))
+            # Store results:
+            INIT_V[k].append(vcar)
+            
+    return INIT_V, P, prec_recall
 
 if __name__=="__main__":
     MAX_V = 6

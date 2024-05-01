@@ -69,7 +69,7 @@ def initialize(MAX_V, Ncar, maxv_init=None):
         xmax_stop = Vhigh*(Vhigh+1)/2 + 1 # earliest stopping point for car 
     
     xped, xcar_stop = set_crosswalk_cell(Ncar, xmax_stop)
-    formula = formula_not_stop(xcar_stop, Vhigh)
+    formula = formula_not_stop(xcar_stop, Vhigh, Ncar)
     return Vlow, Vhigh, xped, formula
 
 def simulate_prop(MAX_V=6):
@@ -83,6 +83,7 @@ def simulate_prop(MAX_V=6):
     INIT_V, P, P_param = compute_probabilities(Ncar, MAX_V,C, param_C, prop_dict,true_env_type="obs")
     save_results(INIT_V, P, P_param, "prop", "obs")
 
+
 def simulate_prop_seg(MAX_V=6):
     Ncar = init(MAX_V=MAX_V)
     C, param_C, prop_dict = cmp.confusion_matrix(prop_cm_seg_fn, prop_dict_file)
@@ -91,6 +92,7 @@ def simulate_prop_seg(MAX_V=6):
     print(" =============== Segmented Parametrized Proposition-based confusion matrix ===============")
     print_param_cm(param_C)
     print("===========================================================")
+
     INIT_V, P, P_param = compute_probabilities(Ncar, MAX_V,C, param_C, prop_dict,true_env_type="obs")
     save_results(INIT_V, P, P_param, "prop_seg", "obs")
 
@@ -118,7 +120,7 @@ def compute_probabilities(Ncar, MAX_V,C, param_C, label_dict,true_env_type="ped"
         M = call_MC(S, O, state_to_S, C, label_dict, true_env, true_env_type, state_info, Ncar, xped, Vhigh)
         result = M.prob_TL(formula)
         P.append(result[start_state])
-        
+
         param_M = call_MC_param(S, O, state_to_S, param_C, label_dict, true_env, true_env_type, state_info, Ncar, xped, Vhigh)
         result_param = param_M.prob_TL(formula)
         P_param.append(result_param[start_state])

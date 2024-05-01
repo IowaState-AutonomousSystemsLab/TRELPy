@@ -58,22 +58,46 @@ def construct_confusion_matrix_dict(cm, prop_dict):
     return C
 
 # Sensitivity:
-def construct_CM(tp_dict, true_env_type, prop_dict):
+def construct_CM(tp_dict, true_env_type, prop_dict, cm_vals):
     C = dict()
+    n = len(prop_dict)
+    
     for k, v in prop_dict.items():
-        v == set({true_env_type})
-    C["ped", "ped"] = tp_ped
-    coeff = random.random()
-    C["obj", "ped"] = coeff*(1-tp_ped)
-    C["empty", "ped"] = (1-coeff)*(1 - tp_ped)
+        tp = tp_dict[k] # k: gt
+        if v ==  set({true_env_type}):
+            remainder = (1-tp)
+            rand_vals = np.array([random.random() for i in range(n-1)])
+            rand_vals = (rand_vals/sum(rand_vals)).tolist() # All elements of rand_vals should some to 1.
+            sum_pred = 0
+            for j in prop_dict.keys():
+                if j==k:
+                    C[j,k] = tp
+                else:
+                    C[j,k] = rand_vals.pop()*remainder
+                sum_pred += C[j,k]
+            assert abs(sum_pred - 1)<1e-3
+        else:
+            sum_pred = 0
+            for j in prop_dict.keys():
+                if j==k:
+                    C[j,k] = tp
+                else:
+                    C[j,k] = cm_vals[k][j] # Other confusion matrix values
+                sum_pred += C[j,k]
+            assert abs(sum_pred - 1)<1e-3
 
-    C["ped", "obj"] = 0.1*(1-tp_obj)
-    C["obj", "obj"] = tp_obj
-    C["empty", "obj"] = 0.9*(1-tp_obj)
+    # C["ped", "ped"] = tp_ped
+    # coeff = random.random()
+    # C["obj", "ped"] = coeff*(1-tp_ped)
+    # C["empty", "ped"] = (1-coeff)*(1 - tp_ped)
 
-    C["ped", "empty"] = 0.5*(1-tp_emp)
-    C["obj", "empty"] = 0.5*(1-tp_emp)
-    C["empty", "empty"] = tp_emp
+    # C["ped", "obj"] = 0.1*(1-tp_obj)
+    # C["obj", "obj"] = tp_obj
+    # C["empty", "obj"] = 0.9*(1-tp_obj)
+
+    # C["ped", "empty"] = 0.5*(1-tp_emp)
+    # C["obj", "empty"] = 0.5*(1-tp_emp)
+    # C["empty", "empty"] = tp_emp
     return C
     
 # Script for confusion matrix of pedestrian
@@ -242,7 +266,6 @@ class synth_markov_chain:
     def construct_param_markov_chain(self, ped_st): # Construct probabilities and transitions in the markov chain given the controller and confusion matrix
         for Si in list(self.states):
             # print("Finding initial states in the Markov chain: ")
-            
             init_st = self.reverse_state_dict[Si]
             distbin = self.get_distbin(ped_st, init_st)
             # The output state can be different depending on the observation as defined by the confusion matrix
@@ -252,13 +275,22 @@ class synth_markov_chain:
 
                 if distbin not in self.param_C.keys():
                     pdb.set_trace()
-
                 try:
                     for k, v in self.label_dict.items():
-                        if v == set({obs}):
-                            pred_j = k
-                        if v == set({self.true_env_type}):
-                            true_j = k
+                        if type(self.true_env_type) == str:
+                            if v == set({self.true_env_type}):
+                                true_j = k
+                        else:
+                            if v == set(self.true_env_type):
+                                true_j = k
+
+                        if type(obs) == str:
+                            if v == set({obs}):
+                                pred_j = k
+                        else:
+                            if v == set(obs):
+                                pred_j = k
+
                     prob_t = self.param_C[distbin][pred_j, true_j] # Probability of transitions
                     if np.isnan(prob_t):
                         prob_T = 0.0
@@ -275,18 +307,32 @@ class synth_markov_chain:
     def construct_markov_chain(self): # Construct probabilities and transitions in the markov chain given the controller and confusion matrix
         for Si in list(self.states):
             init_st = self.reverse_state_dict[Si]
+            
             for obs in self.obs:
                 next_st = self.compute_next_state(obs, init_st)
                 Sj = self.state_dict[tuple(next_st.values())]
                 try:
                     for k, v in self.label_dict.items():
-                        if v == set({obs}):
-                            pred_j = k
-                        if v == set({self.true_env_type}):
-                            true_j = k
+                        if type(self.true_env_type) == str:
+                            if v == set({self.true_env_type}):
+                                true_j = k
+                        else:
+                            if v == set(self.true_env_type):
+                                true_j = k
+
+                        if type(obs) == str:
+                            if v == set({obs}):
+                                pred_j = k
+                        else:
+                            if v == set(obs):
+                                pred_j = k
+                        
                     prob_t = self.C[pred_j, true_j] # Probability of transitions
                 except:
                     st()
+                # if Si == "S1":
+                #     if obs == ("ped", "obs"):
+                #         st()
                 if (Si, Sj) in self.M.keys():
                     self.M[Si, Sj] = self.M[Si, Sj] + prob_t
                 else:

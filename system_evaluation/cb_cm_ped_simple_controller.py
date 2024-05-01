@@ -72,6 +72,45 @@ def initialize(MAX_V, Ncar, maxv_init=None):
     formula = formula_ev_good(xcar_stop, Vhigh, Vlow)
     return Vlow, Vhigh, xped, formula
 
+def initialize_study_failure(MAX_V, Ncar, maxv_init=None):
+    '''
+    Inputs::
+    MAX_V: Maximum speed that the car can travel at
+    Ncar: Maximum discrete states for the car
+    vmax_init: Max initial speed of the car (specified if different from MAX_V)
+
+    Outputs::
+    Vlow: Minimum car speed (0)
+    Vhigh: Maximum car speed (MAX_V)
+    xped: Pedestrian position
+    '''
+
+    Vlow = 0
+    Vhigh = MAX_V
+    
+    if maxv_init:
+        xmax_stop = maxv_init*(maxv_init+1)/2 + 1 # earliest stopping point for car 
+    else:
+        xmax_stop = Vhigh*(Vhigh+1)/2 + 1 # earliest stopping point for car 
+    
+    xped, xcar_stop = set_crosswalk_cell(Ncar, xmax_stop)
+    formula = formula_not_stop(xcar_stop, Vhigh, Ncar)
+    return Vlow, Vhigh, xped, formula
+
+def simulate_why_fail(MAX_V=6):
+    '''
+    Function that describes how much of the failure came from the car not stopping
+    '''
+    Ncar = init(MAX_V=MAX_V)
+    C, param_C = cmp.confusion_matrix(cm_fn)
+    print(" =============== Full confusion matrix ===============")
+    print_cm(C)
+    print(" =============== Parametrized confusion matrix ===============")
+    print_param_cm(param_C)
+    print("===========================================================")
+    INIT_V, P, P_param = compute_probabilities(Ncar, MAX_V, C, param_C,true_env_type="ped", study_fail=True)
+    save_results(INIT_V, P, P_param, "class_not_stop", "ped")
+
 def simulate(MAX_V=6):
     Ncar = init(MAX_V=MAX_V)
     C, param_C = cmp.confusion_matrix(cm_fn)
@@ -80,19 +119,24 @@ def simulate(MAX_V=6):
     print(" =============== Parametrized confusion matrix ===============")
     print_param_cm(param_C)
     print("===========================================================")
+    Vlow, Vhigh, xped, formula = initialize(MAX_V, Ncar)
     INIT_V, P, P_param = compute_probabilities(Ncar, MAX_V, C, param_C,true_env_type="ped")
     save_results(INIT_V, P, P_param, "class", "ped")
 
-def compute_probabilities(Ncar, MAX_V,C, param_C,true_env_type="ped"):
+def compute_probabilities(Ncar, MAX_V,C, param_C,true_env_type="ped", study_fail=False):
     INIT_V = []
     P = []
     P_param = []
     
-    Vlow, Vhigh, xped, formula = initialize(MAX_V, Ncar)
+    if study_fail:
+        Vlow, Vhigh, xped, formula = initialize_study_failure(MAX_V, Ncar)
+    else:
+        Vlow, Vhigh, xped, formula = initialize(MAX_V, Ncar)
     print("===========================================================")
     # Initial conditions set for all velocities
     print("Specification: ")
     print(formula)
+    st()
     for vcar in range(1, MAX_V+1):  # Initial speed at starting point
         state_f = lambda x,v: (Vhigh-Vlow+1)*(x-1) + v
         start_state = "S"+str(state_f(1,vcar))
@@ -120,5 +164,6 @@ def compute_probabilities(Ncar, MAX_V,C, param_C,true_env_type="ped"):
     return INIT_V, P, P_param
 
 if __name__=="__main__":
-    MAX_V = 3
+    MAX_V = 6
     simulate(MAX_V=MAX_V)
+    simulate_why_fail(MAX_V=6)
