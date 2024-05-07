@@ -1,5 +1,6 @@
 FROM nvidia/cuda:11.4.3-devel-ubuntu20.04
 
+RUN echo "hello"
 WORKDIR /root
 
 ARG DEBIAN_FRONTEND=noninteractive \
@@ -115,29 +116,45 @@ RUN pip3 install numpy \
 				setuptools \
 				pycparser
 
+RUN echo "HOW ARE YOU DOING TODAY"
+
 WORKDIR /root/software
-# RUN git clone -b stable https://github.com/moves-rwth/storm.git
-RUN wget https://github.com/moves-rwth/storm/archive/refs/tags/1.8.0.tar.gz -O storm-1.8.0.tar.gz
-RUN tar -xvf storm-1.8.0.tar.gz
-WORKDIR /root/software/storm-1.8.0
-RUN export STORM_DIR=/root/software/storm-1.8.0 && mkdir build
+RUN git clone -b master https://github.com/moves-rwth/storm.git
+WORKDIR /root/software/storm
+RUN export STORM_DIR=/root/software/storm && mkdir build
 RUN cd build && cmake .. 
-WORKDIR /root/software/storm-1.8.0/build
+WORKDIR /root/software/storm/build
 RUN make storm-main -j8
 
-# WORKDIR /root/software
-# RUN git clone https://github.com/moves-rwth/stormpy.git --branch 1.8.0
-# WORKDIR /root/software/stormpy
-# RUN python3 setup.py develop
+WORKDIR /root/software
+RUN git clone -b master https://github.com/moves-rwth/stormpy.git
+WORKDIR /root/software/stormpy
+RUN python3 setup.py develop
 
+RUN eval "$(pyenv init -)" && \
+	eval "$(pyenv init --path)" && \
+	eval "$(pyenv virtualenv-init -)" && \
+	pyenv global 3.10.14
+
+RUN pyenv global 3.10.14
 
 # Installing TULIP
 
-# WORKDIR /root/software
-# RUN git clone https://github.com/tulip-control/tulip-control.git
-# RUN cd /root/software/tulip-control && pip3 install -r requirements.txt
-# WORKDIR /root/software/tulip-control
+WORKDIR /root/software
+RUN git clone https://github.com/tulip-control/tulip-control.git
+RUN cd /root/software/tulip-control && pip3 install -r requirements.txt
+WORKDIR /root/software/tulip-control
+
+RUN eval "$(pyenv init -)" && \
+	eval "$(pyenv init --path)" && \
+	eval "$(pyenv virtualenv-init -)" && \
+	pyenv global 3.10.14
+
+RUN pyenv global 3.10.14
+
 # RUN pip3 install .
 
-# RUN apt-get update 
+RUN apt-get update 
+
+RUN git clone git@github.com:IowaState-AutonomousSystemsLab/TRELPy.git
 
