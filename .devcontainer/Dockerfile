@@ -156,5 +156,16 @@ RUN pyenv global 3.10.14
 
 RUN apt-get update 
 
-RUN git clone git@github.com:IowaState-AutonomousSystemsLab/TRELPy.git
+WORKDIR /root/software/
+RUN git clone -b main https://github.com/IowaState-AutonomousSystemsLab/TRELPy.git
+WORKDIR /root/software/TRELPy
 
+RUN eval "$(pyenv init -)" && \
+	eval "$(pyenv init --path)" && \
+	eval "$(pyenv virtualenv-init -)" && \
+	pyenv global 3.10.14
+
+RUN pyenv global 3.10.14
+
+RUN pip3 install -r requirements-pip.txt
+RUN sed 's/#.*//' requirements-apt.txt | xargs sudo apt-get -y install

@@ -6,4 +6,7 @@ pytest
 scipy
 cvxopt
 gr1py
-pyquaternion                   
+pyquaternion
+ipykernel
+nuscenes-devkit       
+pip            

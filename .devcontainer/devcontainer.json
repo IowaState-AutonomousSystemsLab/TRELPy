@@ -1,0 +1,21 @@
+{
+    "name": "TRELPy",
+    "dockerFile": "Dockerfile",
+
+    "customizations": {
+        "vscode": {
+            "extensions": [
+                "ms-python.python",
+                "ms-toolsai.jupyter",
+                "usernamehw.errorlens",
+                "taoyu.prism-language",
+                "ms-python.black-formatter",
+                "ms-toolsai.jupyter-renderers",
+                "ms-python.debugpy"
+            ],
+            "settings": {
+                "terminal.integrated.shell.linux": "/bin/bash"
+            }
+        }
+    }
+}
