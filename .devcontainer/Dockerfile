@@ -1,6 +1,5 @@
 FROM nvidia/cuda:11.4.3-devel-ubuntu20.04
 
-RUN echo "hello"
 WORKDIR /root
 
 ARG DEBIAN_FRONTEND=noninteractive \
@@ -116,8 +115,6 @@ RUN pip3 install numpy \
 				setuptools \
 				pycparser
 
-RUN echo "HOW ARE YOU DOING TODAY"
-
 WORKDIR /root/software
 RUN git clone -b master https://github.com/moves-rwth/storm.git
 WORKDIR /root/software/storm
@@ -169,3 +166,7 @@ RUN pyenv global 3.10.14
 
 RUN pip3 install -r requirements-pip.txt
 RUN sed 's/#.*//' requirements-apt.txt | xargs sudo apt-get -y install
+
+WORKDIR /root/software/TRELPy/prediction_results
+RUN wget https://iowastate-my.sharepoint.com/:u:/g/personal/ranais_iastate_edu/EUkgQ3HhW65Nvq8m1bKgRqYB4BJcLNlhaVx_Rzl55efZ3Q?e=e2u20R -O nuScenesMini_predResults.tar.gz
+
