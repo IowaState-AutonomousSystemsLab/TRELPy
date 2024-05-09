@@ -2,6 +2,10 @@
     "name": "TRELPy",
     "dockerFile": "Dockerfile",
 
+    "mounts": [
+        "source=/home/ranai/nuscenes_dataset/nuscenes_mini,target=/datasets/nuscenes-mini,type=volume"
+    ],
+
     "customizations": {
         "vscode": {
             "extensions": [

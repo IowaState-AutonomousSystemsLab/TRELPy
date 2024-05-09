@@ -66,9 +66,32 @@ The dependencies required to run the ipynb can be installed through the followin
 <details>
 <summary><b><font size="+1">Docker container</font></b></summary>
 
-There is a `Dockerfile` in the `.devcontainer` directory that simplifies the model-checking installation. This file is a Work in Progress.
+There is a `Dockerfile` in the `.devcontainer` directory that simplifies the model-checking installation. This file is a *Work in Progress*.
 
-The `Dockerfile` will be incrementally updated to include inference capabilities as well.
+Currently, the Dockerfile has all necessary dependencies to run `tutorial.ipynb` out of the box. The container is not capable of inference, only using results that are provided to it. In the upcoming weeks, we plan on releasing a Docker container that can perform inference on pre-trained models.
+
+### Steps 
+1. Clone this repository
+2. Open the repository in Visual Studio Code as a dev-container. Steps can be found [here (DevContainer setup). ](https://code.visualstudio.com/docs/devcontainers/tutorial) 
+3. Navigate to `/root/software/tulip-control` and run this command `pip3 install .`
+</details>
+
+## Troubleshooting
+<details>
+<summary> (Docker) Dockerfile build has an error </summary>
+
+Lodge an issue in GitHub and we will try to help you as soon as possible. If the error is in during the Storm and StormPy installation, ensure that the version of Storm being installed is the same as the version of StormPy being installed. Also check if there are any open issues on those repositories (Links above).
+</details>
+
+<details>
+<summary> (Docker) Running the command to install tulip-control gives error</summary>
+    Run <code> python3 --version </code>. The version should <code>3.10.xx</code>. If it is not run the following in a terminal
+    <p>
+        <code> eval "$(pyenv init -)" && </code>  <br>
+        <code> eval "$(pyenv init --path)" && </code> <br>
+        <code> eval "$(pyenv virtualenv-init -)" && </code> <br>
+        <code> pyenv global 3.10.14 </code> <br>
+    </p>
 </details>
 
 ## Cite this

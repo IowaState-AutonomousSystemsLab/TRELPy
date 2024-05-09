@@ -62,8 +62,7 @@ RUN sudo apt-get install -qy wget \
 					libz3-dev \
 					libxerces-c-dev \
 					automake \
-					graphviz \
-                    software-properties-common
+					graphviz
 
 
 RUN sudo add-apt-repository ppa:ubuntu-toolchain-r/test
@@ -167,6 +166,7 @@ RUN pyenv global 3.10.14
 RUN pip3 install -r requirements-pip.txt
 RUN sed 's/#.*//' requirements-apt.txt | xargs sudo apt-get -y install
 
+RUN mkdir -p /root/software/TRELPy/prediction_results
 WORKDIR /root/software/TRELPy/prediction_results
 RUN wget https://iowastate-my.sharepoint.com/:u:/g/personal/ranais_iastate_edu/EUkgQ3HhW65Nvq8m1bKgRqYB4BJcLNlhaVx_Rzl55efZ3Q?e=e2u20R -O nuScenesMini_predResults.tar.gz
-
+# RUN tar xvf nuScenesMini_predResults.tar.gz

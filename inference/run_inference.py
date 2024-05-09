@@ -1,5 +1,12 @@
 # LIDAR Inference:
 import os
+
+import os
+import sys
+here = os.path.dirname(__file__)
+
+sys.path.append(os.path.join(here, '..'))
+
 import subprocess
 from pathlib import Path
 import pdb
@@ -10,6 +17,7 @@ from custom_env import *
 home_dir = str(Path.home())
 configs_path = "configs/pointpillars/pointpillars_hv_fpn_sbn-all_8xb4-2x_nus-3d.py"
 checkpoint_path = "checkpoints/hv_pointpillars_fpn_sbn-all_4x8_2x_nus-3d_20210826_104936-fca299c1.pth"
+DET_THRESH=0
 setsize="full"
 folder_name = "model_"+now.strftime("%m-%d-%Y_%H_%M")
 
