@@ -39,10 +39,10 @@ def precision_recall_plots(INIT_V, P, prec_recall, fig_name,title=None):
         init_speed = INIT_V[k]
         # st()
         prec, rec = prec_recall[int(k)]
-        ax.plot(init_speed, probabilities, 'o--', label=f"p={prec}, r={rec}")
+        ax.plot(init_speed, probabilities, 'o--', label=f"$p={prec}$, $r={rec}$")
     leg = ax.legend(loc="best", fontsize=15)
-    ax.set_xlabel("Initial speed",fontsize=15)
-    ax.set_ylabel("Probability of satisfaction", fontsize=15)
+    ax.set_xlabel("Initial speed",fontsize=20)
+    ax.set_ylabel("Probability of satisfaction", fontsize=20)
     ax.set_xticks(np.arange(1,max(init_speed)+1,1))
     # if title:
     #     plt.title(title,fontsize=20)
@@ -79,11 +79,11 @@ def sensitivity_probability_plot_w_errorbars(INIT_V, P, std_P, fig_name,title=No
         probabilities = P[k]
         init_speed = INIT_V[k]
         error_bar = std_P[k]
-
-        plt.errorbar(init_speed, probabilities, yerr=error_bar,  fmt='-.o', capsize=6,label=f"TP={k}")
+        TP = "TP"
+        plt.errorbar(init_speed, probabilities, yerr=error_bar,  fmt='-.o', capsize=6,label=f"$\mathtt{{TP}}={k}$")
     leg = plt.legend(loc="best")
-    plt.xlabel("Initial speed",fontsize=15)
-    plt.ylabel("Probability of satisfaction", fontsize=15)
+    plt.xlabel("Initial speed",fontsize=20)
+    plt.ylabel("Probability of satisfaction", fontsize=20)
     plt.xticks(np.arange(1,max(init_speed)+1,1))
     # if title:
     #     plt.title(title,fontsize=20)
@@ -120,22 +120,29 @@ def plot_results(results_folder, MAX_V, true_env_type):
     if not os.path.exists(figure_folder):
         os.makedirs(figure_folder)
     fig_name = Path(f"{figure_folder}/guarantees_cm_{true_env_type}_vmax_"+str(MAX_V)+".png")
+    # fig_name = Path(f"{figure_folder}/class_guarantees_cm_{true_env_type}_vmax_"+str(MAX_V)+".png")
+    # fig_name = Path(f"{figure_folder}/prop_guarantees_cm_{true_env_type}_vmax_"+str(MAX_V)+".png")
 
     fig, ax= plt.subplots()
     ax.tick_params(axis='both', which='major', labelsize=15)
     max_p = update_max()
     title = "System-level Guarantees"
+    CM = "CM"
+    cm_dict = {"class": "$\mathtt{{CM}}_{{class}}$", "prop": "$\mathtt{{CM}}_{\text{logic}}$", "prop_seg": "$\mathtt{{CM}}_{{logic, seg}}$",
+    "class_param": "$\{\mathtt{{CM}^k}_{{class}}\}$", "prop_param": "$\{\mathtt{{CM}^k}_{{logic}}\}$", "prop_seg_param": "$\{\mathtt{{CM}^k}_{{prop, seg}}\}$"}
     
+    # for res_type in ["prop"]:
     for res_type in ["class", "prop", "prop_seg"]:
         INIT_V, P, P_param = load_result(results_folder, res_type, true_env_type, MAX_V) 
-        ax.plot(INIT_V, P, 'o--', label=res_type)
-        ax.plot(INIT_V, P_param, 'o--', label=res_type+"_param")
+        if res_type != "prop_seg":
+            ax.plot(INIT_V, P, 'o--', label=cm_dict[res_type])
+        ax.plot(INIT_V, P_param, 'o--', label=cm_dict[res_type+"_param"])
         # plot_probability(INIT_V, P, max_p, res_type, ax)
         # plot_probability(INIT_V, P_param, max_p, res_type+"_param", ax)    
     
     leg = ax.legend(loc="best", fontsize=15)
-    ax.set_xlabel("Initial speed",fontsize=15)
-    ax.set_ylabel("Probability of satisfaction", fontsize=15)
+    ax.set_xlabel("Initial speed",fontsize=20)
+    ax.set_ylabel("Probability of satisfaction", fontsize=20)
     ax.set_xticks(np.arange(1,MAX_V+1,1))
     # if title:
     #     ax.set_title(title,fontsize=20)
@@ -146,8 +153,16 @@ def plot_results(results_folder, MAX_V, true_env_type):
 if __name__=="__main__":
     MAX_V = 6
     results_folder = f"{cm_dir}/probability_results"
+
     true_env_type = "obs"
     plot_results(results_folder, MAX_V, true_env_type)
+
+    # true_env_type = "obs"
+    # plot_results(results_folder, MAX_V, true_env_type)
     # plot_sensitivity_results_w_errorbars(results_folder, "prop_sensitivity", MAX_V)
-    true_env_type = "obs"
-    plot_precision_recall(results_folder, "prec_recall", true_env_type, MAX_V)
+
+    # true_env_type = "obs"
+    # plot_precision_recall(results_folder, "prec_recall", true_env_type, MAX_V)
+
+    # true_env_type = "ped"
+    # plot_precision_recall(results_folder, "prec_recall", true_env_type, MAX_V)

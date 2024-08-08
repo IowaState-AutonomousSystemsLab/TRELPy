@@ -14,6 +14,9 @@ import os
 from tulip.transys.compositions import synchronous_parallel
 import pickle as pkl
 from pdb import set_trace as st
+import sys
+sys.path.append("..")
+from print_utils import save_cm_latex, save_param_cm_latex
 
 model_MC = "model_MC.nm"
 
@@ -26,6 +29,12 @@ def read_confusion_matrix(cm_fn):
     cm = np.zeros((n,n))
     for k, v in conf_matrix.items():
         cm += v # Total class based conf matrix w/o distance
+
+    cm_latex_file = cm_fn[:-3]+"txt"
+    param_cm_latex_file = cm_fn[:-4]+"_param.txt"
+    cm_dict = {0:"ped", 1:"obs", 2:"empty"}
+    save_cm_latex(cm, cm_dict, cm_latex_file)
+    save_param_cm_latex(conf_matrix, cm_dict, param_cm_latex_file)
     return cm, conf_matrix
 
 # Script for confusion matrix of pedestrian
@@ -36,7 +45,7 @@ def confusion_matrix(conf_matrix):
     C = dict()
     param_C = dict()
     cm, param_cm = read_confusion_matrix(conf_matrix)
-    st()
+    
     C = construct_confusion_matrix_dict(cm)
     for k, cm in param_cm.items():
         param_C[k] = construct_confusion_matrix_dict(cm)

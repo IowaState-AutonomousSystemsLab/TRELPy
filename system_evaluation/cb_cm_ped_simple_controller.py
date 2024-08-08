@@ -122,6 +122,7 @@ def simulate(MAX_V=6):
     Vlow, Vhigh, xped, formula = initialize(MAX_V, Ncar)
     INIT_V, P, P_param = compute_probabilities(Ncar, MAX_V, C, param_C,true_env_type="ped")
     save_results(INIT_V, P, P_param, "class", "ped")
+    
 
 def compute_probabilities(Ncar, MAX_V,C, param_C,true_env_type="ped", study_fail=False):
     INIT_V = []

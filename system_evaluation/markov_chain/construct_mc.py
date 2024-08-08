@@ -14,6 +14,9 @@ import os
 from tulip.transys.compositions import synchronous_parallel
 import pickle as pkl
 from pdb import set_trace as st
+import sys
+sys.path.append("..")
+from print_utils import save_cm_latex
 
 model_MC = "model_MC.nm"
 # Function to return a list of all combinations of inputs:
@@ -51,13 +54,15 @@ def construct_backup_controller(Ncar, Vlow, Vhigh):
 
 # Read confusion matrix from nuscnes file:
 def read_confusion_matrix(cm_fn):
-    conf_matrix = pkl.load( open(cm_fn, "rb" ))
+    conf_matrix = pkl.load(open(cm_fn, "rb" ))
     for k,v in conf_matrix.items():
         n = len(conf_matrix[k][0])
         break
     cm = np.zeros((n,n))
     for k, v in conf_matrix.items():
         cm += v # Total class based conf matrix w/o distance
+    cm_latex_file = cm_fn[:-3]+"txt"
+    st()
     return cm, conf_matrix
 
 

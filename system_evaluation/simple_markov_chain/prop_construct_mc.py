@@ -15,6 +15,9 @@ from tulip.transys.compositions import synchronous_parallel
 import pickle as pkl
 from pdb import set_trace as st
 import random 
+import sys
+sys.path.append("..")
+from print_utils import save_cm_latex, save_param_cm_latex
 
 prop_model_MC = "prop_model_MC.nm"
 
@@ -28,6 +31,12 @@ def read_confusion_matrix(cm_fn, prop_dict_file):
     cm = np.zeros((n,n))
     for k, v in conf_matrix.items():
         cm += v # Total class based conf matrix w/o distance
+
+    cm_latex_file = cm_fn[:-3]+"txt"
+    param_cm_latex_file = cm_fn[:-4]+"_param.txt"
+    save_cm_latex(cm, prop_dict, cm_latex_file)
+    save_param_cm_latex(conf_matrix, prop_dict, param_cm_latex_file)
+    
     return cm, conf_matrix, prop_dict
 
 
@@ -290,7 +299,8 @@ class synth_markov_chain:
                         else:
                             if v == set(obs):
                                 pred_j = k
-
+                    if Si == "S6" and Sj == "S47":
+                        st()
                     prob_t = self.param_C[distbin][pred_j, true_j] # Probability of transitions
                     if np.isnan(prob_t):
                         prob_T = 0.0
@@ -326,7 +336,8 @@ class synth_markov_chain:
                         else:
                             if v == set(obs):
                                 pred_j = k
-                        
+                    # if Si == "S6" and Sj == "S47":
+                    #     st()
                     prob_t = self.C[pred_j, true_j] # Probability of transitions
                 except:
                     st()
