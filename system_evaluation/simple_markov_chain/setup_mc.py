@@ -2,6 +2,11 @@ import sys
 sys.path.append("../..")
 import simple_markov_chain.construct_mc as cmp
 from controllers.simple_controller import prop_control_dict, control_dict
+
+### Controllers where equations of motion are approximated at the end.
+from controllers.simple_controller_v2 import prop_control_dict as prop_control_dict_v2
+from controllers.simple_controller_v2 import control_dict as control_dict_v2
+
 import importlib
 from pdb import set_trace as st
 

@@ -451,7 +451,7 @@ def render_sample_data_with_predictions( sample_data_token: str,
             ax.plot(0, 0, 'x', color='red')
             yaw = get_ego_angle(nusc, sample_data_token)
             ax.plot([0, 5*np.cos(np.radians(yaw))], [0, 5*np.sin(np.radians(yaw))], color='black')
-            ax.plot([0, 5], [0, 0], color='green')
+            # ax.plot([0, 5], [0, 0], color='green')
             
 
             # Get boxes in lidar frame.

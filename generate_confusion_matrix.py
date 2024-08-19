@@ -112,10 +112,10 @@ class GenerateConfusionMatrix:
         if self.verbose:
             print("Loading ground truth and prediction boxes")
         self.group_boxes_into_bands() # 
+        self.match_boxes()
         self.initialize_clusters()
         if self.verbose:
             print("Matching boxes")
-        self.match_boxes()
         
         if self.verbose:
             print("Match boxes completed.")
@@ -378,9 +378,9 @@ class GenerateConfusionMatrix:
         for k, prop in enumerate(propositions):
             if any(prop): # if not empty
                 prop_label = set(prop)
-                self.prop_dict[k] = prop_label
+                self.prop_dict[k-1] = prop_label
             else:
-                self.prop_dict[k] = set(["empty"])
+                self.prop_dict[len(propositions)-1] = set(["empty"])
 
     def set_list_of_propositions(self):
         self.get_propositions()

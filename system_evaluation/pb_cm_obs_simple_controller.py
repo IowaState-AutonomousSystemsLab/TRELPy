@@ -70,6 +70,7 @@ def initialize(MAX_V, Ncar, maxv_init=None):
     
     xped, xcar_stop = set_crosswalk_cell(Ncar, xmax_stop)
     formula = formula_not_stop(xcar_stop, Vhigh, Ncar)
+    formula = formula_ev_good(xcar_stop, Vhigh, Vlow)
     return Vlow, Vhigh, xped, formula
 
 def simulate_prop(MAX_V=6):
@@ -92,7 +93,7 @@ def simulate_prop_seg(MAX_V=6):
     print(" =============== Segmented Parametrized Proposition-based confusion matrix ===============")
     print_param_cm(param_C)
     print("===========================================================")
-
+    st()
     INIT_V, P, P_param = compute_probabilities(Ncar, MAX_V,C, param_C, prop_dict,true_env_type="obs")
     save_results(INIT_V, P, P_param, "prop_seg", "obs")
 
@@ -119,19 +120,20 @@ def compute_probabilities(Ncar, MAX_V,C, param_C, label_dict,true_env_type="ped"
         
         M = call_MC(S, O, state_to_S, C, label_dict, true_env, true_env_type, state_info, Ncar, xped, Vhigh)
         result = M.prob_TL(formula)
-        P.append(result[start_state])
+        P.append(1-result[start_state])
 
         param_M = call_MC_param(S, O, state_to_S, param_C, label_dict, true_env, true_env_type, state_info, Ncar, xped, Vhigh)
         result_param = param_M.prob_TL(formula)
-        P_param.append(result_param[start_state])
-
+        P_param.append(1-result_param[start_state])
+        
         print('Probability of eventually reaching good state for initial speed, {}, and max speed, {} is p = {}:'.format(vcar, MAX_V, result[start_state]))
         # Store results:
+        st()
         INIT_V.append(vcar)
         
     return INIT_V, P, P_param
 
 if __name__=="__main__":
-    MAX_V = 6
+    MAX_V = 3
     simulate_prop(MAX_V=MAX_V)
     simulate_prop_seg(MAX_V=MAX_V)

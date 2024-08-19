@@ -16,6 +16,7 @@ from custom_env import home_dir, cm_dir, repo_dir, output_dir, preds_dir, model_
 from nuscenes import NuScenes
 from nuscenes.eval.common.config import config_factory
 from nuscenes.eval.common.data_classes import EvalBoxes
+import datetime
 
 # parameters to setup nuScenes
 
@@ -73,11 +74,38 @@ generator = GenerateConfusionMatrix(nusc=nusc,
     distance_bin=10
 )
 generator.set_debug(False)
-# generator.set_list_of_classes(list_of_classes)
-# generator.set_list_of_propositions()
+generator.set_list_of_classes(list_of_classes)
+generator.set_list_of_propositions()
+
+# Random scene visualize:
+# from nuscenes_render import render_sample_data_with_predictions
+# from generate_confusion_matrix import convert_from_EvalBox_to_Box
+
+# import random
+
+# random.seed = 42 # Change this number to visualize a different sample
+
+# sample_tokens = generator.gt_boxes.sample_tokens # All the sample tokens in the dataset
+
+# for k in range(10):
+#     tok = random.choice(sample_tokens)
+#     sample_data_token = nusc.get('sample', tok)['data']['LIDAR_TOP']
+
+#     print(f"--------- Details for sample {tok} ------------")
+#     print(f"Number of ground truth objects {len(generator.gt_boxes[tok])}")
+#     print(f"Number of prediction objects {len(generator.pred_boxes[tok])}")
+
+#     now =  str(datetime.datetime.now())
+#     nusc.render_sample_data(cam_front_data['token'], out_path=f"{repo_dir}/plotting/highlevel_true" + now+".png", verbose=False)
+#     render_sample_data_with_predictions(nusc=nusc, 
+#                                         sample_data_token=sample_data_token, 
+#                                         pred_boxes=[convert_from_EvalBox_to_Box(obj) for obj in generator.pred_boxes[tok]], 
+#                                         out_path=f"{repo_dir}/plotting/highlevel_pred" + now+".png")
+
+
 
 compute_prop_cm = False
-compute_class_cm = True
+compute_class_cm = False
 compute_prop_segmented_cm = False
 save_prop_dict = False
 
@@ -134,10 +162,6 @@ if compute_class_cm:
 if compute_prop_segmented_cm:
     cm_prop_w_clusters = generator.get_prop_segmented_cm()
     print("Generated clustered conf mat")
-    cm_prop_w_clusters_full = sum(cm_k for cm_k in cm_prop_w_clusters.values())
-    print("===================================")
-    print("Clustered CM:")
-    print(cm_prop_w_clusters_full)
     
     # Saving clustered confusion matrix:
     # Todo: Integrate the cluster saving into confusion matrix

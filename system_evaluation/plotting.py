@@ -128,8 +128,8 @@ def plot_results(results_folder, MAX_V, true_env_type):
     max_p = update_max()
     title = "System-level Guarantees"
     CM = "CM"
-    cm_dict = {"class": "$\mathtt{{CM}}_{{class}}$", "prop": "$\mathtt{{CM}}_{\text{logic}}$", "prop_seg": "$\mathtt{{CM}}_{{logic, seg}}$",
-    "class_param": "$\{\mathtt{{CM}^k}_{{class}}\}$", "prop_param": "$\{\mathtt{{CM}^k}_{{logic}}\}$", "prop_seg_param": "$\{\mathtt{{CM}^k}_{{prop, seg}}\}$"}
+    cm_dict = {"class": "$\mathtt{{CM}}_{{class}}$", "prop": "$\mathtt{{CM}}_{{logic}}$", "prop_seg": "$\mathtt{{CM}}_{{logic, seg}}$",
+    "class_param": "$\{\mathtt{{CM}^k}_{{class}}\}$", "prop_param": "$\{\mathtt{{CM}^k}_{{logic}}\}$", "prop_seg_param": "$\{\mathtt{{CM}^k}_{{logic, seg}}\}$"}
     
     # for res_type in ["prop"]:
     for res_type in ["class", "prop", "prop_seg"]:

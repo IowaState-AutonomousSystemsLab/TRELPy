@@ -165,6 +165,6 @@ def compute_probabilities(Ncar, MAX_V,C, param_C,true_env_type="ped", study_fail
     return INIT_V, P, P_param
 
 if __name__=="__main__":
-    MAX_V = 6
+    MAX_V = 3
     simulate(MAX_V=MAX_V)
     simulate_why_fail(MAX_V=6)

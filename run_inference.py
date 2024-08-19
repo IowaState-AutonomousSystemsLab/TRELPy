@@ -4,14 +4,17 @@ import subprocess
 from pathlib import Path
 import pdb
 from datetime import datetime
-now = datetime.now()
+now = datetime.now().strftime("%Y%m%d%H%M%S")
 from custom_env import *
 
 home_dir = str(Path.home())
 configs_path = "configs/pointpillars/pointpillars_hv_fpn_sbn-all_8xb4-2x_nus-3d.py"
 checkpoint_path = "checkpoints/hv_pointpillars_fpn_sbn-all_4x8_2x_nus-3d_20210826_104936-fca299c1.pth"
-setsize="full"
-folder_name = "model_"+now.strftime("%m-%d-%Y_%H_%M")
+if is_mini:
+    setsize="mini"
+else:
+    setsize = "full"
+folder_name = "model_"+now
 
 if setsize == "mini":
     dataset_name = "nuscenes"
@@ -46,11 +49,11 @@ for i, pcd in enumerate(pcd_list):
     subprocess.run(cmd, cwd=f"{home_dir}/software/mmdetection3d/", shell=True)
     
     if i%10000 == 0:
-        print(f"---- ---- !-!-!-!- run_inference.py: Done with {i} files")
+        print(f"Run_inference.py: Done with {i} files")
 
 with open(info_file, 'a') as f:
     f.write(f"Inferences complete.")
     f.write(f"Detection threshold {DET_THRESH}")
 f.close()
 
-print(f" !-!-!-!- run_inference.py COMPLETE")
+print(f"Run_inference.py COMPLETE")

@@ -5,10 +5,12 @@ import sys
 import subprocess
 from pathlib import Path
 from nuscenes.eval.common.config import config_factory
+import datetime
 
 ######## PARMS #########
 ## ONLY Change model_name here to make it work with your version.
 DET_THRESH = 0.0 # Default is 0.35 if not indicated in model name
+now = datetime.datetime.now().strftime("%Y%m%d%H%M%S")
 model_name = "model_04-08-2024_09_52"
 # model_name = "model_good"
 modality = "lidar"

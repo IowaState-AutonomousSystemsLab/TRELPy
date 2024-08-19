@@ -7,6 +7,7 @@ import pdb
 from pathlib import Path
 from experiment_file import *
 from print_utils import print_cm, print_param_cm
+import networkx as nx
 # from ..custom_env import cm_dir, is_set_to_mini
 try: 
     from system_evaluation.simple_markov_chain import prop_construct_mc as cmp
@@ -72,6 +73,24 @@ def initialize(MAX_V, Ncar, maxv_init=None):
     formula = formula_ev_good(xcar_stop, Vhigh, Vlow)
     return Vlow, Vhigh, xped, formula
 
+def debug_trace(start, final, markov_chain):
+    G = nx.DiGraph()
+    G.add_nodes_from(markov_chain.states)
+    for k,v in markov_chain.M.items():
+        if v > 0:
+            G.add_edge(k[0], k[1], prob=v)
+    path = nx.shortest_path(G, start, final)
+    total_probability = 1
+    print("Path with probabilities: ")
+    for i in range(len(path)-1):
+        vi = path[i]
+        vj = path[i+1]
+        total_probability *= G.get_edge_data(vi, vj)['prob']
+        print(vi, " to ", vj, " with prob: ", G.get_edge_data(vi, vj)['prob'])
+    print("Total Probability: ", total_probability)
+    return total_probability
+    
+
 def simulate_prop(MAX_V=6):
     Ncar = init(MAX_V=MAX_V)
     C, param_C, prop_dict = cmp.confusion_matrix(prop_cm_fn, prop_dict_file)
@@ -122,6 +141,11 @@ def compute_probabilities(Ncar, MAX_V,C, param_C, label_dict, true_env_type="ped
         result_param = param_M.prob_TL(formula)
         P_param.append(result_param[start_state])
 
+        if vcar == 6:
+            total_probability_full_cm = debug_trace(start_state, "S147", M)
+            total_probability_dist_cm = debug_trace(start_state, "S147", param_M)
+            st()
+        
         print('Probability of eventually reaching good state for initial speed, {}, and max speed, {} is p = {}:'.format(vcar, MAX_V, result[start_state]))
         # Store results:
         INIT_V.append(vcar)

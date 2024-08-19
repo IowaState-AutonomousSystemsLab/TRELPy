@@ -19,6 +19,7 @@ def get_discrete_cell(self, xcar):
 def convert_to_continuous(state):
     xcar, vcar = state
 
+# Equations of motion
 def control(xped, state, obs, Ncar):
     '''
     xped: Location of pedestrian
@@ -29,23 +30,23 @@ def control(xped, state, obs, Ncar):
     xcar, vcar = state
     xcar_stop = xped - 1 # Crosswalk location
     if obs == "ped":
-        steps_to_stop = (vcar+1)*vcar/2
+        steps_to_stop = int(np.ceil((vcar*vcar)/2))
         steps_to_crosswalk = xcar_stop - xcar
         
         if vcar >= 1 and steps_to_crosswalk >= 0:
-            if steps_to_stop < steps_to_crosswalk:
+            if steps_to_stop + 1 < steps_to_crosswalk:
                 # Continue at same speed
                 xcar_new = min(xcar + vcar, Ncar)
                 vcar_new = vcar
-            elif steps_to_stop >= steps_to_crosswalk:
+            elif steps_to_stop + 1 >= steps_to_crosswalk:
                 # Decelerate to stop
-                xcar_new = min(xcar + vcar, Ncar)
+                xcar_new = min(xcar + vcar -0.5, Ncar)
                 vcar_new = vcar - 1
         else:   # Not moving
             xcar_new = xcar
             vcar_new = vcar
             
-        new_state = (int(xcar_new), int(vcar_new))
+        new_state = (int(np.ceil(xcar_new)), int(vcar_new))
 
     if obs != "ped":
         xcar_new = min(xcar + vcar, Ncar)
@@ -61,25 +62,26 @@ def control_simple(xped, state, obs, Ncar):
     '''
     xcar, vcar = state
     xcar_stop = xped - 1 # Crosswalk location
+    
     if obs == "ped":
-        steps_to_stop = (vcar+1)*vcar/2
+        steps_to_stop = int(np.ceil((vcar*vcar)/2))
         threshold_cell = xcar_stop - steps_to_stop
         steps_to_crosswalk = xcar_stop - xcar
         
         if vcar >= 1 and steps_to_crosswalk >= 0:
-            if xcar + vcar <= threshold_cell:
+            if xcar + vcar -0.5 <= threshold_cell:
                 # Continue at same speed
                 xcar_new = min(xcar + vcar, Ncar)
                 vcar_new = vcar
-            elif xcar + vcar > threshold_cell:
+            elif xcar + vcar -0.5 > threshold_cell:
                 # Decelerate to stop
-                xcar_new = min(xcar + vcar, Ncar)
+                xcar_new = min(xcar + vcar - 0.5, Ncar)
                 vcar_new = vcar - 1
         else:   # Not moving
             xcar_new = xcar
             vcar_new = vcar
             
-        new_state = (int(xcar_new), int(vcar_new))
+        new_state = (int(np.ceil(xcar_new)), int(vcar_new))
 
     if obs != "ped":
         xcar_new = min(xcar + vcar, Ncar)
@@ -122,7 +124,7 @@ if __name__ == "__main__":
 
     car_stopped = False
     while not car_stopped:
-        new_state = control(xped, (xcar, vcar), obs, Ncar)
+        new_state = control_simple(xped, (xcar, vcar), obs, Ncar)
         xcar, vcar = new_state
         if xcar == Ncar or vcar == 0:
             car_stopped = True
