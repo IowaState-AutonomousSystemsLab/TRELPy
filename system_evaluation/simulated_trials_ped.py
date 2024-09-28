@@ -35,7 +35,7 @@ class KinCar:
         dx = np.array([np.cos(self.x[2]) * us, np.sin(self.x[2]) * us, (us/self.L) * np.tan(uphi)])
         return dx
 
-    def simulate_step(self, us, uphi, dt=0.1):
+    def simulate_step(self, us, uphi, dt = 0.1):
         dx = self.vehicle_update(us, uphi)
         self.x += dx*dt       
         self.ydot = us*np.sin(self.x[2])
@@ -62,11 +62,11 @@ dt = 0.1 # seconds. Each individual update step
 x0 = np.array([0, 0, np.pi/2]) # Driving up
 u0 = np.array([1, 0])
 image_rate = 0.1 # Hz.
-Ntrials = 10000
+Ntrials = 10
 
 # Helper functions to convert discrete to continuous and vice-versa
 def dis_to_cont(x_abs, v_abs):
-    x = (x_abs - 1)*d2c
+    x = (x_abs)*d2c
     v = v_abs # Usually not important
     return x, v
 
@@ -116,6 +116,19 @@ def sample_param(C, x_abs, xped, true_env_type):
     return obs
 
 #################################################
+### Translating high-level to low-level commands:
+def llc(us_new, uphi_new, x, v, trg_x_abs, trg_v_abs):
+    # dt = 0.1
+    # Parameter chosen for problem. Must be any value >= (yd-y0)/dt -v0-vd + 1
+    if np.ceil(v) == trg_v_abs:
+        return us_new, uphi_new
+    else:
+        trg_x_cont, trg_v_cont = dis_to_cont(trg_x_abs, trg_v_abs)
+        acc = -0.05 # Only deceleration
+        us2 = abs(trg_v_cont**2 - 2*acc*(trg_x_cont-x))
+        us = min(np.sqrt(us2), np.ceil(v))
+        return us, uphi_new
+
 # Simulate trials
 # Each trial is a random run of the car starting from origin.
 # Result: 0 means failure and 1 means success.
@@ -135,14 +148,36 @@ def trial(x_init_abs, v_init_abs, K_strat, xped, C, O, class_dict, true_env_type
     # obs = true_env_type
     assert obs in O
 
+    count = 0
     while car.x[1] < xped_cont:
         # Control law
         (trg_x_abs, trg_v_abs) = K_strat[obs][(x_curr_abs, v_curr_abs)]  # Discrete
-        uphi = 0                                               # Continuous
-        us = trg_v_abs
-
+        (trg_x_abs, trg_v_abs) = K_strat[true_env_type][(x_curr_abs, v_curr_abs)]  # Discrete
+        uphi_new = 0                                               # Continuous
+        us_new = trg_v_abs
+        us, uphi = llc(us_new, uphi_new, car.x[1], car.ydot, trg_x_abs, trg_v_abs)
+        
+        if car.x[1] > 199:
+            if trg_x_abs != x_curr_abs:
+                print("trg_v_abs: ", trg_v_abs, ", us: ", us)
+                
+            print(car.x[1], " : ", us)
+            
+        epsilon = 0.5*2
+        u_eps = 0.1
+        # if abs(us-trg_v_abs) <= u_eps:
+        #     us = trg_v_abs  
+        
         # Simulate step
-        car.simulate_step(us, uphi, dt=0.1)
+        car.simulate_step(us, uphi, dt = 0.1)
+
+        # If car has transitioned to the next cell, set its target speed:
+        trg_x_cont, trg_v_cont = dis_to_cont(trg_x_abs, trg_v_abs)
+        if car.x[1] >= trg_x_cont:
+            car.ydot = trg_v_cont
+        
+        if car.x[1] >= x_cw_cont:
+            st()
 
         # Observe
         x_abs, v_abs = cont_to_dis(car.x[1], car.ydot)
@@ -161,14 +196,18 @@ def trial(x_init_abs, v_init_abs, K_strat, xped, C, O, class_dict, true_env_type
         if car.ydot == 0 and car.x[1] < x_cw_cont:
             result = 0
             break
-        elif car.ydot > 0 and car.x[1] >= x_cw_cont:
+        elif car.ydot > 0 and car.x[1] >= xped_cont:
             result = 0
             break
+
         elif car.ydot == 0 and car.x[1] >= x_cw_cont:
             result = 1
             break
         else:
             result = 1
+
+    if result != 1:
+        st()
     return result
 
 #################################################

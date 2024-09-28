@@ -142,7 +142,7 @@ def trial(x_init_abs, v_init_abs, K_strat, xped, C, O, prop_dict, true_env_type,
         obs = sample(C, prop_dict, true_env_type=true_env_type)
     # obs = true_env_type
     # assert obs in O
-
+    obs = {'ped'}
     while car.x[1] < xped_cont:
         # Control law
         for control_obs, _ in K_strat.items():
@@ -152,7 +152,8 @@ def trial(x_init_abs, v_init_abs, K_strat, xped, C, O, prop_dict, true_env_type,
         (trg_x_abs, trg_v_abs) = K_strat[true_env_type][(x_curr_abs, v_curr_abs)]  # Discrete
         uphi = 0                                               # Continuous
         us = trg_v_abs
-
+        if car.x[1] >= 200:
+            st()
         # Simulate step
         car.simulate_step(us, uphi, dt=0.1)
 
@@ -167,23 +168,6 @@ def trial(x_init_abs, v_init_abs, K_strat, xped, C, O, prop_dict, true_env_type,
             # obs = true_env_type
             x_curr_abs = x_abs
             v_curr_abs = v_abs
-
-        # Break if violating requirement or on test completion. 
-        # Trial is the only change to get the results.
-        # if car.ydot == 0 and car.x[1] < x_cw_cont:
-        #     st()
-        #     result = 0
-        #     break
-        # elif car.ydot > 0 and car.x[1] >= x_cw_cont:
-        #     st()
-        #     result = 0
-        #     break
-        # elif car.ydot == 0 and car.x[1] >= x_cw_cont:
-        #     st()
-        #     result = 1
-        #     break
-        # else:
-        #     result = 1
 
         if car.ydot == 0 and car.x[1] >= x_cw_cont:
             st()
