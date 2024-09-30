@@ -62,11 +62,11 @@ dt = 0.1 # seconds. Each individual update step
 x0 = np.array([0, 0, np.pi/2]) # Driving up
 u0 = np.array([1, 0])
 image_rate = 0.1 # Hz.
-Ntrials = 10
+Ntrials = 10000
 
 # Helper functions to convert discrete to continuous and vice-versa
 def dis_to_cont(x_abs, v_abs):
-    x = (x_abs)*d2c
+    x = (x_abs-1)*d2c
     v = v_abs # Usually not important
     return x, v
 
@@ -117,6 +117,10 @@ def sample_param(C, x_abs, xped, true_env_type):
 
 #################################################
 ### Translating high-level to low-level commands:
+def get_decel(v, trg_v):
+    acc = (trg_v**2 - v**2)/(2*d2c) # Acceleration to cover a cell.
+    return acc
+
 def llc(us_new, uphi_new, x, v, trg_x_abs, trg_v_abs):
     # dt = 0.1
     # Parameter chosen for problem. Must be any value >= (yd-y0)/dt -v0-vd + 1
@@ -124,9 +128,14 @@ def llc(us_new, uphi_new, x, v, trg_x_abs, trg_v_abs):
         return us_new, uphi_new
     else:
         trg_x_cont, trg_v_cont = dis_to_cont(trg_x_abs, trg_v_abs)
-        acc = -0.05 # Only deceleration
-        us2 = abs(trg_v_cont**2 - 2*acc*(trg_x_cont-x))
-        us = min(np.sqrt(us2), np.ceil(v))
+        acc = (trg_v_cont**2 - v**2)/(2*(trg_x_cont - x))
+        us = v + acc*dt
+        # if trg_v_abs == 1 and v>=2:
+        #     st()
+        # acc = 0.1*get_decel(np.ceil(v), trg_v_abs)
+        # us2 = abs(trg_v_cont**2 - 2*acc*(trg_x_cont-x))
+        us = max(min(us, np.ceil(v)), trg_v_abs)
+        # us = 0.5*(trg_v_cont + v)
         return us, uphi_new
 
 # Simulate trials
@@ -148,41 +157,33 @@ def trial(x_init_abs, v_init_abs, K_strat, xped, C, O, class_dict, true_env_type
     # obs = true_env_type
     assert obs in O
 
+    (trg_x_abs, trg_v_abs) = K_strat[obs][(x_curr_abs, v_curr_abs)]
+    # (trg_x_abs, trg_v_abs) = K_strat[true_env_type][(x_curr_abs, v_curr_abs)]  # Discrete
+
     count = 0
     while car.x[1] < xped_cont:
         # Control law
-        (trg_x_abs, trg_v_abs) = K_strat[obs][(x_curr_abs, v_curr_abs)]  # Discrete
-        (trg_x_abs, trg_v_abs) = K_strat[true_env_type][(x_curr_abs, v_curr_abs)]  # Discrete
+          # Discrete
         uphi_new = 0                                               # Continuous
         us_new = trg_v_abs
         us, uphi = llc(us_new, uphi_new, car.x[1], car.ydot, trg_x_abs, trg_v_abs)
-        
-        if car.x[1] > 199:
-            if trg_x_abs != x_curr_abs:
-                print("trg_v_abs: ", trg_v_abs, ", us: ", us)
-                
-            print(car.x[1], " : ", us)
             
-        epsilon = 0.5*2
+        epsilon = 0.1
         u_eps = 0.1
-        # if abs(us-trg_v_abs) <= u_eps:
-        #     us = trg_v_abs  
-        
-        # Simulate step
-        car.simulate_step(us, uphi, dt = 0.1)
 
+        car.simulate_step(us, uphi, dt = 0.1)
+        
         # If car has transitioned to the next cell, set its target speed:
         trg_x_cont, trg_v_cont = dis_to_cont(trg_x_abs, trg_v_abs)
-        if car.x[1] >= trg_x_cont:
-            car.ydot = trg_v_cont
-        
-        if car.x[1] >= x_cw_cont:
-            st()
 
-        # Observe
+        if trg_x_cont - car.x[1]>=0 and trg_x_cont - car.x[1] < epsilon:
+            car.ydot = trg_v_cont
+            car.x[1] = trg_x_cont
+        
         x_abs, v_abs = cont_to_dis(car.x[1], car.ydot)
 
-        if x_abs > x_curr_abs:
+        # Observe only at the same rate stipulated by the high-level planner
+        if x_abs == trg_x_abs:
             if param:
                 obs = sample_param(C, x_curr_abs, xped, true_env_type=true_env_type)
             else:
@@ -190,6 +191,12 @@ def trial(x_init_abs, v_init_abs, K_strat, xped, C, O, class_dict, true_env_type
             # obs = true_env_type
             x_curr_abs = x_abs
             v_curr_abs = v_abs
+
+            # New target is set from the observation!
+            (trg_x_abs, trg_v_abs) = K_strat[obs][(x_curr_abs, v_curr_abs)]
+            # (trg_x_abs, trg_v_abs) = K_strat[true_env_type][(x_curr_abs, v_curr_abs)]  # Discrete
+            # if trg_x_abs == 22:
+            #     st()
 
         # Break if violating requirement or on test completion. 
         # Trial is the only change to get the results.
@@ -205,9 +212,10 @@ def trial(x_init_abs, v_init_abs, K_strat, xped, C, O, class_dict, true_env_type
             break
         else:
             result = 1
-
-    if result != 1:
-        st()
+        count += 1
+        if count >= 10000:
+            st()
+    
     return result
 
 #################################################

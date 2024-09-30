@@ -137,7 +137,7 @@ def compute_probabilities(Ncar, MAX_V,C, param_C,true_env_type="ped", study_fail
     # Initial conditions set for all velocities
     print("Specification: ")
     print(formula)
-    st()
+    
     for vcar in range(1, MAX_V+1):  # Initial speed at starting point
         state_f = lambda x,v: (Vhigh-Vlow+1)*(x-1) + v
         start_state = "S"+str(state_f(1,vcar))
