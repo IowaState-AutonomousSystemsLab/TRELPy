@@ -149,7 +149,7 @@ def compute_probabilities(Ncar, MAX_V,C, param_C, label_dict, true_env_type="ped
         print('Probability of eventually reaching good state for initial speed, {}, and max speed, {} is p = {}:'.format(vcar, MAX_V, result[start_state]))
         # Store results:
         INIT_V.append(vcar)
-    
+    st()
     return INIT_V, P, P_param
 
 if __name__=="__main__":

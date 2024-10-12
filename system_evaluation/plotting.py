@@ -153,9 +153,9 @@ def plot_results(results_folder, MAX_V, true_env_type):
 if __name__=="__main__":
     MAX_V = 6
     results_folder = f"{cm_dir}/probability_results"
-    results_folder = f"{cm_dir}/simulated_probability_results"
+    results_folder = f"{cm_dir}/simulated_probability_results_v1"
 
-    true_env_type = "obs"
+    true_env_type = "ped"
     plot_results(results_folder, MAX_V, true_env_type)
 
     # true_env_type = "obs"

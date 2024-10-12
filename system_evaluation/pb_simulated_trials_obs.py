@@ -62,7 +62,7 @@ dt = 0.1 # seconds. Each individual update step
 x0 = np.array([0, 0, np.pi/2]) # Driving up
 u0 = np.array([1, 0])
 image_rate = 0.1 # Hz.
-Ntrials = 10000
+Ntrials = 10
 
 # Helper functions to convert discrete to continuous and vice-versa
 def dis_to_cont(x_abs, v_abs):

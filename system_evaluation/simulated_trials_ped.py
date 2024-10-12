@@ -66,12 +66,14 @@ Ntrials = 10000
 
 # Helper functions to convert discrete to continuous and vice-versa
 def dis_to_cont(x_abs, v_abs):
-    x = (x_abs-1)*d2c
+    # x = (x_abs-1)*d2c
+    x = (x_abs-1)
     v = v_abs # Usually not important
     return x, v
 
 def cont_to_dis(x, v):
-    x_abs = int(np.ceil(x*c2d))
+    # x_abs = int(np.ceil(x*c2d))
+    x_abs = int(np.ceil(x))
     v_abs = np.ceil(v)
     return x_abs, v_abs
 
@@ -130,10 +132,6 @@ def llc(us_new, uphi_new, x, v, trg_x_abs, trg_v_abs):
         trg_x_cont, trg_v_cont = dis_to_cont(trg_x_abs, trg_v_abs)
         acc = (trg_v_cont**2 - v**2)/(2*(trg_x_cont - x))
         us = v + acc*dt
-        # if trg_v_abs == 1 and v>=2:
-        #     st()
-        # acc = 0.1*get_decel(np.ceil(v), trg_v_abs)
-        # us2 = abs(trg_v_cont**2 - 2*acc*(trg_x_cont-x))
         us = max(min(us, np.ceil(v)), trg_v_abs)
         # us = 0.5*(trg_v_cont + v)
         return us, uphi_new
@@ -163,7 +161,7 @@ def trial(x_init_abs, v_init_abs, K_strat, xped, C, O, class_dict, true_env_type
     count = 0
     while car.x[1] < xped_cont:
         # Control law
-          # Discrete
+        # Discrete
         uphi_new = 0                                               # Continuous
         us_new = trg_v_abs
         us, uphi = llc(us_new, uphi_new, car.x[1], car.ydot, trg_x_abs, trg_v_abs)
@@ -194,9 +192,7 @@ def trial(x_init_abs, v_init_abs, K_strat, xped, C, O, class_dict, true_env_type
 
             # New target is set from the observation!
             (trg_x_abs, trg_v_abs) = K_strat[obs][(x_curr_abs, v_curr_abs)]
-            # (trg_x_abs, trg_v_abs) = K_strat[true_env_type][(x_curr_abs, v_curr_abs)]  # Discrete
-            # if trg_x_abs == 22:
-            #     st()
+            # (trg_x_abs, trg_v_abs) = K_strat[true_env_type][(x_curr_abs, v_curr_abs)]
 
         # Break if violating requirement or on test completion. 
         # Trial is the only change to get the results.
@@ -226,7 +222,7 @@ def init(MAX_V=6):
     return Ncar
 
 def save_results(INIT_V, P, P_param, result_type, true_env):
-    results_folder = f"{cm_dir}/simulated_probability_results"
+    results_folder = f"{cm_dir}/simulated_probability_results_v1"
     if not os.path.exists(results_folder):
         os.makedirs(results_folder)
     fname_v = Path(f"{results_folder}/{result_type}_cm_{true_env}_vmax_"+str(MAX_V)+"_initv.json")
