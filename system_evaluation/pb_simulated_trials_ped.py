@@ -11,6 +11,7 @@ from experiment_file import *
 import  json
 from formula import *
 from print_utils import print_cm, print_param_cm
+import networkx as nx
 
 try: 
     from system_evaluation.simple_markov_chain import prop_construct_mc as cmp
@@ -98,6 +99,7 @@ def sample(C, prop_dict, true_env_type):
     for idx, obs_tuple in prop_dict.items():
         if {true_env_type} == obs_tuple:
             C_true_env = {k: v for k,v in C.items() if k[1]==idx}
+    
     cdf = 0
     rand_obs = np.random.rand()
     for k, v in C_true_env.items():
@@ -106,6 +108,26 @@ def sample(C, prop_dict, true_env_type):
             obs = prop_dict[k[0]]
             break
     return obs
+
+def debug_sample(C, prop_dict, true_env_type):
+    C_true_env = dict()
+    for idx, obs_tuple in prop_dict.items():
+        if {true_env_type} == obs_tuple:
+            C_true_env = {k: v for k,v in C.items() if k[1]==idx}
+    
+    C_sampled_true_env = dict()
+    C_sampled_true_env = {k: 0 for k in C_true_env.keys()}
+    for n in range(Ntrials):
+        cdf = 0
+        rand_obs = np.random.rand()
+        for k, v in C_true_env.items():
+            cdf += v
+            if rand_obs <= cdf:
+                C_sampled_true_env[k] += 1
+                break
+    
+    C_sampled_true_env = {k: v/Ntrials for k,v in C_sampled_true_env.items()}
+    return C_sampled_true_env
 
 # Sample observation from distance parametrized confusion matrix
 def sample_param(C, x_abs, xped, prop_dict, true_env_type):
@@ -140,7 +162,7 @@ def cont_control(us_new, uphi_new, x, v, trg_x_abs, trg_v_abs):
 # Simulate trials
 # Each trial is a random run of the car starting from origin.
 # Result: 0 means failure and 1 means success.
-def trial(x_init_abs, v_init_abs, K_strat, xped, C, O, prop_dict, true_env_type, param=False):
+def trial(x_init_abs, v_init_abs, K_strat, xped, C, O, prop_dict, true_env_type, G= None, mc=None, state_to_S=None, param=False):
     x0, u0 = dis_to_cont(x_init_abs, v_init_abs)
     xped_cont, _ = dis_to_cont(xped, 0)
     x_cw_cont, _ = dis_to_cont(xped-1, 0)
@@ -148,7 +170,7 @@ def trial(x_init_abs, v_init_abs, K_strat, xped, C, O, prop_dict, true_env_type,
     traj = [(car.x[1], car.ydot)]
     x_curr_abs = x_init_abs
     v_curr_abs = v_init_abs
-    
+    debug_sample(C, prop_dict, true_env_type)
     if param:
         obs = sample_param(C, x_curr_abs, xped, prop_dict, true_env_type=true_env_type)
     else:
@@ -167,6 +189,7 @@ def trial(x_init_abs, v_init_abs, K_strat, xped, C, O, prop_dict, true_env_type,
     assert control_obs in O
 
     count=0
+    edge = ((x_curr_abs,v_curr_abs), (trg_x_abs, trg_v_abs))
     
     while car.x[1] < xped_cont:
         # Discrete
@@ -189,6 +212,14 @@ def trial(x_init_abs, v_init_abs, K_strat, xped, C, O, prop_dict, true_env_type,
         x_abs, v_abs = cont_to_dis(car.x[1], car.ydot)
 
         if x_abs == trg_x_abs:
+            if edge not in G.edges():
+                G.add_edge(edge[0], edge[1], weight=1.0)
+            else:
+                G[edge[0]][edge[1]]['weight'] += 1.0
+
+            if v_abs != trg_v_abs:
+                st()
+            
             if param:
                 obs = sample_param(C, x_curr_abs, xped, prop_dict, true_env_type=true_env_type)
             else:
@@ -204,11 +235,8 @@ def trial(x_init_abs, v_init_abs, K_strat, xped, C, O, prop_dict, true_env_type,
                 else:
                     if set({control_obs,}) == obs:
                         break
-                
             (trg_x_abs, trg_v_abs) = K_strat[control_obs][(x_curr_abs, v_curr_abs)]
-            # st()
-            # (trg_x_abs, trg_v_abs) = K_strat[true_env_type][(x_curr_abs, v_curr_abs)]
-
+            edge = ((x_curr_abs,v_curr_abs), (trg_x_abs, trg_v_abs))
         # Break if violating requirement or on test completion. 
         # Trial is the only change to get the results.
         if car.ydot == 0 and car.x[1] < x_cw_cont:
@@ -227,7 +255,7 @@ def trial(x_init_abs, v_init_abs, K_strat, xped, C, O, prop_dict, true_env_type,
         if count >= 10000:
             st()
 
-    return result
+    return result, G
 
 #################################################
 # Simulate trials
@@ -318,26 +346,43 @@ def simulated_probabilities(Ncar, MAX_V, C, param_C, prop_dict, true_env_type="p
         result_sum = 0
         result_param_sum = 0
 
+        G = nx.DiGraph()
+
+        #### Debug
+        state_f = lambda x,v: (Vhigh-Vlow+1)*(x-1) + v
+        start_state = "S"+str(state_f(1,vcar))
+        state_info = dict()
+        state_info["start"] = start_state
+        S, state_to_S = cmp.system_states_example_ped(Ncar, Vlow, Vhigh)
+        true_env = str(1)
+        # M = call_MC(S, O, state_to_S, C, class_dict, true_env, true_env_type, state_info, Ncar, xped, Vhigh)
+        # param_M = call_MC_param(S, O, state_to_S, param_C, class_dict, true_env, true_env_type, state_info, Ncar, xped, Vhigh)
+        G.add_nodes_from(list(state_to_S.keys()))
+    
         K_strat = prop_control_dict(Ncar, Vhigh, O, xped)
         for k in range(Ntrials):    # Trials
-            result = trial(x_init_abs, v_init_abs, K_strat, xped, C, O, prop_dict, true_env_type)
-            result_param = trial(x_init_abs, v_init_abs, K_strat, xped, param_C, O, prop_dict, true_env_type, param=True)
+            result, G = trial(x_init_abs, v_init_abs, K_strat, xped, C, O, prop_dict, true_env_type, G=G)
+            # result_param = trial(x_init_abs, v_init_abs, K_strat, xped, param_C, O, prop_dict, true_env_type, param=True)
+
+            # result = trial(x_init_abs, v_init_abs, K_strat, xped, C, O, prop_dict, true_env_type, M, state_to_S)
+            # result_param = trial(x_init_abs, v_init_abs, K_strat, xped, param_C, O, prop_dict, true_env_type, param_M, state_to_S, param=True)
 
             result_sum += result
-            result_param_sum += result_param
+            # result_param_sum += result_param
 
         success = result_sum/Ntrials
-        success_param = result_param_sum/Ntrials
+        #success_param = result_param_sum/Ntrials
 
         P.append(success)
-        P_param.append(success_param)
+        # P_param.append(success_param)
 
         print('Probability of eventually reaching good state for initial speed, {}, and max speed, {} is p = {}:'.format(vcar, MAX_V, success))
         # Store results:
         INIT_V.append(vcar)
+        st()
     return INIT_V, P, P_param
 
 if __name__=="__main__":
-    MAX_V = 6
+    MAX_V = 3
     simulate_prop(MAX_V=MAX_V)
     simulate_prop_seg(MAX_V=MAX_V)

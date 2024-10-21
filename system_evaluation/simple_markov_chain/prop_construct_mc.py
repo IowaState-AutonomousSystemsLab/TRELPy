@@ -299,8 +299,8 @@ class synth_markov_chain:
                         else:
                             if v == set(obs):
                                 pred_j = k
-                    if Si == "S6" and Sj == "S47":
-                        st()
+                    # if Si == "S6" and Sj == "S47":
+                    #     st()
                     prob_t = self.param_C[distbin][pred_j, true_j] # Probability of transitions
                     if np.isnan(prob_t):
                         prob_T = 0.0
@@ -348,6 +348,10 @@ class synth_markov_chain:
                     self.M[Si, Sj] = self.M[Si, Sj] + prob_t
                 else:
                     self.M[Si, Sj] = prob_t
+
+        ## Approximate to three decimal places:
+        for (Si, Sj) in self.M.keys():
+            self.M[Si, Sj] = min(1, round(self.M[Si, Sj],3))
         return self.M
     
     # Adding formulae to list of temporal logic formulas:
