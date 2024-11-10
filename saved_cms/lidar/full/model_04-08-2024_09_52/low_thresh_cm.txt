@@ -1,0 +1,9 @@
+\begin{tabular}{lrrr}
+\hline
+       &   ped &   obs &   empty \\
+\hline
+ ped   & 14884 &   751 &    2488 \\
+ obs   &   650 & 48693 &    1760 \\
+ empty &  7966 & 14921 &   29748 \\
+\hline
+\end{tabular}

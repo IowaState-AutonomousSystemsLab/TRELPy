@@ -1,0 +1,10 @@
+\begin{tabular}{lrrrr}
+\hline
+                &   \{'empty'\} &   \{'ped'\} &   \{'obs'\} &   \{'obs', 'ped'\} \\
+\hline
+ ('empty',)     &           0 &       441 &      1722 &              105 \\
+ ('ped',)       &         153 &      1223 &       106 &              300 \\
+ ('obs',)       &         140 &        30 &     12128 &             1530 \\
+ ('obs', 'ped') &           9 &       100 &       925 &             4620 \\
+\hline
+\end{tabular}

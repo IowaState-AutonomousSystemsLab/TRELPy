@@ -1,0 +1,120 @@
+
+Printing confusion matrix from distance range (1, 10)
+\begin{tabular}{lrrrr}
+\hline
+                &   \{'empty'\} &   \{'ped'\} &   \{'obs'\} &   \{'obs', 'ped'\} \\
+\hline
+ ('empty',)     &           0 &       141 &        94 &                6 \\
+ ('ped',)       &          54 &       373 &         9 &               17 \\
+ ('obs',)       &          20 &         3 &      2122 &              210 \\
+ ('obs', 'ped') &           0 &         3 &       104 &              415 \\
+\hline
+\end{tabular}
+
+Printing confusion matrix from distance range (11, 20)
+\begin{tabular}{lrrrr}
+\hline
+                &   \{'empty'\} &   \{'ped'\} &   \{'obs'\} &   \{'obs', 'ped'\} \\
+\hline
+ ('empty',)     &           0 &       110 &       139 &               24 \\
+ ('ped',)       &          34 &       363 &        18 &               81 \\
+ ('obs',)       &          36 &         1 &      2301 &              388 \\
+ ('obs', 'ped') &           1 &        18 &       233 &             1400 \\
+\hline
+\end{tabular}
+
+Printing confusion matrix from distance range (21, 30)
+\begin{tabular}{lrrrr}
+\hline
+                &   \{'empty'\} &   \{'ped'\} &   \{'obs'\} &   \{'obs', 'ped'\} \\
+\hline
+ ('empty',)     &           0 &        84 &       253 &               27 \\
+ ('ped',)       &          34 &       246 &        34 &               74 \\
+ ('obs',)       &          25 &        14 &      2109 &              443 \\
+ ('obs', 'ped') &           8 &        37 &       343 &             1565 \\
+\hline
+\end{tabular}
+
+Printing confusion matrix from distance range (31, 40)
+\begin{tabular}{lrrrr}
+\hline
+                &   \{'empty'\} &   \{'ped'\} &   \{'obs'\} &   \{'obs', 'ped'\} \\
+\hline
+ ('empty',)     &           0 &       106 &       331 &               48 \\
+ ('ped',)       &          31 &       241 &        45 &              128 \\
+ ('obs',)       &          17 &        12 &      2200 &              489 \\
+ ('obs', 'ped') &           0 &        42 &       245 &             1240 \\
+\hline
+\end{tabular}
+
+Printing confusion matrix from distance range (41, 50)
+\begin{tabular}{lrrrr}
+\hline
+                &   \{'empty'\} &   \{'ped'\} &   \{'obs'\} &   \{'obs', 'ped'\} \\
+\hline
+ ('empty',)     &           0 &         0 &       905 &                0 \\
+ ('ped',)       &           0 &         0 &         0 &                0 \\
+ ('obs',)       &          42 &         0 &      3396 &                0 \\
+ ('obs', 'ped') &           0 &         0 &         0 &                0 \\
+\hline
+\end{tabular}
+
+Printing confusion matrix from distance range (51, 60)
+\begin{tabular}{lrrrr}
+\hline
+                &   \{'empty'\} &   \{'ped'\} &   \{'obs'\} &   \{'obs', 'ped'\} \\
+\hline
+ ('empty',)     &           0 &         0 &         0 &                0 \\
+ ('ped',)       &           0 &         0 &         0 &                0 \\
+ ('obs',)       &           0 &         0 &         0 &                0 \\
+ ('obs', 'ped') &           0 &         0 &         0 &                0 \\
+\hline
+\end{tabular}
+
+Printing confusion matrix from distance range (61, 70)
+\begin{tabular}{lrrrr}
+\hline
+                &   \{'empty'\} &   \{'ped'\} &   \{'obs'\} &   \{'obs', 'ped'\} \\
+\hline
+ ('empty',)     &           0 &         0 &         0 &                0 \\
+ ('ped',)       &           0 &         0 &         0 &                0 \\
+ ('obs',)       &           0 &         0 &         0 &                0 \\
+ ('obs', 'ped') &           0 &         0 &         0 &                0 \\
+\hline
+\end{tabular}
+
+Printing confusion matrix from distance range (71, 80)
+\begin{tabular}{lrrrr}
+\hline
+                &   \{'empty'\} &   \{'ped'\} &   \{'obs'\} &   \{'obs', 'ped'\} \\
+\hline
+ ('empty',)     &           0 &         0 &         0 &                0 \\
+ ('ped',)       &           0 &         0 &         0 &                0 \\
+ ('obs',)       &           0 &         0 &         0 &                0 \\
+ ('obs', 'ped') &           0 &         0 &         0 &                0 \\
+\hline
+\end{tabular}
+
+Printing confusion matrix from distance range (81, 90)
+\begin{tabular}{lrrrr}
+\hline
+                &   \{'empty'\} &   \{'ped'\} &   \{'obs'\} &   \{'obs', 'ped'\} \\
+\hline
+ ('empty',)     &           0 &         0 &         0 &                0 \\
+ ('ped',)       &           0 &         0 &         0 &                0 \\
+ ('obs',)       &           0 &         0 &         0 &                0 \\
+ ('obs', 'ped') &           0 &         0 &         0 &                0 \\
+\hline
+\end{tabular}
+
+Printing confusion matrix from distance range (91, 100)
+\begin{tabular}{lrrrr}
+\hline
+                &   \{'empty'\} &   \{'ped'\} &   \{'obs'\} &   \{'obs', 'ped'\} \\
+\hline
+ ('empty',)     &           0 &         0 &         0 &                0 \\
+ ('ped',)       &           0 &         0 &         0 &                0 \\
+ ('obs',)       &           0 &         0 &         0 &                0 \\
+ ('obs', 'ped') &           0 &         0 &         0 &                0 \\
+\hline
+\end{tabular}

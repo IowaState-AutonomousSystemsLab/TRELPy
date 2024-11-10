@@ -204,7 +204,10 @@ def trial(x_init_abs, v_init_abs, K_strat, xped, C, O, class_dict, true_env_type
             break
 
         elif car.ydot == 0 and car.x[1] >= x_cw_cont:
-            result = 1
+            if trg_x_abs == xped-1 and trg_v_abs ==0:
+                result = 1
+            else:
+                result=0
             break
         else:
             result = 1
@@ -222,7 +225,7 @@ def init(MAX_V=6):
     return Ncar
 
 def save_results(INIT_V, P, P_param, result_type, true_env):
-    results_folder = f"{cm_dir}/simulated_probability_results_v1"
+    results_folder = f"{cm_dir}/simulated_probability_results"
     if not os.path.exists(results_folder):
         os.makedirs(results_folder)
     fname_v = Path(f"{results_folder}/{result_type}_cm_{true_env}_vmax_"+str(MAX_V)+"_initv.json")

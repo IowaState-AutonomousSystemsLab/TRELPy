@@ -122,7 +122,7 @@ def plot_results(results_folder, MAX_V, true_env_type):
     fig_name = Path(f"{figure_folder}/guarantees_cm_{true_env_type}_vmax_"+str(MAX_V)+".png")
     # fig_name = Path(f"{figure_folder}/class_guarantees_cm_{true_env_type}_vmax_"+str(MAX_V)+".png")
     # fig_name = Path(f"{figure_folder}/prop_guarantees_cm_{true_env_type}_vmax_"+str(MAX_V)+".png")
-
+    st()
     fig, ax= plt.subplots()
     ax.tick_params(axis='both', which='major', labelsize=15)
     max_p = update_max()
@@ -153,8 +153,8 @@ def plot_results(results_folder, MAX_V, true_env_type):
 if __name__=="__main__":
     MAX_V = 6
     results_folder = f"{cm_dir}/probability_results"
-    results_folder = f"{cm_dir}/simulated_probability_results_v1"
-
+    results_folder = f"{cm_dir}/simulated_probability_results"
+    st()
     true_env_type = "ped"
     plot_results(results_folder, MAX_V, true_env_type)
 

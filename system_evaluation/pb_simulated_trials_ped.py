@@ -62,7 +62,7 @@ c2d = 1.0/d2c # Needs to be further approximated to get into integer form.
 dt = 0.1 # seconds. Each individual update step
 x0 = np.array([0, 0, np.pi/2]) # Driving up
 u0 = np.array([1, 0])
-Ntrials = 100000
+Ntrials = 10000
 
 # Helper functions to convert discrete to continuous and vice-versa
 def dis_to_cont(x_abs, v_abs):
@@ -212,10 +212,10 @@ def trial(x_init_abs, v_init_abs, K_strat, xped, C, O, prop_dict, true_env_type,
         x_abs, v_abs = cont_to_dis(car.x[1], car.ydot)
 
         if x_abs == trg_x_abs:
-            if edge not in G.edges():
-                G.add_edge(edge[0], edge[1], weight=1.0)
-            else:
-                G[edge[0]][edge[1]]['weight'] += 1.0
+            # if edge not in G.edges():
+            #     G.add_edge(edge[0], edge[1], weight=1.0)
+            # else:
+            #     G[edge[0]][edge[1]]['weight'] += 1.0
 
             if v_abs != trg_v_abs:
                 st()
@@ -237,6 +237,7 @@ def trial(x_init_abs, v_init_abs, K_strat, xped, C, O, prop_dict, true_env_type,
                         break
             (trg_x_abs, trg_v_abs) = K_strat[control_obs][(x_curr_abs, v_curr_abs)]
             edge = ((x_curr_abs,v_curr_abs), (trg_x_abs, trg_v_abs))
+
         # Break if violating requirement or on test completion. 
         # Trial is the only change to get the results.
         if car.ydot == 0 and car.x[1] < x_cw_cont:
@@ -247,15 +248,18 @@ def trial(x_init_abs, v_init_abs, K_strat, xped, C, O, prop_dict, true_env_type,
             break
 
         elif car.ydot == 0 and car.x[1] >= x_cw_cont:
-            result = 1
+            if trg_x_abs == xped-1 and trg_v_abs ==0:
+                result = 1
+            else:
+                result=0
             break
         else:
-            result = 1
+            result = 0
         count += 1
         if count >= 10000:
             st()
 
-    return result, G
+    return result
 
 #################################################
 # Simulate trials
@@ -265,7 +269,7 @@ def init(MAX_V=6):
     return Ncar
 
 def save_results(INIT_V, P, P_param, result_type, true_env):
-    results_folder = f"{cm_dir}/simulated_probability_results_v1"
+    results_folder = f"{cm_dir}/simulated_probability_results"
     if not os.path.exists(results_folder):
         os.makedirs(results_folder)
     fname_v = Path(f"{results_folder}/{result_type}_cm_{true_env}_vmax_"+str(MAX_V)+"_initv.json")
@@ -357,32 +361,32 @@ def simulated_probabilities(Ncar, MAX_V, C, param_C, prop_dict, true_env_type="p
         true_env = str(1)
         # M = call_MC(S, O, state_to_S, C, class_dict, true_env, true_env_type, state_info, Ncar, xped, Vhigh)
         # param_M = call_MC_param(S, O, state_to_S, param_C, class_dict, true_env, true_env_type, state_info, Ncar, xped, Vhigh)
-        G.add_nodes_from(list(state_to_S.keys()))
-    
+        # G.add_nodes_from(list(state_to_S.keys()))
+        
         K_strat = prop_control_dict(Ncar, Vhigh, O, xped)
         for k in range(Ntrials):    # Trials
-            result, G = trial(x_init_abs, v_init_abs, K_strat, xped, C, O, prop_dict, true_env_type, G=G)
-            # result_param = trial(x_init_abs, v_init_abs, K_strat, xped, param_C, O, prop_dict, true_env_type, param=True)
+            result = trial(x_init_abs, v_init_abs, K_strat, xped, C, O, prop_dict, true_env_type)
+            result_param = trial(x_init_abs, v_init_abs, K_strat, xped, param_C, O, prop_dict, true_env_type, param=True)
 
             # result = trial(x_init_abs, v_init_abs, K_strat, xped, C, O, prop_dict, true_env_type, M, state_to_S)
             # result_param = trial(x_init_abs, v_init_abs, K_strat, xped, param_C, O, prop_dict, true_env_type, param_M, state_to_S, param=True)
 
             result_sum += result
-            # result_param_sum += result_param
+            result_param_sum += result_param
 
         success = result_sum/Ntrials
-        #success_param = result_param_sum/Ntrials
+        success_param = result_param_sum/Ntrials
 
         P.append(success)
-        # P_param.append(success_param)
+        P_param.append(success_param)
 
         print('Probability of eventually reaching good state for initial speed, {}, and max speed, {} is p = {}:'.format(vcar, MAX_V, success))
         # Store results:
         INIT_V.append(vcar)
-        st()
+        
     return INIT_V, P, P_param
 
 if __name__=="__main__":
-    MAX_V = 3
+    MAX_V = 6
     simulate_prop(MAX_V=MAX_V)
     simulate_prop_seg(MAX_V=MAX_V)
